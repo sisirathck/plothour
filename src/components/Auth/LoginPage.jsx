@@ -5,7 +5,7 @@ import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
 import { LoginForm } from './LoginForm';
 import './LoginPage.css';
 
-export const LoginPage = ({ onTryDemo }) => {
+export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
   const [notification, setNotification] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
@@ -21,7 +21,10 @@ export const LoginPage = ({ onTryDemo }) => {
   };
 
   const handleLoginSuccess = (userData) => {
-    showToast(`Welcome back, ${userData.email}! Sign-in verified.`, 'success');
+    showToast(`Welcome, ${userData.display_name || userData.email}!`, 'success');
+    setTimeout(() => {
+      onLoginSuccess?.(userData);
+    }, 700);
   };
 
   return (
@@ -52,13 +55,7 @@ export const LoginPage = ({ onTryDemo }) => {
             <LoginForm
               isSignUp={isSignUp}
               onLoginSuccess={handleLoginSuccess}
-              onSignUpClick={() => {
-                if (isSignUp) {
-                  showToast('Account creation is not available until server authentication is configured.', 'info');
-                } else {
-                  setIsSignUp(true);
-                }
-              }}
+              onSignUpClick={() => setIsSignUp(true)}
               onLogInClick={() => setIsSignUp(false)}
             />
           </div>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, Eye, EyeOff, Loader2, User } from 'lucide-react';
 import { FormInput } from './FormInput';
 import { NoticeBanner } from './NoticeBanner';
 import { SocialAuth } from './SocialAuth';
@@ -8,18 +8,92 @@ import './LoginForm.css';
 export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onLogInClick }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [serverStatus, setServerStatus] = useState({
+    checked: false,
+    configured: false,
+    googleAuth: false,
+    googleClientId: null,
+  });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // Check server configuration status on mount
+  useEffect(() => {
+    fetch('/api/auth/status')
+      .then((res) => res.json())
+      .then((data) => {
+        setServerStatus({
+          checked: true,
+          configured: Boolean(data.configured),
+          googleAuth: Boolean(data.googleAuth),
+          googleClientId: data.googleClientId,
+        });
+      })
+      .catch(() => {
+        setServerStatus({
+          checked: true,
+          configured: false,
+          googleAuth: false,
+          googleClientId: null,
+        });
+      });
+  }, []);
+
+  // Initialize Google Identity Services if Client ID is configured
+  useEffect(() => {
+    if (!serverStatus.googleClientId) return;
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({
+          client_id: serverStatus.googleClientId,
+          callback: handleGoogleCredentialResponse,
+        });
+      }
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [serverStatus.googleClientId]);
+
+  const handleGoogleCredentialResponse = async (response) => {
+    if (!response.credential) return;
+    setIsLoading(true);
     setError('');
 
-    if (isSignUp) {
-      onSignUpClick?.();
-      return;
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Google authentication failed');
+      }
+
+      onLoginSuccess?.(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
 
     if (!email) {
       setError('Please enter your email address');
@@ -29,24 +103,45 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
       setError('Please enter your password');
       return;
     }
+    if (isSignUp && password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      if (onLoginSuccess) {
-        onLoginSuccess({ email });
+
+    try {
+      const endpoint = isSignUp ? '/api/auth/register' : '/api/auth/login';
+      const payload = isSignUp
+        ? { email, password, displayName: displayName || email.split('@')[0] }
+        : { email, password };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || (isSignUp ? 'Registration failed.' : 'Login failed.'));
       }
-    }, 600);
+
+      onLoginSuccess?.(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      if (onLoginSuccess) {
-        onLoginSuccess({ email: 'alex.rivers@gmail.com', provider: 'google' });
-      }
-    }, 500);
+    if (serverStatus.googleAuth && window.google?.accounts?.id) {
+      window.google.accounts.id.prompt();
+    } else {
+      setError('Google Sign-In is not configured yet. Add GOOGLE_CLIENT_ID to .env to enable it. Email & password sign-in is ready!');
+    }
   };
 
   return (
@@ -59,16 +154,31 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         </p>
       </header>
 
-      {/* Setup Notice Banner (from reference screenshot) */}
-      <NoticeBanner
-        message={isSignUp
-          ? 'Account creation is not available until server authentication is configured.'
-          : 'Account sign-in is not set up on this server yet. Configure PostgreSQL and AUTH_SECRET to enable accounts.'}
-      />
+      {/* Setup Notice Banner (only shown if PostgreSQL / AUTH_SECRET are unconfigured) */}
+      {serverStatus.checked && !serverStatus.configured && (
+        <NoticeBanner
+          message={isSignUp
+            ? 'Account creation is not available until server authentication is configured.'
+            : 'Account sign-in is not set up on this server yet. Configure PostgreSQL and AUTH_SECRET to enable accounts.'}
+        />
+      )}
 
       {/* Login Form */}
       <form className="login-form" onSubmit={handleSubmit} noValidate>
         {error && <div className="login-general-error">{error}</div>}
+
+        {isSignUp && (
+          <FormInput
+            id="signup-name"
+            label="Name (optional)"
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="How should friends see you?"
+            icon={User}
+            autoComplete="name"
+          />
+        )}
 
         <FormInput
           id="login-email"

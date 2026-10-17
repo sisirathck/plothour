@@ -17,7 +17,7 @@ const pages = [
   { id: 'manage', label: 'Manage' },
 ];
 
-export const GuestDashboard = ({ onExitGuest }) => {
+export const GuestDashboard = ({ user, onExitGuest }) => {
   const [activePage, setActivePage] = useState('timer');
   const [isSettings, setIsSettings] = useState(() => window.location.pathname === '/settings');
 
@@ -46,7 +46,7 @@ export const GuestDashboard = ({ onExitGuest }) => {
     <nav className="dashboard-nav" aria-label="Demo dashboard">
       <div className="nav-left">
         <StudyDuelLogo size="medium" />
-        {!isSettings && <span className="demo-mode-pill">Alex</span>}
+        {!isSettings && <span className="demo-mode-pill">{user ? user.display_name : 'Guest'}</span>}
       </div>
 
       {!isSettings && <div className="dashboard-tabs" role="tablist" aria-label="Dashboard pages">
