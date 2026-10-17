@@ -1,0 +1,47 @@
+.studyduel-backdrop-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.backdrop-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center right;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(1.01);
+}
+
+.backdrop-layer.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Ambient gradient scrim to keep left-side form readable across all viewports */
+.backdrop-gradient-scrim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--sd-backdrop-scrim);
+  transition: background var(--sd-transition);
+}
+
+@media (max-width: 900px) {
+  .backdrop-layer {
+    background-position: 70% center;
+  }
+}

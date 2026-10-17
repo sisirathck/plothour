@@ -1,0 +1,87 @@
+.compact-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.compact-field-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sd-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.compact-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.compact-input-icon.left {
+  position: absolute;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sd-text-muted);
+  pointer-events: none;
+  transition: color var(--sd-transition);
+}
+
+.compact-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--sd-radius-md);
+  background: var(--sd-input-bg);
+  border: 1px solid var(--sd-input-border);
+  color: var(--sd-text-primary);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  transition: all var(--sd-transition);
+}
+
+.compact-input::placeholder {
+  color: var(--sd-text-muted);
+  font-weight: 400;
+}
+
+.compact-input.has-left-icon {
+  padding-left: 38px;
+}
+
+.compact-input.has-right-slot {
+  padding-right: 38px;
+}
+
+.compact-input:focus {
+  border-color: var(--sd-input-border-focus);
+  box-shadow: 0 0 0 3px var(--sd-input-ring);
+  background: var(--sd-input-bg);
+}
+
+.compact-input-wrapper:focus-within .compact-input-icon.left {
+  color: var(--sd-coral);
+}
+
+.compact-input-right-slot {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compact-form-field.has-error .compact-input {
+  border-color: #ef4444;
+}
+
+.compact-field-error {
+  font-size: 11px;
+  color: #ef4444;
+  margin-top: 1px;
+}

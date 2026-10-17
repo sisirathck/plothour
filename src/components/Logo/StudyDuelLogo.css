@@ -1,0 +1,41 @@
+.studyduel-logo-wrapper {
+  display: inline-flex;
+  align-items: center;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0;
+  user-select: none;
+  transition: transform var(--sd-transition);
+}
+
+.studyduel-logo-wrapper:hover {
+  transform: translateY(-1px);
+}
+
+.studyduel-logo-img {
+  display: block;
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  background: transparent !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.05));
+  transition: opacity var(--sd-transition);
+}
+
+[data-theme='dark'] .studyduel-logo-img {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+
+.studyduel-logo-wrapper.size-small .studyduel-logo-img {
+  height: 28px;
+}
+
+.studyduel-logo-wrapper.size-medium .studyduel-logo-img {
+  height: 36px;
+}
+
+.studyduel-logo-wrapper.size-large .studyduel-logo-img {
+  height: 60px;
+}

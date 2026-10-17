@@ -1,0 +1,41 @@
+.minimal-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--sd-radius-pill);
+  background: var(--sd-glass-btn-bg);
+  border: 1px solid var(--sd-glass-btn-border);
+  color: var(--sd-text-primary);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.minimal-theme-toggle:hover {
+  background: var(--sd-glass-btn-hover-bg);
+  border-color: var(--sd-glass-btn-hover-border);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(55, 42, 28, 0.1);
+}
+
+.minimal-theme-toggle:active {
+  transform: translateY(0) scale(0.94);
+  box-shadow: 0 1px 3px rgba(55, 42, 28, 0.08);
+}
+
+.theme-toggle-icon {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--sd-transition);
+}
+
+.minimal-theme-toggle:hover .theme-toggle-icon {
+  transform: rotate(18deg) scale(1.08);
+}

@@ -1,0 +1,88 @@
+.minimal-header-actions {
+  position: absolute;
+  top: 28px;
+  right: 28px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.minimal-try-me-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--sd-radius-pill);
+  background: var(--sd-glass-btn-bg);
+  border: 1px solid var(--sd-glass-btn-border);
+  color: var(--sd-text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(55, 42, 28, 0.06);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.minimal-try-me-btn:hover {
+  background: var(--sd-glass-btn-hover-bg);
+  border-color: var(--sd-glass-btn-hover-border);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(55, 42, 28, 0.12);
+}
+
+.minimal-try-me-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 1px 3px rgba(55, 42, 28, 0.08);
+}
+
+.minimal-try-me-btn:focus-visible,
+.minimal-theme-toggle:focus-visible {
+  outline: 2px solid var(--sd-coral);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .minimal-header-actions {
+    top: 16px;
+    right: 16px;
+  }
+}
+
+[data-theme='light'] .minimal-try-me-btn,
+[data-theme='light'] .minimal-theme-toggle {
+  background: var(--sd-glass-btn-bg) !important;
+  border: 1px solid var(--sd-glass-btn-border);
+  color: #1f2937;
+  font-weight: 500;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(55, 42, 28, 0.06);
+  text-shadow: none;
+}
+
+[data-theme='light'] .minimal-try-me-btn:hover,
+[data-theme='light'] .minimal-theme-toggle:hover {
+  background: var(--sd-glass-btn-hover-bg) !important;
+  border-color: var(--sd-glass-btn-hover-border);
+  color: #1f2937;
+  box-shadow: 0 5px 14px rgba(55, 42, 28, 0.12), 0 0 0 3px rgba(31, 41, 55, 0.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimal-try-me-btn,
+  .minimal-theme-toggle,
+  .theme-toggle-icon {
+    transition: none !important;
+  }
+}
