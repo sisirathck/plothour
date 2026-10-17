@@ -1,7 +1,5 @@
 .minimal-header-actions {
-  position: absolute;
-  top: 28px;
-  right: 28px;
+  position: relative;
   z-index: 50;
   display: flex;
   align-items: center;
@@ -54,8 +52,7 @@
 
 @media (max-width: 640px) {
   .minimal-header-actions {
-    top: 16px;
-    right: 16px;
+    gap: 8px;
   }
 }
 

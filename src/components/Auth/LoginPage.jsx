@@ -29,8 +29,14 @@ export const LoginPage = ({ onTryDemo }) => {
       {/* Dynamic Background Illustration with Cross-fade */}
       <BackgroundBackdrop />
 
-      {/* Top Right Header Controls: TryMe + Theme Toggle */}
-      <HeaderActions onTryDemo={handleTryDemo} />
+      {/* Top Header Bar: Brand Logo & Tagline on Left, Try Demo & Theme Toggle on Right */}
+      <header className="login-header-bar">
+        <div className="login-brand-header">
+          <StudyDuelLogo size="large" />
+          <p className="login-brand-tagline">A little progress, every day</p>
+        </div>
+        <HeaderActions onTryDemo={handleTryDemo} />
+      </header>
 
       {/* Toast Alert */}
       {notification && (
@@ -38,12 +44,6 @@ export const LoginPage = ({ onTryDemo }) => {
           <span>{notification.message}</span>
         </div>
       )}
-
-      {/* Main Layout Area */}
-      <div className="login-brand-header">
-        <StudyDuelLogo size="large" />
-        <p className="login-brand-tagline">A little progress, every day</p>
-      </div>
 
       <main className="login-page-main">
         <div className="login-left-pane">

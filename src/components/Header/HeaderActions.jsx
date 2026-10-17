@@ -4,7 +4,7 @@ import './HeaderActions.css';
 
 export const HeaderActions = ({ onTryDemo }) => {
   return (
-    <header className="minimal-header-actions" role="banner">
+    <div className="minimal-header-actions" role="region" aria-label="Page actions">
       <button
         type="button"
         id="try-me-btn"
@@ -16,6 +16,6 @@ export const HeaderActions = ({ onTryDemo }) => {
       </button>
 
       <ThemeToggle />
-    </header>
+    </div>
   );
 };
