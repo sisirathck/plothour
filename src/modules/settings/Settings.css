@@ -1,0 +1,80 @@
+/* ==========================================================================
+   StudyDuel — Settings Module Styles (/settings)
+   ========================================================================== */
+
+.demo-settings-page {
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 30px;
+  background: var(--sd-bg-surface);
+  border: 1px solid var(--sd-border-glass);
+  border-radius: var(--sd-radius-xl);
+  box-shadow: var(--sd-shadow-card);
+}
+
+.settings-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--sd-text-secondary);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: color var(--sd-transition-fast);
+}
+
+.settings-back-btn:hover {
+  color: var(--sd-orange);
+}
+
+.demo-settings-heading {
+  margin: 24px 0;
+}
+
+.demo-settings-heading h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+  color: var(--sd-text-primary);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.demo-settings-heading p {
+  margin: 0;
+  color: var(--sd-text-muted);
+  font-size: 13.5px;
+}
+
+.demo-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--sd-border-soft);
+  border-bottom: 1px solid var(--sd-border-soft);
+}
+
+.demo-settings-row div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--sd-text-primary);
+}
+
+.demo-settings-row span,
+.demo-settings-note {
+  color: var(--sd-text-muted);
+  font-size: 13px;
+}
+
+.demo-settings-note {
+  margin-top: 20px;
+  line-height: 1.5;
+}

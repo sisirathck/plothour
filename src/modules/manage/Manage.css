@@ -1,0 +1,276 @@
+/* ==========================================================================
+   StudyDuel — Manage Module Styles (/manage)
+   ========================================================================== */
+
+.manage-module-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.demo-manage-card {
+  max-width: none;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px;
+  background: var(--sd-bg-surface);
+  border: 1px solid var(--sd-border-glass);
+  border-radius: var(--sd-radius-xl);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--sd-shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.manage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.manage-heading-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.manage-heading-title h2 {
+  margin: 0;
+  color: var(--sd-text-primary);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.manage-heading-title p {
+  margin: 4px 0 0;
+  color: var(--sd-text-muted);
+  font-size: 13px;
+}
+
+.manage-count {
+  color: var(--sd-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.manage-add-project {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.manage-add-project input {
+  min-width: 0;
+  flex: 1;
+  height: 42px;
+  padding: 0 14px;
+  color: var(--sd-text-primary);
+  background: var(--sd-bg-base);
+  border: 1px solid var(--sd-border-soft);
+  border-radius: var(--sd-radius-md);
+  outline: none;
+  font-size: 13.5px;
+}
+
+.manage-add-project input:focus {
+  border-color: var(--sd-orange);
+}
+
+.manage-add-project button {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 1px solid var(--sd-orange);
+  border-radius: var(--sd-radius-md);
+  background: var(--sd-orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--sd-transition-fast);
+}
+
+.manage-add-project button:hover {
+  background: var(--sd-coral-hover);
+}
+
+.manage-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.manage-project {
+  overflow: hidden;
+  border: 1px solid var(--sd-border-soft);
+  border-radius: var(--sd-radius-lg);
+  background: var(--sd-bg-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.manage-project-heading,
+.manage-subject-row {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.manage-project-heading {
+  background: var(--sd-bg-subtle);
+}
+
+.manage-project-heading > strong,
+.manage-subject-row > strong {
+  color: var(--sd-text-primary);
+  font-size: 13.5px;
+}
+
+.manage-subjects {
+  padding: 6px 14px 14px 40px;
+}
+
+.manage-subject-row {
+  min-height: 46px;
+  border-bottom: 1px solid var(--sd-border-soft);
+  padding: 0 10px;
+}
+
+.manage-subject-row:last-of-type {
+  border-bottom: 0;
+}
+
+.manage-color-wrap {
+  width: 26px;
+  height: 26px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.manage-color-wrap input {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.manage-color-wrap input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.manage-color-wrap input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 50%;
+}
+
+.manage-row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.manage-row-actions button,
+.manage-inline-edit button {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--sd-radius-sm);
+  background: transparent;
+  color: var(--sd-text-muted);
+  cursor: pointer;
+}
+
+.manage-row-actions button:hover,
+.manage-inline-edit button:hover {
+  background: var(--sd-bg-subtle);
+  color: var(--sd-orange);
+}
+
+.manage-add-subject {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.manage-add-subject input {
+  height: 36px;
+  font-size: 12.5px;
+  padding: 0 12px;
+  background: var(--sd-bg-base);
+  border: 1px solid var(--sd-border-soft);
+  border-radius: var(--sd-radius-md);
+  color: var(--sd-text-primary);
+  flex: 1;
+}
+
+.manage-add-subject button {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 650;
+  background: var(--sd-bg-subtle);
+  border: 1px solid var(--sd-border-soft);
+  border-radius: var(--sd-radius-md);
+  color: var(--sd-text-primary);
+  cursor: pointer;
+}
+
+.manage-add-subject button:hover {
+  border-color: var(--sd-orange);
+  color: var(--sd-orange);
+}
+
+.manage-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--sd-text-muted);
+  font-size: 13.5px;
+}
+
+.manage-inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manage-inline-edit input {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--sd-radius-sm);
+  border: 1px solid var(--sd-border-soft);
+  background: var(--sd-bg-base);
+  color: var(--sd-text-primary);
+}
+
+@media (max-width: 600px) {
+  .manage-heading {
+    align-items: flex-start;
+  }
+  .manage-project-heading,
+  .manage-subject-row {
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+  }
+  .manage-subjects {
+    padding-left: 16px;
+  }
+  .manage-add-project {
+    flex-direction: column;
+  }
+}
