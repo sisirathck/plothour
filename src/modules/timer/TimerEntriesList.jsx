@@ -33,8 +33,7 @@ const getDateRange = (range, now = new Date()) => {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(start);
   if (range === 'week') {
-    const daysFromMonday = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - daysFromMonday);
+    start.setDate(start.getDate() - start.getDay());
   } else if (range === 'month') {
     start.setDate(1);
   } else if (range === 'quarter') {
@@ -44,6 +43,7 @@ const getDateRange = (range, now = new Date()) => {
 };
 
 const durationLabel = (seconds) => {
+  if (seconds > 0 && seconds < 60) return `${Math.floor(seconds)}s`;
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
@@ -300,6 +300,17 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
                               onChange={(e) => setDraft({ ...draft, endTime: e.target.value })}
                             />
                           </div>
+                        </div>
+                        <div className="edit-field edit-field-wide">
+                          <label>Session outcome (optional)</label>
+                          <input
+                            type="text"
+                            className="edit-input"
+                            value={draft.note || ''}
+                            onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+                            placeholder="What did you finish? e.g. solved 8 practice problems"
+                            maxLength={240}
+                          />
                         </div>
                       </div>
 

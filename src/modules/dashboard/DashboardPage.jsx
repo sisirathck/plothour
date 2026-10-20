@@ -6,6 +6,10 @@ import {
   LogOut,
   Sparkles,
   Zap,
+  SlidersHorizontal,
+  ArrowUp,
+  ArrowDown,
+  Pin,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import './Dashboard.css';
@@ -46,6 +50,7 @@ const pickNextHeroIndex = (currentIdx, totalCount) => {
 /* ── Helpers ─────────────────────────────────── */
 const fmtDur = (s) => {
   if (!s || s <= 0) return '0m';
+  if (s < 60) return `${Math.floor(s)}s`;
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
@@ -63,8 +68,8 @@ const getHourTicks = (seconds) => {
   return Array.from({ length: Math.round(max / step) + 1 }, (_, index) => index * step);
 };
 
-const DailyHoursGraph = ({ days, title }) => {
-  const width = 900;
+const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
+  const width = Math.max(900, days.length * 34);
   const height = 240;
   const margin = { top: 14, right: 18, bottom: 34, left: 44 };
   const plotWidth = width - margin.left - margin.right;
@@ -81,7 +86,7 @@ const DailyHoursGraph = ({ days, title }) => {
         <h3 className="db-section-title">Daily Hours</h3>
         <span className="db-section-meta">{title}</span>
       </div>
-      <div className="db-chart-scroll">
+      {!hasData ? <QuietEmptyState message="No sessions in this date range yet." onStart={onStart} /> : <div className="db-chart-scroll">
         <svg className="db-svg-chart db-daily-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily study hours for ${title}`}>
           {hourTicks.map((value) => {
             const y = margin.top + plotHeight - (value / maxHours) * plotHeight;
@@ -101,20 +106,20 @@ const DailyHoursGraph = ({ days, title }) => {
                 <rect className="db-chart-bar" x={x} y={y} width={barWidth} height={Math.max(day.seconds ? 2 : 0, barHeight)} rx="4">
                   <title>{`${day.dateLabel} · ${day.seconds ? fmtDur(day.seconds) : 'No study logged'}`}</title>
                 </rect>
-                {(index === 0 || index % 4 === 0 || index === days.length - 1) && (
+                {(index === 0 || index % Math.max(1, Math.ceil(days.length / 10)) === 0 || index === days.length - 1) && (
                   <text className="db-chart-axis-label" x={x + barWidth / 2} y={height - 10} textAnchor="middle">{day.dayOfMonth}</text>
                 )}
               </g>
             );
           })}
         </svg>
-      </div>
+      </div>}
     </div>
   );
 };
 
-const WeeklyTrendGraph = ({ weeks }) => {
-  const width = 900;
+const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
+  const width = Math.max(900, weeks.length * 56);
   const height = 300;
   const margin = { top: 20, right: 22, bottom: 42, left: 48 };
   const plotWidth = width - margin.left - margin.right;
@@ -131,14 +136,14 @@ const WeeklyTrendGraph = ({ weeks }) => {
       <div className="db-chart-heading db-chart-heading-stack">
         <div>
           <h3 className="db-section-title">Weekly Study Trend</h3>
-          <span className="db-section-meta">Last 12 weeks · 4-week moving average</span>
+          <span className="db-section-meta">{rangeLabel} · Sunday-start weeks</span>
         </div>
         <div className="db-chart-legend" aria-label="Chart legend">
           <span><i className="db-legend-bar" /> Study hours</span>
           <span><i className="db-legend-line" /> 4-week average</span>
         </div>
       </div>
-      <div className="db-chart-scroll">
+      {!hasData ? <QuietEmptyState message="No weekly activity to chart in this range." onStart={onStart} /> : <div className="db-chart-scroll">
         <svg className="db-svg-chart db-trend-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Weekly study hours and four-week moving average">
           {hourTicks.map((value) => {
             const y = margin.top + plotHeight - (value / maxHours) * plotHeight;
@@ -160,7 +165,7 @@ const WeeklyTrendGraph = ({ weeks }) => {
                 <rect className="db-chart-bar db-chart-bar-muted" x={x} y={y} width={barWidth} height={Math.max(week.seconds ? 2 : 0, barHeight)} rx="4">
                   <title>{`Week of ${week.startLabel} · ${fmtDur(week.seconds)}`}</title>
                 </rect>
-                {index % 2 === 0 && (
+                {(index === 0 || index % Math.max(1, Math.ceil(weeks.length / 8)) === 0 || index === weeks.length - 1) && (
                   <text className="db-chart-axis-label" x={xFor(index)} y={height - 12} textAnchor="middle">{week.axisLabel}</text>
                 )}
                 <circle className="db-chart-line-point" cx={xFor(index)} cy={yFor(week.averageSeconds)} r="3.2">
@@ -171,12 +176,12 @@ const WeeklyTrendGraph = ({ weeks }) => {
           })}
           <polyline className="db-chart-average-line" points={linePoints} />
         </svg>
-      </div>
+      </div>}
     </div>
   );
 };
 
-const SessionLengthGraph = ({ buckets }) => {
+const SessionLengthGraph = ({ buckets, hasData, onStart }) => {
   const width = 720;
   const height = 300;
   const margin = { top: 22, right: 18, bottom: 44, left: 42 };
@@ -193,10 +198,10 @@ const SessionLengthGraph = ({ buckets }) => {
       <div className="db-chart-heading db-chart-heading-stack">
         <div>
           <h3 className="db-section-title">Session Length</h3>
-          <span className="db-section-meta">Distribution across tracked sessions</span>
+          <span className="db-section-meta">Distribution across sessions in the selected range</span>
         </div>
       </div>
-      <div className="db-chart-scroll">
+      {!hasData ? <QuietEmptyState message="Session length appears after your first tracked session." onStart={onStart} /> : <div className="db-chart-scroll">
         <svg className="db-svg-chart db-session-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Number of sessions by session length">
           {Array.from({ length: 5 }, (_, index) => {
             const value = (maxY * index) / 4;
@@ -223,15 +228,84 @@ const SessionLengthGraph = ({ buckets }) => {
             );
           })}
         </svg>
-      </div>
+      </div>}
     </div>
   );
 };
+
+const DashboardSection = ({ section, order, onExpand, children }) => {
+  if (!section?.visible) return null;
+  return (
+    <section className="db-preference-section" style={{ order }} aria-label={section.label}>
+      {section.collapsed ? (
+        <button type="button" className="db-collapsed-section" onClick={() => onExpand(section.id)}>
+          <span>{section.label}</span><span>Show section <span aria-hidden="true">＋</span></span>
+        </button>
+      ) : children}
+    </section>
+  );
+};
+
+const QuietEmptyState = ({ message, onStart }) => (
+  <div className="db-range-empty">
+    <span>{message}</span>
+    <button type="button" onClick={onStart}>Start a session <span aria-hidden="true">→</span></button>
+  </div>
+);
 
 
 const dateKey = (d) => {
   const dt = new Date(d);
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+};
+
+const dashboardRangeOptions = [
+  { id: 'today', label: 'Today' },
+  { id: '7days', label: 'Last 7 days' },
+  { id: 'week', label: 'This week' },
+  { id: 'month', label: 'This month' },
+  { id: '30days', label: 'Last 30 days' },
+  { id: '90days', label: 'Last 90 days' },
+  { id: 'all', label: 'All time' },
+  { id: 'custom', label: 'Custom' },
+];
+
+const dashboardSectionDefaults = [
+  { id: 'overview', label: 'Overview', visible: true, pinned: true, collapsed: false },
+  { id: 'focus', label: 'Focus distribution', visible: true, pinned: false, collapsed: false },
+  { id: 'rhythms', label: 'Study rhythms', visible: true, pinned: false, collapsed: false },
+  { id: 'projects', label: 'Project progress', visible: true, pinned: true, collapsed: false },
+  { id: 'patterns', label: 'Study pattern charts', visible: true, pinned: false, collapsed: false },
+  { id: 'heatmap', label: 'Time-of-day heatmap', visible: true, pinned: false, collapsed: false },
+  { id: 'calendar', label: 'Activity calendar', visible: true, pinned: false, collapsed: false },
+];
+
+const getDashboardWindow = (range, customStart, customEnd, entries, now = new Date()) => {
+  const end = new Date(now);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (range === 'today') { /* start already marks today */ }
+  else if (range === '7days') start.setDate(start.getDate() - 6);
+  else if (range === 'week') start.setDate(start.getDate() - start.getDay());
+  else if (range === 'month') start.setDate(1);
+  else if (range === '30days') start.setDate(start.getDate() - 29);
+  else if (range === '90days') start.setDate(start.getDate() - 89);
+  else if (range === 'custom') {
+    const parsedStart = customStart ? new Date(`${customStart}T00:00:00`) : null;
+    const parsedEnd = customEnd ? new Date(`${customEnd}T23:59:59.999`) : null;
+    return {
+      start: parsedStart && !Number.isNaN(parsedStart.getTime()) ? parsedStart : start,
+      end: parsedEnd && !Number.isNaN(parsedEnd.getTime()) ? new Date(Math.min(parsedEnd.getTime(), end.getTime())) : end,
+    };
+  } else if (range === 'all') {
+    const timestamps = entries.map((entry) => new Date(entry.startedAt).getTime()).filter(Number.isFinite);
+    if (timestamps.length) {
+      const earliest = new Date(Math.min(...timestamps));
+      earliest.setHours(0, 0, 0, 0);
+      return { start: earliest, end };
+    }
+  }
+  start.setHours(0, 0, 0, 0);
+  return { start, end };
 };
 
 const isInRange = (entry, range) => {
@@ -243,7 +317,7 @@ const isInRange = (entry, range) => {
   }
   if (range === 'Week' || range === 'week') {
     const s = new Date(now);
-    s.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    s.setDate(now.getDate() - now.getDay());
     s.setHours(0, 0, 0, 0);
     return d >= s;
   }
@@ -280,12 +354,65 @@ const calcStreak = (entries) => {
   return n;
 };
 
+const calcLongestStreak = (entries) => {
+  const serials = Array.from(new Set(entries.filter((entry) => Number(entry.durationSeconds) > 0 && entry.startedAt).map((entry) => {
+    const [year, month, day] = dateKey(entry.startedAt).split('-').map(Number);
+    return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+  }))).sort((a, b) => a - b);
+  let best = 0;
+  let current = 0;
+  let previous = null;
+  serials.forEach((day) => {
+    current = previous != null && day === previous + 1 ? current + 1 : 1;
+    best = Math.max(best, current);
+    previous = day;
+  });
+  return best;
+};
+
 export function DashboardPage({ user, onNavigate, standalone = false }) {
   const { theme: currentTheme, toggleTheme } = useTheme();
   const isDark = currentTheme === 'dark';
 
   const [activeNav, setActiveNav] = useState('Dashboard');
-  const [portfolioRange, setPortfolioRange] = useState('Today');
+  const preferenceKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences` : 'studyduel_demo_dashboard_preferences';
+  const [dateRange, setDateRange] = useState(() => {
+    try { return localStorage.getItem(`${preferenceKey}_range`) || 'week'; } catch { return 'week'; }
+  });
+  const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
+  const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(id); }, []);
+  const [dashboardPreferences, setDashboardPreferences] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(preferenceKey) || 'null');
+      const current = new Map((Array.isArray(saved) ? saved : []).map((item) => [item.id, item]));
+      return dashboardSectionDefaults.map((section) => ({ ...section, ...current.get(section.id) }));
+    } catch { return dashboardSectionDefaults; }
+  });
+  useEffect(() => {
+    localStorage.setItem(`${preferenceKey}_range`, dateRange);
+  }, [preferenceKey, dateRange]);
+  useEffect(() => {
+    localStorage.setItem(preferenceKey, JSON.stringify(dashboardPreferences));
+  }, [preferenceKey, dashboardPreferences]);
+  const orderedDashboardSections = useMemo(() => [...dashboardPreferences].sort((a, b) => (
+    Number(b.pinned) - Number(a.pinned) || dashboardPreferences.findIndex((item) => item.id === a.id) - dashboardPreferences.findIndex((item) => item.id === b.id)
+  )), [dashboardPreferences]);
+  const dashboardSection = (id) => dashboardPreferences.find((section) => section.id === id);
+  const dashboardSectionOrder = (id) => orderedDashboardSections.findIndex((section) => section.id === id) + 1;
+  const updateDashboardSection = (id, changes) => setDashboardPreferences((sections) => sections.map((section) => (
+    section.id === id ? { ...section, ...changes } : section
+  )));
+  const moveDashboardSection = (id, direction) => setDashboardPreferences((sections) => {
+    const next = [...sections];
+    const index = next.findIndex((section) => section.id === id);
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return sections;
+    [next[index], next[target]] = [next[target], next[index]];
+    return next;
+  });
 
   // Project goals are managed in /manage and stored with the project hierarchy.
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
@@ -383,32 +510,133 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     };
   }, [entriesKey]);
 
+  const dateWindow = useMemo(
+    () => getDashboardWindow(dateRange, customStart, customEnd, entries, now),
+    [dateRange, customStart, customEnd, entries, now]
+  );
+  const rangeEntries = useMemo(() => entries.filter((entry) => {
+    const time = new Date(entry.startedAt).getTime();
+    return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= dateWindow.start.getTime() && time <= dateWindow.end.getTime();
+  }), [entries, dateWindow]);
+  const rangeDaysCount = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
+  const rangeSecs = useMemo(
+    () => rangeEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0),
+    [rangeEntries]
+  );
+  const previousWindow = useMemo(() => {
+    if (dateRange === 'all') return null;
+    const shiftDays = (date, amount) => {
+      const shifted = new Date(date);
+      shifted.setDate(shifted.getDate() + amount);
+      return shifted;
+    };
+    if (dateRange === 'today') return { start: shiftDays(dateWindow.start, -1), end: shiftDays(dateWindow.end, -1) };
+    if (dateRange === 'week') {
+      return { start: shiftDays(dateWindow.start, -7), end: shiftDays(dateWindow.end, -7) };
+    }
+    if (dateRange === 'month') {
+      const start = new Date(dateWindow.start.getFullYear(), dateWindow.start.getMonth() - 1, 1);
+      const previousMonthLastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+      const end = new Date(start.getFullYear(), start.getMonth(), Math.min(dateWindow.end.getDate(), previousMonthLastDay), dateWindow.end.getHours(), dateWindow.end.getMinutes(), dateWindow.end.getSeconds(), dateWindow.end.getMilliseconds());
+      return { start, end };
+    }
+    if (dateRange === '7days') return { start: shiftDays(dateWindow.start, -7), end: shiftDays(dateWindow.end, -7) };
+    if (dateRange === '30days') return { start: shiftDays(dateWindow.start, -30), end: shiftDays(dateWindow.end, -30) };
+    if (dateRange === '90days') return { start: shiftDays(dateWindow.start, -90), end: shiftDays(dateWindow.end, -90) };
+    const span = Math.max(1, dateWindow.end.getTime() - dateWindow.start.getTime() + 1);
+    return {
+      start: new Date(dateWindow.start.getTime() - span),
+      end: new Date(dateWindow.start.getTime() - 1),
+    };
+  }, [dateRange, dateWindow]);
+  const previousRangeEntries = useMemo(() => previousWindow ? entries.filter((entry) => {
+    const time = new Date(entry.startedAt).getTime();
+      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= previousWindow.start.getTime() && time <= previousWindow.end.getTime();
+  }) : [], [entries, previousWindow]);
+  const previousRangeSecs = useMemo(
+    () => previousRangeEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0),
+    [previousRangeEntries]
+  );
+  const rangeDeltaSecs = rangeSecs - previousRangeSecs;
+  const rangeDeltaPct = previousRangeSecs > 0 ? Math.round((rangeDeltaSecs / previousRangeSecs) * 100) : null;
+  const rangeActiveDays = new Set(rangeEntries.filter((entry) => entry.durationSeconds > 0).map((entry) => dateKey(entry.startedAt))).size;
+  const averageSessionSecs = rangeEntries.length ? Math.round(rangeSecs / rangeEntries.length) : 0;
+  const averageActiveDaySecs = rangeActiveDays ? Math.round(rangeSecs / rangeActiveDays) : 0;
+  const rangeLabel = dateRange === 'custom'
+    ? `${dateWindow.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} – ${dateWindow.end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : dashboardRangeOptions.find((item) => item.id === dateRange)?.label || 'This week';
+  const rangeGoalHours = useMemo(() => projects.reduce((total, project) => {
+    if (project.archived) return total;
+    return total + (project.subjects || []).reduce((projectTotal, subject) => {
+      if (dateRange === 'today') return projectTotal + (Number(subject.goals?.daily) || 0);
+      if (dateRange === '7days') return projectTotal + (Number(subject.goals?.daily) || 0) * 7;
+      if (dateRange === 'week') return projectTotal + (Number(subject.goals?.weekly) || 0);
+      if (dateRange === 'month') return projectTotal + (Number(subject.goals?.monthly) || 0);
+      if (['30days', '90days', 'custom'].includes(dateRange)) return projectTotal + (Number(subject.goals?.daily) || 0) * (dateRange === '30days' ? 30 : dateRange === '90days' ? 90 : rangeDaysCount);
+      return projectTotal;
+    }, 0);
+  }, 0), [projects, dateRange, rangeDaysCount]);
+  const rangeGoalSecs = rangeGoalHours * 3600;
+
+  const weeklyReview = useMemo(() => {
+    const now = new Date();
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+    const priorStart = new Date(weekStart);
+    priorStart.setDate(priorStart.getDate() - 7);
+    const current = entries.filter((entry) => {
+      const time = new Date(entry.startedAt).getTime();
+      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= weekStart.getTime() && time <= now.getTime();
+    });
+    const priorEnd = new Date(now.getTime() - 7 * 86400000);
+    const prior = entries.filter((entry) => {
+      const time = new Date(entry.startedAt).getTime();
+      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= priorStart.getTime() && time <= priorEnd.getTime();
+    });
+    const seconds = current.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
+    const previousSeconds = prior.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
+    const activeDays = new Set(current.map((entry) => dateKey(entry.startedAt))).size;
+    const byProject = new Map();
+    current.forEach((entry) => {
+      const name = entry.projectName || 'General Study';
+      byProject.set(name, (byProject.get(name) || 0) + (Number(entry.durationSeconds) || 0));
+    });
+    const topProject = Array.from(byProject.entries()).sort((a, b) => b[1] - a[1])[0] || null;
+    const weeklyGoal = projects.filter((project) => !project.archived).reduce(
+      (sum, project) => sum + (project.subjects || []).reduce((part, subject) => part + (Number(subject.goals?.weekly) || 0), 0), 0
+    ) * 3600;
+    const elapsedDays = Math.min(7, now.getDay() + 1);
+    const expectedByNow = weeklyGoal * elapsedDays / 7;
+    let suggestion = 'Add a weekly target in Manage to get a pace recommendation.';
+    if (!current.length) suggestion = 'Start a session today to give this week some momentum.';
+    else if (weeklyGoal > 0 && seconds < expectedByNow) suggestion = `${fmtDur(expectedByNow - seconds)} more today keeps you on pace for your weekly goal.`;
+    else if (weeklyGoal > 0) suggestion = 'You are on pace for this week’s goal. Keep your next session focused.';
+    else if (topProject) suggestion = `Your most studied project is ${topProject[0]}. Set a weekly target to track its pace.`;
+    return {
+      seconds,
+      previousSeconds,
+      delta: seconds - previousSeconds,
+      sessions: current.length,
+      activeDays,
+      topProject,
+      weeklyGoal,
+      goalPct: weeklyGoal ? Math.min(100, Math.round((seconds / weeklyGoal) * 100)) : null,
+      suggestion,
+    };
+  }, [entries, projects, now]);
+
   /* ── Core Computed Metrics ───────────────────── */
-  const todayEntries = useMemo(() => entries.filter((e) => isInRange(e, 'Today')), [entries]);
-  const weekEntries = useMemo(() => entries.filter((e) => isInRange(e, 'Week')), [entries]);
-  const monthEntries = useMemo(() => entries.filter((e) => isInRange(e, 'Month')), [entries]);
+  const todayEntries = useMemo(() => entries.filter((e) => Number(e.durationSeconds) > 0 && isInRange(e, 'Today')), [entries]);
 
   const todaySecs = useMemo(
     () => todayEntries.reduce((s, e) => s + (e.durationSeconds || 0), 0),
     [todayEntries]
   );
-  const weekSecs = useMemo(
-    () => weekEntries.reduce((s, e) => s + (e.durationSeconds || 0), 0),
-    [weekEntries]
-  );
-  const monthSecs = useMemo(
-    () => monthEntries.reduce((s, e) => s + (e.durationSeconds || 0), 0),
-    [monthEntries]
-  );
-  const allSecs = useMemo(
-    () => entries.reduce((s, e) => s + (e.durationSeconds || 0), 0),
-    [entries]
-  );
-
   // Daily goal calculation
   const goalSecs = dailyGoalHours * 3600;
   const goalPct = goalSecs > 0 ? Math.min(100, Math.round((todaySecs / goalSecs) * 100)) : 0;
   const goalRemainingSecs = Math.max(0, goalSecs - todaySecs);
+  const currentStreak = useMemo(() => calcStreak(entries), [entries]);
+  const longestStreak = useMemo(() => calcLongestStreak(entries), [entries]);
 
   // SVG Progress Ring circumference: 2 * PI * 40 = 251.327
   const ringCircumference = 251.327;
@@ -416,82 +644,20 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     ? ringCircumference * (1 - Math.min(1, todaySecs / goalSecs))
     : ringCircumference;
 
-  // Yesterday's volume for comparison
-  const yestSecs = useMemo(() => {
-    const yest = new Date();
-    yest.setDate(yest.getDate() - 1);
-    const yK = dateKey(yest);
-    return entries
-      .filter((e) => e.startedAt && dateKey(e.startedAt) === yK)
-      .reduce((s, e) => s + (e.durationSeconds || 0), 0);
-  }, [entries]);
-
-  // Prior week volume for WoW Velocity
-  const priorWeekSecs = useMemo(() => {
-    const now = new Date();
-    const day = (now.getDay() + 6) % 7;
-    const thisStart = new Date(now);
-    thisStart.setDate(now.getDate() - day);
-    thisStart.setHours(0, 0, 0, 0);
-
-    const prevStart = new Date(thisStart);
-    prevStart.setDate(prevStart.getDate() - 7);
-    const prevEnd = new Date(thisStart);
-    prevEnd.setDate(prevEnd.getDate() - 1);
-    prevEnd.setHours(23, 59, 59, 999);
-
-    return entries
-      .filter((e) => {
-        if (!e.startedAt) return false;
-        const d = new Date(e.startedAt);
-        return d >= prevStart && d <= prevEnd;
-      })
-      .reduce((s, e) => s + (e.durationSeconds || 0), 0);
-  }, [entries]);
-
-  const weekVelocityPct = useMemo(() => {
-    if (priorWeekSecs === 0) return weekSecs > 0 ? 100 : 0;
-    return Math.round(((weekSecs - priorWeekSecs) / priorWeekSecs) * 100);
-  }, [weekSecs, priorWeekSecs]);
-
-  // Streak & 14-day consistency
-  const streak = useMemo(() => calcStreak(entries), [entries]);
-  const consistency14 = useMemo(() => {
-    const dates = new Set();
-    entries.forEach((e) => {
-      if (e.durationSeconds > 0 && e.startedAt) dates.add(dateKey(e.startedAt));
-    });
-    const now = new Date();
-    let activeDays = 0;
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      if (dates.has(dateKey(d))) activeDays++;
-    }
-    return Math.round((activeDays / 14) * 100);
-  }, [entries]);
-
-  // Daily avg this week
-  const dailyAvg = useMemo(() => {
-    if (!weekEntries.length) return 0;
-    const activeDays = new Set(weekEntries.map((e) => dateKey(e.startedAt)));
-    return Math.round(weekSecs / Math.max(1, activeDays.size));
-  }, [weekEntries, weekSecs]);
-
   /* ── ROW 2: Focus Depth & Flow State Tiers ──── */
   const sessionTierStats = useMemo(() => {
     let sprint = 0,
       pomodoro = 0,
       deepFlow = 0,
       marathon = 0;
-    entries.forEach((e) => {
+    rangeEntries.forEach((e) => {
       const dur = e.durationSeconds || 0;
       if (dur < 20 * 60) sprint++;
       else if (dur < 45 * 60) pomodoro++;
       else if (dur < 90 * 60) deepFlow++;
       else marathon++;
     });
-    const total = entries.length;
+    const total = rangeEntries.length;
     const flowCount = deepFlow + marathon;
     const flowRatio = total > 0 ? Math.round((flowCount / total) * 100) : 0;
 
@@ -507,24 +673,24 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       deepFlowPct: total > 0 ? Math.round((deepFlow / total) * 100) : 0,
       marathonPct: total > 0 ? Math.round((marathon / total) * 100) : 0,
     };
-  }, [entries]);
+  }, [rangeEntries]);
 
   // Avg focus depth & longest session
   const avgFocusDepth = useMemo(() => {
-    if (!entries.length) return 0;
-    return Math.round(allSecs / entries.length);
-  }, [entries, allSecs]);
+    if (!rangeEntries.length) return 0;
+    return Math.round(rangeSecs / rangeEntries.length);
+  }, [rangeEntries, rangeSecs]);
 
   const longestSession = useMemo(() => {
-    if (!entries.length) return 0;
-    return Math.max(...entries.map((e) => e.durationSeconds || 0));
-  }, [entries]);
+    if (!rangeEntries.length) return 0;
+    return Math.max(...rangeEntries.map((e) => e.durationSeconds || 0));
+  }, [rangeEntries]);
 
   // Context switching rate (subjects per active day)
   const contextSwitching = useMemo(() => {
-    if (!entries.length) return '1.0 subj/day';
+    if (!rangeEntries.length) return '1.0 subj/day';
     const dayMap = {};
-    entries.forEach((e) => {
+    rangeEntries.forEach((e) => {
       const k = dateKey(e.startedAt);
       if (!dayMap[k]) dayMap[k] = new Set();
       dayMap[k].add(e.subjectName || e.projectName || 'General');
@@ -533,13 +699,13 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     if (!days.length) return '1.0 subj/day';
     const totalSubjects = days.reduce((sum, d) => sum + dayMap[d].size, 0);
     return `${(totalSubjects / days.length).toFixed(1)} subj/day`;
-  }, [entries]);
+  }, [rangeEntries]);
 
   // Peak cognitive hour
   const peakHourLabel = useMemo(() => {
-    if (!entries.length) return '—';
+    if (!rangeEntries.length) return '—';
     const hourVolumes = Array(24).fill(0);
-    entries.forEach((e) => {
+    rangeEntries.forEach((e) => {
       if (!e.startedAt) return;
       const h = new Date(e.startedAt).getHours();
       hourVolumes[h] += e.durationSeconds || 0;
@@ -556,7 +722,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const period = bestH >= 12 ? 'PM' : 'AM';
     const displayH = bestH % 12 === 0 ? 12 : bestH % 12;
     return `${displayH}:00 ${period}`;
-  }, [entries]);
+  }, [rangeEntries]);
 
   /* ── ROW 3: Circadian Focus Window ──────────── */
   const circadianStats = useMemo(() => {
@@ -564,7 +730,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       a = 0,
       e = 0,
       n = 0;
-    entries.forEach((entry) => {
+    rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const h = new Date(entry.startedAt).getHours();
       const dur = entry.durationSeconds || 0;
@@ -597,13 +763,13 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       bestPct: total > 0 ? Math.round((bestSlot.secs / total) * 100) : 0,
       hasData: total > 0,
     };
-  }, [entries]);
+  }, [rangeEntries]);
 
   /* ── ROW 3: Day-of-Week Power Rhythm ────────── */
   const dayOfWeekStats = useMemo(() => {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dayTotals = [0, 0, 0, 0, 0, 0, 0];
-    entries.forEach((entry) => {
+    rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const dayIdx = new Date(entry.startedAt).getDay();
       dayTotals[dayIdx] += entry.durationSeconds || 0;
@@ -631,85 +797,105 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       powerDayVolume: fmtDur(dayTotals[bestIdx]),
       hasData: dayTotals.some((s) => s > 0),
     };
-  }, [entries]);
+  }, [rangeEntries]);
 
-  /* ── ROW 4: Weekly Study (Last 7 Days) ──────── */
+  /* ── Study volume by day or week in the selected range ──────── */
   const weekBarData = useMemo(() => {
     const map = new Map();
-    entries.forEach((e) => {
+    rangeEntries.forEach((e) => {
       if (!e.startedAt) return;
       const k = dateKey(e.startedAt);
       map.set(k, (map.get(k) || 0) + (e.durationSeconds || 0));
     });
-    const now = new Date();
+    const useWeeks = rangeDaysCount > 45;
     const days = [];
-    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const k = dateKey(d);
-      const val = map.get(k) || 0;
-      days.push({
-        day: labels[d.getDay()],
-        val,
-        label: val > 0 ? fmtDur(val) : '',
-        active: i === 0, // Today
-        isToday: i === 0,
-      });
+    const dayCount = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
+    if (!useWeeks) {
+      for (let offset = 0; offset < dayCount; offset++) {
+        const date = new Date(dateWindow.start);
+        date.setDate(date.getDate() + offset);
+        const key = dateKey(date);
+        const val = map.get(key) || 0;
+        days.push({ day: date.toLocaleDateString(undefined, { weekday: 'short' }), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), val, label: val > 0 ? fmtDur(val) : '', active: date.toDateString() === new Date().toDateString(), key });
+      }
+    } else {
+      const cursor = new Date(dateWindow.start);
+      cursor.setDate(cursor.getDate() - cursor.getDay());
+      const end = new Date(dateWindow.end);
+      while (cursor <= end) {
+        const weekStart = new Date(cursor);
+        const weekEnd = new Date(cursor);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        let val = 0;
+        for (let offset = 0; offset < 7; offset++) {
+          const date = new Date(weekStart);
+          date.setDate(date.getDate() + offset);
+          val += map.get(dateKey(date)) || 0;
+        }
+        days.push({ day: weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), dateLabel: `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}–${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`, val, label: val > 0 ? fmtDur(val) : '', active: weekStart <= new Date() && weekEnd >= new Date(), key: dateKey(weekStart) });
+        cursor.setDate(cursor.getDate() + 7);
+      }
     }
     const maxVal = Math.max(1, ...days.map((d) => d.val));
-    const totalWeeklySecs = days.reduce((sum, d) => sum + d.val, 0);
-    let peakCol = days[0];
-    days.forEach((d) => {
-      if (d.val > peakCol.val) peakCol = d;
-    });
+    const totalWeeklySecs = rangeSecs;
+    const peakCol = days.reduce((peak, day) => day.val > peak.val ? day : peak, days[0] || { val: 0, day: '—' });
 
     return {
       cols: days.map((d) => ({
         ...d,
         h: d.val > 0 ? Math.max(6, Math.round((d.val / maxVal) * 100)) : 0,
-        muted: d.val > 0 && !d.isToday,
+        muted: d.val > 0 && !d.active,
       })),
       totalWeeklySecs,
       totalWeeklyFmt: fmtDur(totalWeeklySecs),
       peakDayLabel: peakCol.val > 0 ? peakCol.day : '—',
       peakDayFmt: peakCol.val > 0 ? fmtDur(peakCol.val) : '0m',
+      unit: useWeeks ? 'weeks' : 'days',
+      minWidth: Math.max(520, days.length * (useWeeks ? 20 : 14)),
     };
-  }, [entries]);
+  }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount]);
 
   const dailyHoursData = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const dayCount = new Date(year, month + 1, 0).getDate();
     const totals = new Map();
-    entries.forEach((entry) => {
+    rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const key = dateKey(entry.startedAt);
       totals.set(key, (totals.get(key) || 0) + (entry.durationSeconds || 0));
     });
-    const days = Array.from({ length: dayCount }, (_, index) => {
-      const date = new Date(year, month, index + 1);
-      const key = dateKey(date);
-      return {
-        key,
-        dayOfMonth: date.getDate(),
-        dateLabel: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        seconds: totals.get(key) || 0,
-      };
-    });
+    const useWeeks = rangeDaysCount > 45;
+    const days = [];
+    if (!useWeeks) {
+      const count = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
+      for (let index = 0; index < count; index++) {
+        const date = new Date(dateWindow.start);
+        date.setDate(date.getDate() + index);
+        const key = dateKey(date);
+        days.push({ key, dayOfMonth: date.getDate(), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), seconds: totals.get(key) || 0 });
+      }
+    } else {
+      const cursor = new Date(dateWindow.start);
+      cursor.setDate(cursor.getDate() - cursor.getDay());
+      while (cursor <= dateWindow.end) {
+        const weekStart = new Date(cursor);
+        let seconds = 0;
+        for (let offset = 0; offset < 7; offset++) {
+          const date = new Date(weekStart);
+          date.setDate(date.getDate() + offset);
+          seconds += totals.get(dateKey(date)) || 0;
+        }
+        days.push({ key: dateKey(weekStart), dayOfMonth: weekStart.getDate(), dateLabel: `Week of ${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`, seconds });
+        cursor.setDate(cursor.getDate() + 7);
+      }
+    }
     return {
       days,
-      title: `${dateKey(new Date(year, month, 1))} → ${dateKey(new Date(year, month, dayCount))}`,
+      title: `${rangeLabel} · ${useWeeks ? 'weekly totals' : 'daily totals'}`,
     };
-  }, [entries]);
+  }, [rangeEntries, dateWindow, rangeDaysCount, rangeLabel]);
 
   const weeklyTrendData = useMemo(() => {
-    const now = new Date();
-    const currentSunday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-    currentSunday.setHours(0, 0, 0, 0);
     const totals = new Map();
-    entries.forEach((entry) => {
+    rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const date = new Date(entry.startedAt);
       date.setDate(date.getDate() - date.getDay());
@@ -717,27 +903,27 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       const key = dateKey(date);
       totals.set(key, (totals.get(key) || 0) + (entry.durationSeconds || 0));
     });
-    const weeks = Array.from({ length: 12 }, (_, index) => {
-      const start = new Date(currentSunday);
-      start.setDate(start.getDate() - (11 - index) * 7);
+    const weeks = [];
+    const cursor = new Date(dateWindow.start);
+    cursor.setDate(cursor.getDate() - cursor.getDay());
+    while (cursor <= dateWindow.end) {
+      const start = new Date(cursor);
       const key = dateKey(start);
       const seconds = totals.get(key) || 0;
-      const windowStart = Math.max(0, index - 3);
-      const recent = Array.from({ length: index - windowStart + 1 }, (_, offset) => {
-        const prev = new Date(start);
-        prev.setDate(prev.getDate() - (index - (windowStart + offset)) * 7);
-        return totals.get(dateKey(prev)) || 0;
-      });
-      return {
+      weeks.push({
         key,
         seconds,
-        averageSeconds: recent.reduce((sum, value) => sum + value, 0) / recent.length,
+        averageSeconds: seconds,
         startLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         axisLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      };
-    });
-    return weeks;
-  }, [entries]);
+      });
+      cursor.setDate(cursor.getDate() + 7);
+    }
+    return weeks.map((week, index) => ({
+      ...week,
+      averageSeconds: weeks.slice(Math.max(0, index - 3), index + 1).reduce((sum, item) => sum + item.seconds, 0) / Math.min(4, index + 1),
+    }));
+  }, [rangeEntries, dateWindow]);
 
   const sessionLengthData = useMemo(() => {
     const buckets = [
@@ -746,7 +932,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       { label: '45–90m', count: 0 },
       { label: '90m+', count: 0 },
     ];
-    entries.forEach((entry) => {
+    rangeEntries.forEach((entry) => {
       const duration = entry.durationSeconds || 0;
       if (duration < 15 * 60) buckets[0].count += 1;
       else if (duration < 45 * 60) buckets[1].count += 1;
@@ -754,13 +940,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       else buckets[3].count += 1;
     });
     return buckets;
-  }, [entries]);
+  }, [rangeEntries]);
 
   /* ── ROW 4: Project Portfolio Breakdown ─────── */
-  const portfolioEntries = useMemo(
-    () => entries.filter((e) => isInRange(e, portfolioRange)),
-    [entries, portfolioRange]
-  );
+  const portfolioEntries = rangeEntries;
 
   const portfolioStats = useMemo(() => {
     const map = new Map();
@@ -795,16 +978,44 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         pct: rangeTotalSecs > 0 ? Math.max(4, Math.round((item.secs / rangeTotalSecs) * 100)) : 0,
         durationFmt: fmtDur(item.secs),
       })),
-      totalProjects: list.length,
+      totalProjects: new Set(list.map((item) => item.projectName)).size,
+      topKind: list[0]?.subjectName ? 'subproject' : 'project',
       topPct,
     };
   }, [portfolioEntries]);
+
+  const projectPlans = useMemo(() => projects.filter((project) => !project.archived).map((project) => {
+    const matching = entries.filter((entry) => entry.projectId === project.id || (!entry.projectId && entry.projectName === project.name));
+    const subjectPlans = project.subjects || [];
+    const projectEstimate = Number(project.estimateHours) || 0;
+    const estimatedSubjects = subjectPlans.filter((subject) => Number(subject.estimateHours) > 0);
+    const estimateHours = projectEstimate || estimatedSubjects.reduce((sum, subject) => sum + (Number(subject.estimateHours) || 0), 0);
+    const planEntries = projectEstimate || !estimatedSubjects.length ? matching : matching.filter((entry) => estimatedSubjects.some((subject) => entry.subjectId === subject.id || (!entry.subjectId && entry.subjectName === subject.name)));
+    const seconds = planEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
+    const remainingSeconds = Math.max(0, estimateHours * 3600 - seconds);
+    const recentStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+    const recentSeconds = planEntries.filter((entry) => {
+      const time = new Date(entry.startedAt).getTime();
+      return Number.isFinite(time) && time >= recentStart.getTime() && time <= now.getTime();
+    }).reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
+    const recentActiveDays = new Set(planEntries.filter((entry) => {
+      const time = new Date(entry.startedAt).getTime();
+      return Number.isFinite(time) && time >= recentStart.getTime() && time <= now.getTime() && (Number(entry.durationSeconds) || 0) > 0;
+    }).map((entry) => dateKey(entry.startedAt))).size;
+    const pacePerDay = recentActiveDays ? recentSeconds / 30 : 0;
+    const forecastDate = remainingSeconds > 0 && pacePerDay > 0 ? new Date(now.getTime() + (remainingSeconds / pacePerDay) * 86400000) : null;
+    const deadlineValues = [project.deadline, ...subjectPlans.map((subject) => subject.deadline)].filter(Boolean).map((value) => new Date(`${value}T23:59:59`)).filter((value) => Number.isFinite(value.getTime())).sort((a, b) => a - b);
+    const deadline = deadlineValues[0] || null;
+    const milestones = [...(Array.isArray(project.milestones) ? project.milestones : []), ...subjectPlans.flatMap((subject) => Array.isArray(subject.milestones) ? subject.milestones : [])];
+    const completedMilestones = milestones.filter((milestone) => milestone.completed).length;
+    return { id: project.id, name: project.name, color: project.color, seconds, estimateHours, remainingSeconds, progress: estimateHours > 0 ? Math.min(100, Math.round(seconds / (estimateHours * 3600) * 100)) : null, forecastDate: forecastDate && Number.isFinite(forecastDate.getTime()) ? forecastDate : null, deadline: deadline && Number.isFinite(deadline.getTime()) ? deadline : null, milestones, completedMilestones };
+  }), [projects, entries, now]);
 
   /* ── ROW 5: 24h × 7d Time-of-Day Heatmap ────── */
   const heatmapStats = useMemo(() => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
-    entries.forEach((e) => {
+    rangeEntries.forEach((e) => {
       if (!e.startedAt) return;
       const d = new Date(e.startedAt);
       const dayIdx = d.getDay();
@@ -832,75 +1043,48 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       peakDayIdx,
       peakHour,
     };
-  }, [entries]);
+  }, [rangeEntries]);
 
   /* ── ROW 6: 52-Week Activity Calendar ───────── */
   const activityCalStats = useMemo(() => {
     const dateMap = new Map();
-    entries.forEach((e) => {
+    rangeEntries.forEach((e) => {
       if (!e.startedAt) return;
       const k = dateKey(e.startedAt);
       dateMap.set(k, (dateMap.get(k) || 0) + (e.durationSeconds || 0));
     });
 
-    const now = new Date();
-    // Align to Sunday 52 weeks ago
-    const start = new Date(now);
-    start.setDate(now.getDate() - 52 * 7);
+    const rangeStart = new Date(dateWindow.start);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(dateWindow.end);
+    rangeEnd.setHours(0, 0, 0, 0);
+    const start = new Date(rangeStart);
     start.setDate(start.getDate() - start.getDay());
-    start.setHours(0, 0, 0, 0);
-
     const weeks = [];
-    let curWeek = [];
-    const cur = new Date(start);
-
     let maxVal = 1;
     let activeDaysCount = 0;
-
-    while (cur <= now) {
-      const k = dateKey(cur);
-      const val = dateMap.get(k) || 0;
-      if (val > maxVal) maxVal = val;
-      if (val > 0) activeDaysCount++;
-
-      curWeek.push({
-        key: k,
-        dateStr: cur.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-        val,
-        isToday: cur.toDateString() === now.toDateString(),
-      });
-
-      if (cur.getDay() === 6) {
-        weeks.push(curWeek);
-        curWeek = [];
+    const monthNames = [];
+    const cursor = new Date(start);
+    while (cursor <= rangeEnd) {
+      const week = [];
+      for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+        const day = new Date(cursor);
+        day.setDate(day.getDate() + dayIndex);
+        if (day < rangeStart || day > rangeEnd) {
+          week.push(null);
+          continue;
+        }
+        const key = dateKey(day);
+        const val = dateMap.get(key) || 0;
+        if (val > maxVal) maxVal = val;
+        if (val > 0) activeDaysCount++;
+        const monthLabel = day.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+        if (!monthNames.includes(monthLabel)) monthNames.push(monthLabel);
+        week.push({ key, dateStr: day.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), val, isToday: day.toDateString() === new Date().toDateString() });
       }
-      cur.setDate(cur.getDate() + 1);
+      weeks.push(week);
+      cursor.setDate(cursor.getDate() + 7);
     }
-    if (curWeek.length > 0) {
-      while (curWeek.length < 7) curWeek.push(null);
-      weeks.push(curWeek);
-    }
-
-    // Month headers
-    const monthNames = [
-      'Oct',
-      'Nov',
-      'Dec',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-    ];
 
     return {
       weeks,
@@ -908,7 +1092,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       maxVal,
       activeDaysCount,
     };
-  }, [entries]);
+  }, [rangeEntries, dateWindow]);
 
   // Determine dominant tier to highlight
   const dominantTier = useMemo(() => {
@@ -989,7 +1173,48 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
       {/* ================= MAIN BENTO CONTAINER ================= */}
       <div className="db-bento-container">
-        {/* ROW 1: PAINTERLY WINDOW HERO (LEFT) + 6 KPI BENTO GRID (RIGHT) */}
+        <section className="db-dashboard-controls" style={{ order: 0 }} aria-label="Dashboard display controls">
+          <div className="db-range-control-copy">
+            <span>REPORTING WINDOW</span>
+            <strong>{rangeLabel}</strong>
+          </div>
+          <div className="db-range-control-options" role="group" aria-label="Dashboard date range">
+            {dashboardRangeOptions.map((option) => (
+              <button key={option.id} type="button" className={dateRange === option.id ? 'active' : ''} aria-pressed={dateRange === option.id} onClick={() => setDateRange(option.id)}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {dateRange === 'custom' && (
+            <div className="db-custom-date-inputs">
+              <label>From<input type="date" value={customStart} max={customEnd} onChange={(event) => setCustomStart(event.target.value)} /></label>
+              <label>To<input type="date" value={customEnd} min={customStart} max={new Date().toLocaleDateString('en-CA')} onChange={(event) => setCustomEnd(event.target.value)} /></label>
+            </div>
+          )}
+          <div className="db-customize-wrap">
+            <button type="button" className={`db-customize-trigger${customizerOpen ? ' active' : ''}`} aria-expanded={customizerOpen} onClick={() => setCustomizerOpen((open) => !open)}>
+              <SlidersHorizontal size={15} /> Personalize
+            </button>
+            {customizerOpen && (
+              <div className="db-customizer-panel" role="dialog" aria-label="Personalize dashboard sections">
+                <div className="db-customizer-heading"><strong>Personalize dashboard</strong><span>Show, pin, collapse, or reorder sections.</span></div>
+                {orderedDashboardSections.map((section, index) => (
+                  <div className="db-customizer-row" key={section.id}>
+                    <label><input type="checkbox" checked={section.visible} onChange={(event) => updateDashboardSection(section.id, { visible: event.target.checked })} /><span>{section.label}</span></label>
+                    <div className="db-customizer-actions">
+                      <button type="button" className={section.pinned ? 'selected' : ''} title={section.pinned ? 'Unpin section' : 'Pin section near top'} aria-label={`${section.pinned ? 'Unpin' : 'Pin'} ${section.label}`} onClick={() => updateDashboardSection(section.id, { pinned: !section.pinned })}><Pin size={13} /></button>
+                      <button type="button" className={section.collapsed ? 'selected' : ''} title={section.collapsed ? 'Expand section' : 'Collapse section'} aria-label={`${section.collapsed ? 'Expand' : 'Collapse'} ${section.label}`} onClick={() => updateDashboardSection(section.id, { collapsed: !section.collapsed })}>{section.collapsed ? '＋' : '−'}</button>
+                      <button type="button" title="Move section up" aria-label={`Move ${section.label} up`} disabled={index === 0} onClick={() => moveDashboardSection(section.id, -1)}><ArrowUp size={13} /></button>
+                      <button type="button" title="Move section down" aria-label={`Move ${section.label} down`} disabled={index === orderedDashboardSections.length - 1} onClick={() => moveDashboardSection(section.id, 1)}><ArrowDown size={13} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+        <DashboardSection section={dashboardSection('overview')} order={dashboardSectionOrder('overview')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
+        {/* ROW 1: PAINTERLY WINDOW HERO (LEFT) + RANGE-SCOPED KPI GRID (RIGHT) */}
         <div className="db-bento-grid-row db-hero-row">
           {/* Painterly Illustrated Window + Glassmorphic Daily Goal */}
           <div className="db-hero-window-card">
@@ -1071,35 +1296,35 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           <div className="db-kpi-grid">
             {[
               {
-                label: 'TODAY',
-                value: todaySecs > 0 ? fmtDur(todaySecs) : '—',
-                sub: `${fmtDur(yestSecs)} yesterday`,
+                label: 'TIME TRACKED',
+                value: rangeEntries.length ? fmtDur(rangeSecs) : '—',
+                sub: rangeGoalSecs > 0 ? `${fmtDur(rangeSecs)} / ${fmtDur(rangeGoalSecs)} goal` : rangeLabel,
               },
               {
-                label: 'THIS WEEK',
-                value: fmtDur(weekSecs),
-                sub: 'vs prior week',
-                badge: `${weekVelocityPct >= 0 ? `+${weekVelocityPct}%` : `${weekVelocityPct}%`}`,
+                label: 'VS PREVIOUS',
+                value: previousWindow ? `${rangeDeltaSecs > 0 ? '+' : rangeDeltaSecs < 0 ? '−' : ''}${fmtDur(Math.abs(rangeDeltaSecs))}` : '—',
+                sub: dateRange === 'week' ? 'vs same days last week' : 'vs previous period',
+                badge: rangeDeltaPct === null ? null : `${rangeDeltaPct > 0 ? '+' : ''}${rangeDeltaPct}%`,
               },
               {
-                label: 'THIS MONTH',
-                value: fmtDur(monthSecs),
-                sub: `${monthEntries.length} ${monthEntries.length === 1 ? 'session' : 'sessions'} logged`,
+                label: 'SESSIONS',
+                value: rangeEntries.length || '—',
+                sub: `in ${rangeLabel.toLocaleLowerCase()}`,
               },
               {
-                label: 'ALL TIME',
-                value: fmtDur(allSecs),
-                sub: `${entries.length} total ${entries.length === 1 ? 'session' : 'sessions'}`,
+                label: 'ACTIVE DAYS',
+                value: rangeActiveDays || '—',
+                sub: `of ${rangeDaysCount} days · ${rangeActiveDays ? `${fmtDur(averageActiveDaySecs)} avg / active day` : 'no active days'}`,
               },
               {
-                label: 'CURRENT STREAK',
-                value: `${streak} ${streak === 1 ? 'day' : 'days'}`,
-                sub: `${consistency14}% 14-day consistency`,
+                label: 'AVG / SESSION',
+                value: rangeEntries.length ? fmtDur(averageSessionSecs) : '—',
+                sub: 'tracked session length',
               },
               {
-                label: 'DAILY AVG',
-                value: fmtDur(dailyAvg),
-                sub: 'Active days · This week',
+                label: 'AVG SESSIONS / DAY',
+                value: rangeEntries.length ? (rangeEntries.length / rangeDaysCount).toFixed(1) : '—',
+                sub: `over ${rangeDaysCount} ${rangeDaysCount === 1 ? 'day' : 'days'}`,
               },
             ].map((kpi, idx) => {
               return (
@@ -1113,7 +1338,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                   <div className="db-kpi-sub-row">
                     {kpi.badge ? (
                       <>
-                        <span className={`db-kpi-trend-pill ${weekVelocityPct >= 0 ? 'is-positive' : 'is-negative'}`}>{kpi.badge}</span>
+                        <span className={`db-kpi-trend-pill ${rangeDeltaSecs >= 0 ? 'is-positive' : 'is-negative'}`}>{kpi.badge}</span>
                         <span className="db-kpi-sub">{kpi.sub}</span>
                       </>
                     ) : (
@@ -1125,9 +1350,34 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             })}
           </div>
         </div>
+        <div className="db-weekly-review-card">
+          <div className="db-weekly-review-heading">
+            <div><span className="db-review-kicker">SUNDAY–SATURDAY · THIS WEEK</span><h2>Weekly review</h2></div>
+            <span className={`db-review-delta ${weeklyReview.delta >= 0 ? 'positive' : 'negative'}`}>
+              {weeklyReview.delta > 0 ? '+' : weeklyReview.delta < 0 ? '−' : ''}{fmtDur(Math.abs(weeklyReview.delta))} vs same days last week
+            </span>
+          </div>
+          <div className="db-weekly-review-metrics">
+            <div><strong>{fmtDur(weeklyReview.seconds)}</strong><span>this week</span></div>
+            <div><strong>{weeklyReview.activeDays} / {new Date().getDay() + 1}</strong><span>active days so far</span></div>
+            <div><strong>{weeklyReview.sessions}</strong><span>sessions</span></div>
+            <div><strong>{weeklyReview.topProject ? weeklyReview.topProject[0] : '—'}</strong><span>most studied project</span></div>
+            <div><strong>{currentStreak} {currentStreak === 1 ? 'day' : 'days'}</strong><span>current study streak</span></div>
+            <div><strong>{longestStreak} {longestStreak === 1 ? 'day' : 'days'}</strong><span>longest study streak</span></div>
+          </div>
+          {weeklyReview.weeklyGoal > 0 && (
+            <div className="db-review-goal-track" aria-label={`Weekly goal progress ${weeklyReview.goalPct}%`}>
+              <span style={{ width: `${weeklyReview.goalPct}%` }} />
+            </div>
+          )}
+          <p className="db-weekly-review-suggestion">{weeklyReview.suggestion}</p>
+        </div>
+        </DashboardSection>
 
+        <DashboardSection section={dashboardSection('focus')} order={dashboardSectionOrder('focus')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
         {/* ROW 2: FOCUS DEPTH & FLOW STATE (FULL WIDTH) */}
         <div className="db-card db-flow-card">
+          {rangeEntries.length === 0 ? <><h2 className="db-section-title">Focus Depth & Flow State</h2><QuietEmptyState message="Focus breakdowns appear after you log a session in this range." onStart={() => onNavigate?.('timer')} /></> : <>
           <div className="db-card-header-flex">
             <div className="db-card-title-group">
               <h2 className="db-section-title">Focus Depth & Flow State</h2>
@@ -1256,10 +1506,14 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               <div className="db-metric-val">{peakHourLabel}</div>
             </div>
           </div>
+          </>}
         </div>
+        </DashboardSection>
 
+        <DashboardSection section={dashboardSection('rhythms')} order={dashboardSectionOrder('rhythms')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
         {/* ROW 3: CIRCADIAN FOCUS WINDOW (LEFT) + DAY-OF-WEEK POWER RHYTHM (RIGHT) */}
         <div className="db-bento-grid-row db-two-col">
+          {rangeEntries.length === 0 ? <div className="db-card"><QuietEmptyState message="Study timing patterns appear after your first session in this range." onStart={() => onNavigate?.('timer')} /></div> : <>
           {/* Circadian Focus Window */}
           <div className="db-card db-card-column">
             <div>
@@ -1349,8 +1603,11 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               </span>
             </div>
           </div>
+          </>}
         </div>
+        </DashboardSection>
 
+        <DashboardSection section={dashboardSection('projects')} order={dashboardSectionOrder('projects')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
         {/* ROW 4: WEEKLY STUDY BAR CHART (LEFT) + PROJECT PORTFOLIO (RIGHT) */}
         <div className="db-bento-grid-row db-two-col">
           {/* Weekly Study Bar Chart */}
@@ -1358,13 +1615,14 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             <div className="db-card-header-flex mb-6">
               <h2 className="db-section-title">Weekly Study</h2>
               <span className="db-section-meta">
-                Last 7 days · {weekBarData.totalWeeklyFmt} total · Peak: {weekBarData.peakDayLabel}{' '}
+                {rangeLabel} · {weekBarData.totalWeeklyFmt} total · Peak: {weekBarData.peakDayLabel}{' '}
                 ({weekBarData.peakDayFmt})
               </span>
             </div>
 
             {/* Zero Overlap Bar Chart Container with Headroom */}
-            <div className="db-weekly-bar-chart-stage">
+            {rangeEntries.length === 0 ? <QuietEmptyState message="No study logged in this date range." onStart={() => onNavigate?.('timer')} /> : <div className="db-weekly-chart-scroll">
+            <div className="db-weekly-bar-chart-stage" style={{ minWidth: weekBarData.minWidth }}>
               {weekBarData.cols.map((col, i) => (
                   <div
                     key={i}
@@ -1389,7 +1647,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               ))}
             </div>
 
-            <div className="db-weekly-bar-days-footer">
+            <div className="db-weekly-bar-days-footer" style={{ minWidth: weekBarData.minWidth }}>
               {weekBarData.cols.map((col, idx) => (
                 <span
                   key={idx}
@@ -1399,6 +1657,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                 </span>
               ))}
             </div>
+            </div>}
           </div>
 
           {/* Project Portfolio */}
@@ -1406,17 +1665,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             <div>
               <div className="db-card-header-flex mb-6">
                 <h2 className="db-section-title">Project Portfolio</h2>
-                <div className="db-portfolio-range-pills">
-                  {['Today', 'Week', 'Month', 'All time'].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setPortfolioRange(t)}
-                      className={`db-portfolio-pill ${portfolioRange === t ? 'active' : ''}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
+                <span className="db-section-meta">{rangeLabel}</span>
               </div>
 
               {/* Dynamic Project Items */}
@@ -1469,7 +1718,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             </div>
 
             <div className="db-portfolio-footer">
-              <span>Top focused subject accounts for {portfolioStats.topPct}% of logged study</span>
+              <span>Top {portfolioStats.topKind} accounts for {portfolioStats.topPct}% of {rangeLabel.toLowerCase()} study</span>
               <span className="accent">
                 {portfolioStats.totalProjects} active{' '}
                 {portfolioStats.totalProjects === 1 ? 'project' : 'projects'}
@@ -1477,8 +1726,36 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             </div>
           </div>
         </div>
+        <div className="db-card db-project-plans-card">
+          <div className="db-card-header-flex">
+            <div><h2 className="db-section-title">Project plans</h2><span className="db-section-meta">Estimate, progress, and a pace-based finish forecast</span></div>
+            <button type="button" className="db-manage-link" onClick={() => onNavigate?.('manage')}>Edit plans <span aria-hidden="true">→</span></button>
+          </div>
+          {projectPlans.length === 0 ? (
+            <div className="db-range-empty"><span>Add a project to plan its estimate, deadline, and milestones.</span><button type="button" onClick={() => onNavigate?.('manage')}>Open project library <span aria-hidden="true">→</span></button></div>
+          ) : (
+            <div className="db-project-plans-list">
+              {projectPlans.map((plan) => (
+                <article className="db-project-plan-row" key={plan.id}>
+                  <span className="db-project-plan-dot" style={{ backgroundColor: plan.color || 'var(--db-portfolio-accent)' }} />
+                  <div className="db-project-plan-main">
+                    <div className="db-project-plan-title"><strong>{plan.name}</strong>{plan.estimateHours > 0 && <span>{fmtDur(plan.seconds)} / {fmtDur(plan.estimateHours * 3600)}</span>}</div>
+                    {plan.estimateHours > 0 ? <div className="db-project-plan-track"><span style={{ width: `${plan.progress}%` }} /></div> : <p>Set a total estimate in Manage to track progress.</p>}
+                    <div className="db-project-plan-meta">
+                      <span>{plan.estimateHours > 0 ? `${plan.progress}% complete · ${fmtDur(plan.remainingSeconds)} left` : 'No total estimate set'}</span>
+                      <span>{plan.milestones.length ? `${plan.completedMilestones}/${plan.milestones.length} milestones` : 'No milestones yet'}</span>
+                      <span>{plan.deadline ? `Due ${plan.deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${plan.forecastDate ? ` · pace ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}` : plan.estimateHours > 0 && plan.remainingSeconds === 0 ? 'Time estimate reached' : plan.forecastDate ? `At recent pace: ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Log sessions to estimate finish'}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+        </DashboardSection>
 
         {/* Study trend charts */}
+        <DashboardSection section={dashboardSection('patterns')} order={dashboardSectionOrder('patterns')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
         <section className="db-chart-section" aria-labelledby="db-study-patterns-title">
           <div className="db-chart-section-heading">
             <div>
@@ -1486,13 +1763,15 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               <p>Daily output, weekly momentum, and session length</p>
             </div>
           </div>
-          <DailyHoursGraph days={dailyHoursData.days} title={dailyHoursData.title} />
+          <DailyHoursGraph days={dailyHoursData.days} title={dailyHoursData.title} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
           <div className="db-bento-grid-row db-two-col db-chart-pair">
-            <WeeklyTrendGraph weeks={weeklyTrendData} />
-            <SessionLengthGraph buckets={sessionLengthData} />
+            <WeeklyTrendGraph weeks={weeklyTrendData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} rangeLabel={rangeLabel} />
+            <SessionLengthGraph buckets={sessionLengthData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
           </div>
         </section>
+        </DashboardSection>
 
+        <DashboardSection section={dashboardSection('heatmap')} order={dashboardSectionOrder('heatmap')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
         {/* ROW 5: TIME-OF-DAY HEATMAP (24H x 7 DAYS) */}
         <div className="db-card">
           <div className="db-card-header-flex mb-5">
@@ -1500,7 +1779,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             <span className="db-section-meta">Study hours by day and hour</span>
           </div>
 
-          <div className="db-heatmap-scroll">
+          {rangeEntries.length === 0 ? <QuietEmptyState message="The heatmap fills in as you log sessions." onStart={() => onNavigate?.('timer')} /> : <div className="db-heatmap-scroll">
             <div className="db-heatmap-matrix-min">
               {/* Hour Headers */}
               <div className="db-heatmap-hour-headers">
@@ -1544,71 +1823,80 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               </div>
             </div>
           </div>
+          }
         </div>
+        </DashboardSection>
 
-        {/* ROW 6: 52-WEEK ACTIVITY CALENDAR */}
+        <DashboardSection section={dashboardSection('calendar')} order={dashboardSectionOrder('calendar')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
+        {/* Activity calendar for the selected range */}
         <div className="db-card">
           <div className="db-card-header-flex mb-5">
             <h2 className="db-section-title">Activity Calendar</h2>
             <span className="db-section-meta">
-              52 weeks · {activityCalStats.activeDaysCount} active days · {fmtDur(allSecs)} logged
+              {rangeLabel} · {activityCalStats.activeDaysCount} active days · {fmtDur(rangeSecs)} logged
             </span>
           </div>
 
+          {rangeEntries.length === 0 ? <QuietEmptyState message="Your activity calendar will appear after the first session in this range." onStart={() => onNavigate?.('timer')} /> : (
           <div className="db-activity-cal-scroll">
-            <div className="db-activity-cal-min">
-              {/* Month Labels */}
+            <div className="db-activity-cal-min" style={{ minWidth: Math.max(320, activityCalStats.weeks.length * 17 + 48) }}>
               <div className="db-activity-cal-months">
                 {activityCalStats.monthNames.map((m, idx) => (
                   <span key={idx}>{m}</span>
                 ))}
               </div>
 
-              <div className="db-activity-cal-body">
-                {/* Weekday Labels */}
-                <div className="db-activity-cal-weekdays">
-                  <span>Mon</span>
-                  <span>Wed</span>
-                  <span>Fri</span>
+              {activityCalStats.weeks.length <= 2 ? (
+                <div className="db-activity-cal-days">
+                  {activityCalStats.weeks.flat().filter(Boolean).map((day) => {
+                    const date = new Date(`${day.key}T12:00:00`);
+                    return (
+                      <div
+                        key={day.key}
+                        title={`${day.dateStr} · ${day.val > 0 ? fmtDur(day.val) : 'No study'}`}
+                        className={`db-activity-cal-day${day.isToday ? ' is-today' : ''}${day.val > 0 ? ' has-study' : ''}`}
+                      >
+                        <span>{date.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                        <strong>{date.getDate()}</strong>
+                        <small>{day.val > 0 ? fmtDur(day.val) : '—'}</small>
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {/* 52x7 Contribution Grid */}
-                <div className="db-activity-cal-grid">
-                  {activityCalStats.weeks.map((week, weekIdx) => (
-                    <div key={weekIdx} className="db-activity-cal-week-col">
-                      {week.map((day, dayIdx) => {
-                        if (!day) {
+              ) : (
+                <div className="db-activity-cal-body">
+                  <div className="db-activity-cal-weekdays" aria-hidden="true">
+                    <span>Sun</span>
+                    <span>Wed</span>
+                    <span>Sat</span>
+                  </div>
+                  <div className="db-activity-cal-grid" style={{ gridTemplateColumns: `repeat(${activityCalStats.weeks.length}, 12px)` }}>
+                    {activityCalStats.weeks.map((week, weekIdx) => (
+                      <div key={weekIdx} className="db-activity-cal-week-col">
+                        {week.map((day, dayIdx) => {
+                          if (!day) return <div key={dayIdx} className="db-activity-cal-cell empty-ghost" />;
+                          const hasVal = day.val > 0;
+                          const isMax = hasVal && day.val === activityCalStats.maxVal;
+                          const opacity = hasVal ? Math.min(1, Math.max(0.3, day.val / activityCalStats.maxVal)) : 0;
                           return (
                             <div
                               key={dayIdx}
-                              className="db-activity-cal-cell empty-ghost"
+                              title={`${day.dateStr} · ${hasVal ? fmtDur(day.val) : 'No study'}`}
+                              className={`db-activity-cal-cell ${day.isToday ? 'is-today-ring' : ''} ${isMax ? 'is-max' : hasVal ? 'is-active' : 'is-empty'}`}
+                              style={hasVal && !isMax ? { opacity } : {}}
                             />
                           );
-                        }
-                        const hasVal = day.val > 0;
-                        const isMax = day.val > 0 && day.val === activityCalStats.maxVal;
-                        const op = hasVal
-                          ? Math.min(1, Math.max(0.3, day.val / activityCalStats.maxVal))
-                          : 0;
-
-                        return (
-                          <div
-                            key={dayIdx}
-                            title={`${day.dateStr} · ${day.val > 0 ? fmtDur(day.val) : 'No study'}`}
-                            className={`db-activity-cal-cell ${
-                              day.isToday ? 'is-today-ring' : ''
-                            } ${isMax ? 'is-max' : hasVal ? 'is-active' : 'is-empty'}`}
-                            style={hasVal && !isMax ? { opacity: op } : {}}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))}
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
+          )}
         </div>
+        </DashboardSection>
       </div>
     </div>
   );

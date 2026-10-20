@@ -78,3 +78,22 @@
   margin-top: 20px;
   line-height: 1.5;
 }
+
+.settings-reminders {
+  margin-top: 26px;
+  padding: 20px;
+  border: 1px solid var(--sd-border-soft);
+  border-radius: var(--sd-radius-lg);
+  background: var(--sd-bg-subtle);
+}
+.settings-reminders-heading { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.settings-reminders-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 11px; background: rgba(128, 134, 212, .13); color: var(--sd-orange); }
+.settings-reminders-heading h2 { margin: 0 0 4px; color: var(--sd-text-primary); font-size: 15px; }
+.settings-reminders-heading p { margin: 0; color: var(--sd-text-muted); font-size: 12px; line-height: 1.5; }
+.settings-reminder-option { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-top: 1px solid var(--sd-border-soft); cursor: pointer; }
+.settings-reminder-option span { display: flex; flex-direction: column; gap: 4px; }
+.settings-reminder-option strong { color: var(--sd-text-primary); font-size: 12px; }
+.settings-reminder-option small { color: var(--sd-text-muted); font-size: 11px; }
+.settings-reminder-option input { width: 17px; height: 17px; flex: 0 0 auto; accent-color: var(--sd-orange); }
+.settings-reminder-time { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 0 0 12px; color: var(--sd-text-muted); font-size: 11px; }
+.settings-reminder-time input, .settings-reminder-time select { min-height: 34px; padding: 0 9px; border: 1px solid var(--sd-border-soft); border-radius: 9px; background: var(--sd-bg-surface); color: var(--sd-text-primary); font: inherit; }

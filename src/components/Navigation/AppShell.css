@@ -214,3 +214,26 @@
   .exit-demo-btn span { display: none; }
   .dashboard-tab { padding: 0 12px; font-size: 13px; }
 }
+
+.app-reminder-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: min(430px, calc(100vw - 32px));
+  padding: 13px 14px;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: 15px;
+  background: var(--sd-bg-surface);
+  box-shadow: var(--sd-shadow-card);
+  color: var(--sd-text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.app-reminder-icon { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: rgba(128, 134, 212, .13); color: var(--sd-orange); }
+.app-reminder-toast > span:nth-child(2) { flex: 1; }
+.app-reminder-toast > button { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--sd-text-muted); cursor: pointer; }
+.app-reminder-toast > button:hover { background: var(--sd-bg-subtle); color: var(--sd-text-primary); }

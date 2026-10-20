@@ -400,3 +400,40 @@
 
 .dark-mode .manage-create-project { background: linear-gradient(105deg, rgba(128,134,212,.12), rgba(23,24,31,.55)); }
 .dark-mode .manage-notice { color: #e59aad; }
+
+.manage-plan-editor {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(220px, 1.4fr);
+  gap: 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--manage-line);
+  background: color-mix(in srgb, var(--sd-bg-subtle, #f5f5fa), transparent 24%);
+}
+.manage-plan-editor > label { display: flex; flex-direction: column; gap: 6px; color: var(--manage-muted); font-size: 10px; font-weight: 650; }
+.manage-plan-editor input:not([type='checkbox']) { width: 100%; min-width: 0; height: 32px; padding: 0 9px; border: 1px solid var(--manage-line); border-radius: 8px; outline: none; background: var(--sd-bg-base, #fff); color: var(--manage-text); font: inherit; font-size: 11px; }
+.manage-plan-editor input:focus { border-color: var(--manage-accent); box-shadow: 0 0 0 3px rgba(119,125,208,.12); }
+.manage-plan-number { display: flex; align-items: center; gap: 7px; }
+.manage-plan-number > span { font-size: 10px; font-weight: 500; }
+.manage-plan-label { display: block; margin-bottom: 6px; color: var(--manage-muted); font-size: 10px; font-weight: 650; }
+.manage-milestone-editor { min-width: 0; }
+.manage-milestone-row { display: flex; align-items: center; gap: 7px; margin: 4px 0; color: var(--manage-text); font-size: 10px; }
+.manage-milestone-row input { accent-color: var(--manage-accent); }
+.manage-milestone-row > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manage-milestone-row > span.completed { color: var(--manage-muted); text-decoration: line-through; }
+.manage-milestone-row button { display: grid; width: 22px; height: 22px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--manage-muted); cursor: pointer; }
+.manage-milestone-row button:hover { background: rgba(177,79,104,.08); color: #b14f68; }
+.manage-add-milestone { display: flex; gap: 6px; margin-top: 6px; }
+.manage-add-milestone input { flex: 1; }
+.manage-add-milestone button { display: inline-flex; align-items: center; justify-content: center; gap: 3px; padding: 0 8px; border: 1px solid var(--manage-line); border-radius: 8px; background: var(--sd-bg-surface, #fff); color: var(--manage-accent); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.manage-add-milestone button:disabled { opacity: .45; cursor: default; }
+.manage-subproject-plan { grid-column: 1 / -1; margin: 0 0 10px; border: 1px solid var(--manage-line); border-radius: 10px; overflow: hidden; }
+.manage-subproject-plan .manage-plan-editor { border-bottom: 0; }
+
+@media (max-width: 760px) {
+  .manage-plan-editor { grid-template-columns: 1fr 1fr; }
+  .manage-plan-editor .manage-milestone-editor { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .manage-plan-editor { grid-template-columns: 1fr; }
+  .manage-plan-editor .manage-milestone-editor { grid-column: auto; }
+}

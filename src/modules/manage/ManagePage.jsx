@@ -53,6 +53,7 @@ const formatGoalHours = (hours) => {
 };
 
 const formatDuration = (seconds) => {
+  if (seconds > 0 && seconds < 60) return `${Math.floor(seconds)}s`;
   const totalMinutes = Math.floor(Math.max(0, seconds || 0) / 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -141,6 +142,40 @@ const ColorPicker = ({ value, label, onChange }) => {
   );
 };
 
+const PlanEditor = ({ value, label, onChange }) => {
+  const [milestoneTitle, setMilestoneTitle] = useState('');
+  const milestones = Array.isArray(value?.milestones) ? value.milestones : [];
+  const addMilestone = (event) => {
+    event.preventDefault();
+    const title = milestoneTitle.trim();
+    if (!title) return;
+    onChange({ milestones: [...milestones, { id: crypto.randomUUID(), title, completed: false }] });
+    setMilestoneTitle('');
+  };
+  const updateMilestone = (id, changes) => onChange({ milestones: milestones.map((milestone) => milestone.id === id ? { ...milestone, ...changes } : milestone) });
+
+  return (
+    <div className="manage-plan-editor" aria-label={`${label} plan`}>
+      <label><span>Total time estimate</span><div className="manage-plan-number"><input type="number" min="0" step="0.25" value={value?.estimateHours ?? ''} placeholder="e.g. 40" onChange={(event) => onChange({ estimateHours: event.target.value === '' ? '' : Math.max(0, Number(event.target.value) || 0) })} /><span>hours</span></div></label>
+      <label><span>Target date</span><input type="date" value={value?.deadline || ''} onChange={(event) => onChange({ deadline: event.target.value })} /></label>
+      <div className="manage-milestone-editor">
+        <span className="manage-plan-label">Milestones</span>
+        {milestones.map((milestone) => (
+          <label className="manage-milestone-row" key={milestone.id}>
+            <input type="checkbox" checked={Boolean(milestone.completed)} onChange={(event) => updateMilestone(milestone.id, { completed: event.target.checked })} />
+            <span className={milestone.completed ? 'completed' : ''}>{milestone.title}</span>
+            <button type="button" aria-label={`Remove milestone ${milestone.title}`} onClick={() => onChange({ milestones: milestones.filter((item) => item.id !== milestone.id) })}><X size={13} /></button>
+          </label>
+        ))}
+        <form className="manage-add-milestone" onSubmit={addMilestone}>
+          <input value={milestoneTitle} onChange={(event) => setMilestoneTitle(event.target.value)} placeholder="Add a milestone" aria-label={`Add a milestone to ${label}`} />
+          <button type="submit" disabled={!milestoneTitle.trim()}><Plus size={13} /> Add</button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 export const ManagePage = ({ user }) => {
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
@@ -158,6 +193,7 @@ export const ManagePage = ({ user }) => {
   const [view, setView] = useState('active');
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
+  const [openSubjectPlans, setOpenSubjectPlans] = useState({});
 
   useEffect(() => {
     localStorage.setItem(projectsKey, JSON.stringify(projects));
@@ -399,6 +435,11 @@ export const ManagePage = ({ user }) => {
                         <strong>{formatGoalHours(totals.weekly)} <small>/ week</small></strong>
                         <strong>{formatGoalHours(totals.monthly)} <small>/ month</small></strong>
                       </div>
+                      <PlanEditor
+                        value={project}
+                        label={project.name}
+                        onChange={(changes) => setProjects((items) => items.map((item) => item.id === project.id ? { ...item, ...changes } : item))}
+                      />
                       <div className="manage-subprojects">
                         <div className="manage-subproject-table-head"><span>Subproject</span><span>Daily</span><span>Weekly</span><span>Monthly</span><span aria-label="Actions" /></div>
                         {subjects.map((subject) => (
@@ -420,9 +461,11 @@ export const ManagePage = ({ user }) => {
                               </label>
                             ))}
                             <div className="manage-card-actions compact">
+                              <button type="button" title={openSubjectPlans[subject.id] ? 'Hide plan' : 'Edit estimate, deadline, and milestones'} aria-label={`${openSubjectPlans[subject.id] ? 'Hide' : 'Edit'} plan for ${subject.name}`} onClick={() => setOpenSubjectPlans((items) => ({ ...items, [subject.id]: !items[subject.id] }))}><Target size={14} /></button>
                               <button type="button" title="Rename subproject" aria-label={`Rename ${subject.name}`} onClick={() => beginRename('subject', subject.id, subject.name)}><Pencil size={14} /></button>
                               <button type="button" title="Delete subproject" aria-label={`Delete ${subject.name}`} onClick={() => deleteSubject(project.id, subject.id)}><Trash2 size={14} /></button>
                             </div>
+                            {openSubjectPlans[subject.id] && <div className="manage-subproject-plan"><PlanEditor value={subject} label={subject.name} onChange={(changes) => setProjects((items) => items.map((item) => item.id !== project.id ? item : { ...item, subjects: item.subjects.map((child) => child.id === subject.id ? { ...child, ...changes } : child) }))} /></div>}
                           </div>
                         ))}
                         {!subjects.length && <p className="manage-no-subprojects">Add a subproject to define goals for this project.</p>}

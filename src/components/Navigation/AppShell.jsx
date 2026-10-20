@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, Settings, Square, Timer } from 'lucide-react';
+import { Bell, LogOut, Settings, Square, Timer, X } from 'lucide-react';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
 import { ThemeToggle } from '../Header/ThemeToggle';
 import { TimerPage } from '../../modules/timer/TimerPage';
@@ -47,6 +47,9 @@ export const AppShell = ({ user, onLogout }) => {
   const entriesKey = user?.id
     ? `studyduel_user_${user.id}_time_entries`
     : 'studyduel_demo_time_entries';
+  const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
+  const remindersKey = user?.id ? `studyduel_user_${user.id}_reminders` : 'studyduel_demo_reminders';
+  const [reminderNotice, setReminderNotice] = useState(null);
   const [activeTimer, setActiveTimer] = useState(() => readLocalValue(activeTimerKey));
   const [timerNow, setTimerNow] = useState(Date.now());
 
@@ -87,6 +90,59 @@ export const AppShell = ({ user, onLogout }) => {
       detail: { activeTimerKey, entriesKey },
     }));
   };
+
+  useEffect(() => {
+    const checkReminders = () => {
+      const settings = readLocalValue(remindersKey, {});
+      const entries = readLocalValue(entriesKey, []);
+      const projects = readLocalValue(projectsKey, []);
+      const now = new Date();
+      const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const remindersFiredKey = `${remindersKey}_fired`;
+      const fired = readLocalValue(remindersFiredKey, []);
+      const notifyOnce = (key, message) => {
+        if (fired.includes(key)) return false;
+        localStorage.setItem(remindersFiredKey, JSON.stringify([...fired.slice(-99), key]));
+        setReminderNotice({ id: key, message });
+        return true;
+      };
+      const timeToMinutes = (value) => {
+        const [hour, minute] = String(value || '20:00').split(':').map(Number);
+        return (hour || 0) * 60 + (minute || 0);
+      };
+      const minutesNow = now.getHours() * 60 + now.getMinutes();
+      const validEntries = Array.isArray(entries) ? entries : [];
+      if (settings.dailyGoal && minutesNow >= timeToMinutes(settings.dailyTime)) {
+        const todaySeconds = validEntries.filter((entry) => new Date(entry.startedAt).toDateString() === now.toDateString()).reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
+        const dailyGoalHours = (Array.isArray(projects) ? projects : []).filter((project) => !project.archived).reduce((sum, project) => sum + (project.subjects || []).reduce((part, subject) => part + (Number(subject.goals?.daily) || 0), 0), 0);
+        if (dailyGoalHours > 0 && todaySeconds < dailyGoalHours * 3600 && notifyOnce(`daily-${todayKey}`, `You are ${Math.ceil((dailyGoalHours * 3600 - todaySeconds) / 60)} minutes short of today's goal.`)) return;
+      }
+      if (settings.weeklyGoal && now.getDay() === 6 && minutesNow >= timeToMinutes(settings.weeklyTime)) {
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+        const weekSeconds = validEntries.filter((entry) => new Date(entry.startedAt).getTime() >= weekStart.getTime()).reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
+        const weeklyGoal = (Array.isArray(projects) ? projects : []).filter((project) => !project.archived).reduce((sum, project) => sum + (project.subjects || []).reduce((part, subject) => part + (Number(subject.goals?.weekly) || 0), 0), 0);
+        const weekKey = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+        if (weeklyGoal > 0 && weekSeconds < weeklyGoal * 3600 && notifyOnce(`weekly-${weekKey}`, `You are ${Math.ceil((weeklyGoal * 3600 - weekSeconds) / 60)} minutes short of this week's goal.`)) return;
+      }
+      if (settings.projectEstimate) {
+        for (const project of (Array.isArray(projects) ? projects : []).filter((item) => !item.archived)) {
+          const estimate = Number(project.estimateHours) || (project.subjects || []).reduce((sum, subject) => sum + (Number(subject.estimateHours) || 0), 0);
+          if (!estimate) continue;
+          const seconds = validEntries.filter((entry) => entry.projectId === project.id || (!entry.projectId && entry.projectName === project.name)).reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
+          const percent = Math.floor(seconds / (estimate * 3600) * 100);
+          if (percent >= 80 && percent < 100 && notifyOnce(`estimate-${project.id}-${estimate}`, `${project.name} has reached ${percent}% of its planned time.`)) return;
+        }
+      }
+      if (settings.longTimer && activeTimer?.startedAt) {
+        const hours = Number(settings.longTimerHours) || 3;
+        const elapsedHours = (now.getTime() - Number(activeTimer.startedAt)) / 3600000;
+        if (elapsedHours >= hours && notifyOnce(`timer-${activeTimer.startedAt}-${hours}`, `Your ${activeTimer.projectName || 'study'} timer has been running for ${hours} hours.`)) return;
+      }
+    };
+    checkReminders();
+    const interval = window.setInterval(checkReminders, 30_000);
+    return () => window.clearInterval(interval);
+  }, [activeTimer?.startedAt, entriesKey, projectsKey, remindersKey]);
 
   useEffect(() => {
     // Sync URL if root or unmatched
@@ -201,6 +257,8 @@ export const AppShell = ({ user, onLogout }) => {
           </button>
         </div>
       </nav>
+
+      {reminderNotice && <aside className="app-reminder-toast" role="status"><span className="app-reminder-icon"><Bell size={16} /></span><span>{reminderNotice.message}</span><button type="button" aria-label="Dismiss reminder" onClick={() => setReminderNotice(null)}><X size={15} /></button></aside>}
 
       {/* Modular Section Content */}
       <main className="app-shell-content" id={`panel-${currentRoute}`} role="region">

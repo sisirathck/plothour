@@ -1519,6 +1519,48 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  width: 12px;
+}
+
+.db-activity-cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.db-activity-cal-day {
+  display: flex;
+  min-width: 0;
+  min-height: 82px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--db-divider);
+  border-radius: 13px;
+  background: var(--db-pill-bg);
+  color: var(--db-muted);
+}
+
+.db-activity-cal-day.is-today {
+  border-color: var(--sd-coral-primary);
+  background: var(--db-accent-tint);
+}
+
+.db-activity-cal-day.has-study strong,
+.db-activity-cal-day.is-today strong {
+  color: var(--db-text);
+}
+
+.db-activity-cal-day > span,
+.db-activity-cal-day > small {
+  color: var(--db-muted);
+  font-size: 10px;
+}
+
+.db-activity-cal-day > strong {
+  color: var(--db-text);
+  font-size: 17px;
+  line-height: 1;
 }
 
 .db-activity-cal-cell {
@@ -1553,4 +1595,179 @@
 .db-activity-cal-cell.empty-ghost {
   background: transparent;
   pointer-events: none;
+}
+
+/* Shared reporting range and dashboard personalization */
+.db-preference-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.db-dashboard-controls {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--db-card-border);
+  border-radius: 18px;
+  background: var(--db-card-bg);
+  box-shadow: var(--db-card-shadow);
+}
+
+.db-range-control-copy {
+  display: flex;
+  min-width: 112px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.db-range-control-copy span,
+.db-review-kicker {
+  color: var(--db-label);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .12em;
+}
+
+.db-range-control-copy strong {
+  color: var(--db-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.db-range-control-options {
+  display: flex;
+  flex: 1 1 500px;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--db-divider);
+  border-radius: 13px;
+  background: var(--db-pill-bg);
+}
+
+.db-range-control-options button,
+.db-customize-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--db-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: .18s ease;
+}
+
+.db-range-control-options button:hover,
+.db-customize-trigger:hover {
+  color: var(--db-text);
+  background: var(--db-accent-tint);
+}
+
+.db-range-control-options button.active,
+.db-customize-trigger.active {
+  color: var(--db-pill-active-text);
+  background: var(--db-pill-active-bg);
+  border-color: var(--db-card-border);
+  box-shadow: 0 2px 7px rgba(56, 57, 112, .1), inset 0 1px 0 rgba(255,255,255,.65);
+}
+
+.db-customize-wrap { position: relative; margin-left: auto; }
+.db-customize-trigger { border-color: var(--db-divider); background: var(--db-pill-bg); color: var(--db-text); }
+.db-customizer-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  width: min(390px, calc(100vw - 40px));
+  padding: 16px;
+  border: 1px solid var(--db-card-border);
+  border-radius: 18px;
+  background: var(--db-card-bg);
+  box-shadow: 0 18px 48px rgba(18, 22, 54, .22), var(--db-card-shadow);
+}
+.db-customizer-heading { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.db-customizer-heading strong { color: var(--db-text); font-size: 13px; }
+.db-customizer-heading span { color: var(--db-muted); font-size: 11px; }
+.db-customizer-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 38px; border-top: 1px solid var(--db-divider); }
+.db-customizer-row > label { display: flex; align-items: center; gap: 8px; color: var(--db-text); font-size: 11px; }
+.db-customizer-row input { accent-color: var(--sd-coral-primary); }
+.db-customizer-actions { display: flex; gap: 3px; }
+.db-customizer-actions button { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--db-muted); cursor: pointer; }
+.db-customizer-actions button:hover, .db-customizer-actions button.selected { background: var(--db-accent-tint); color: var(--sd-coral-primary); }
+.db-customizer-actions button:disabled { opacity: .3; cursor: default; }
+.db-custom-date-inputs { display: flex; gap: 8px; }
+.db-custom-date-inputs label { display: flex; align-items: center; gap: 6px; color: var(--db-muted); font-size: 10px; }
+.db-custom-date-inputs input { width: 132px; min-height: 34px; padding: 0 8px; border: 1px solid var(--db-divider); border-radius: 9px; background: var(--db-pill-bg); color: var(--db-text); font: inherit; font-size: 11px; }
+.db-collapsed-section { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px 18px; border: 1px solid var(--db-card-border); border-radius: 15px; background: var(--db-card-bg); box-shadow: var(--db-card-shadow); color: var(--db-text); font: inherit; cursor: pointer; }
+.db-collapsed-section span:last-child { color: var(--db-muted); font-size: 11px; }
+
+.db-weekly-review-card {
+  padding: 22px 24px 18px;
+  overflow: hidden;
+  border: 1px solid var(--db-card-border);
+  border-radius: 22px;
+  background: linear-gradient(120deg, var(--db-card-bg), var(--db-accent-tint));
+  box-shadow: var(--db-card-shadow);
+}
+.db-weekly-review-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 20px; }
+.db-weekly-review-heading > div { display: flex; flex-direction: column; gap: 5px; }
+.db-weekly-review-heading h2 { margin: 0; color: var(--db-text); font-size: 19px; letter-spacing: -.03em; }
+.db-review-delta { padding: 7px 10px; border-radius: 999px; background: var(--db-accent-tint); font-size: 11px; font-weight: 700; }
+.db-review-delta.positive { color: var(--db-sage-text); }
+.db-review-delta.negative { color: var(--sd-coral-deep); }
+.db-weekly-review-metrics { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; }
+.db-weekly-review-metrics > div { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 12px; border: 1px solid var(--db-divider); border-radius: 13px; background: var(--db-card-bg); }
+.db-weekly-review-metrics strong { overflow: hidden; color: var(--db-text); font-size: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.db-weekly-review-metrics span { color: var(--db-muted); font-size: 10px; }
+.db-review-goal-track { height: 5px; margin-top: 14px; overflow: hidden; border-radius: 99px; background: var(--db-track-bg); }
+.db-review-goal-track span { display: block; height: 100%; border-radius: inherit; background: var(--sd-coral-primary); }
+.db-weekly-review-suggestion { margin: 12px 0 0; color: var(--db-muted); font-size: 11px; line-height: 1.5; }
+
+.db-range-empty { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 82px; padding: 14px 16px; border: 1px dashed var(--db-divider); border-radius: 14px; color: var(--db-muted); font-size: 12px; }
+.db-range-empty button, .db-manage-link { display: inline-flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid var(--db-divider); border-radius: 10px; background: var(--db-pill-bg); color: var(--sd-coral-primary); font: inherit; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.db-range-empty button:hover, .db-manage-link:hover { background: var(--db-accent-tint); }
+.db-weekly-chart-scroll { width: 100%; overflow-x: auto; padding-bottom: 4px; }
+.db-weekly-bar-days-footer { min-width: max-content; }
+.db-project-plans-list { display: flex; flex-direction: column; }
+.db-project-plan-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-top: 1px solid var(--db-divider); }
+.db-project-plan-dot { flex: 0 0 9px; height: 9px; margin-top: 5px; border-radius: 50%; }
+.db-project-plan-main { flex: 1; min-width: 0; }
+.db-project-plan-title { display: flex; justify-content: space-between; gap: 10px; color: var(--db-text); font-size: 12px; }
+.db-project-plan-title span { color: var(--db-muted); white-space: nowrap; }
+.db-project-plan-main p { margin: 7px 0 0; color: var(--db-muted); font-size: 11px; }
+.db-project-plan-track { height: 5px; margin: 9px 0; overflow: hidden; border-radius: 99px; background: var(--db-track-bg); }
+.db-project-plan-track span { display: block; height: 100%; border-radius: inherit; background: var(--db-portfolio-accent); }
+.db-project-plan-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--db-muted); font-size: 10px; }
+
+@media (max-width: 760px) {
+  .db-dashboard-controls { align-items: stretch; }
+  .db-range-control-options { flex-basis: 100%; }
+  .db-range-control-options button { flex: 1 1 auto; padding-inline: 8px; }
+  .db-customize-wrap { margin-left: 0; }
+  .db-customizer-panel { left: 0; right: auto; }
+  .db-weekly-review-heading { align-items: flex-start; flex-direction: column; }
+  .db-weekly-review-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .db-range-empty { align-items: flex-start; flex-direction: column; }
+  .db-custom-date-inputs { flex-wrap: wrap; }
+}
+
+
+@media (max-width: 760px) {
+  .db-activity-cal-days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .db-activity-cal-day { min-height: 74px; padding: 9px; }
 }

@@ -388,3 +388,30 @@
   color: var(--sd-text-secondary);
   margin: 0;
 }
+
+.compare-weekly-recap {
+  padding: 22px 24px 18px;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: var(--sd-radius-xl);
+  background: var(--sd-bg-surface);
+  box-shadow: var(--sd-shadow-sm);
+}
+.compare-weekly-recap-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+.compare-weekly-recap-heading > div { display: flex; flex-direction: column; gap: 5px; }
+.compare-weekly-recap-heading > div > span { color: var(--sd-text-muted); font-size: 9px; font-weight: 750; letter-spacing: .12em; }
+.compare-weekly-recap-heading h2 { margin: 0; color: var(--sd-text-primary); font-size: 18px; letter-spacing: -.02em; }
+.compare-recap-change { padding: 7px 10px; border-radius: 99px; background: var(--sd-bg-subtle); font-size: 11px; font-weight: 700; }
+.compare-recap-change.positive { color: #37835e; }
+.compare-recap-change.negative { color: #b75365; }
+.compare-weekly-recap-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.compare-weekly-recap-grid > div { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 11px 12px; border: 1px solid var(--sd-border-soft); border-radius: var(--sd-radius-md); background: var(--sd-bg-subtle); }
+.compare-weekly-recap-grid strong { overflow: hidden; color: var(--sd-text-primary); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.compare-weekly-recap-grid span { color: var(--sd-text-muted); font-size: 10px; }
+.compare-recap-goal-track { height: 5px; margin-top: 12px; overflow: hidden; border-radius: 99px; background: var(--sd-border-soft); }
+.compare-recap-goal-track span { display: block; height: 100%; border-radius: inherit; background: var(--sd-orange); }
+.standings-context-metrics { margin-top: 3px; font-size: 10px !important; }
+
+@media (max-width: 640px) {
+  .compare-weekly-recap-heading { align-items: flex-start; flex-direction: column; }
+  .compare-weekly-recap-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
