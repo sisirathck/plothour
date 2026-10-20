@@ -121,14 +121,15 @@ export const TimerPage = ({ user }) => {
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : K_ENTRIES;
 
   const [projects, setProjects] = useState(() => rj(projectsKey, DEFAULT_PROJECTS));
+  const activeProjects = useMemo(() => projects.filter((project) => !project.archived), [projects]);
   const [activeTimer, setActiveTimer] = useState(() => rj(activeKey, null));
   const [entries, setEntries] = useState(() => rj(entriesKey, []));
 
   const [selProj, setSelProj] = useState(
-    () => rj(activeKey, null)?.projectId || rj(projectsKey, DEFAULT_PROJECTS)[0]?.id || ''
+    () => rj(activeKey, null)?.projectId || rj(projectsKey, DEFAULT_PROJECTS).find((project) => !project.archived)?.id || ''
   );
   const [selSub, setSelSub] = useState(
-    () => rj(activeKey, null)?.subjectId || rj(projectsKey, DEFAULT_PROJECTS)[0]?.subjects?.[0]?.id || ''
+    () => rj(activeKey, null)?.subjectId || rj(projectsKey, DEFAULT_PROJECTS).find((project) => !project.archived)?.subjects?.[0]?.id || ''
   );
 
   const [comboSearch, setComboSearch] = useState('');
@@ -172,15 +173,20 @@ export const TimerPage = ({ user }) => {
   }, [activeKey, entriesKey]);
 
   useEffect(() => {
-    if (!selProj && projects.length) {
-      setSelProj(projects[0].id);
-      setSelSub(projects[0].subjects?.[0]?.id || '');
+    if (!activeTimer && (!selProj || !activeProjects.some((project) => project.id === selProj)) && activeProjects.length) {
+      setSelProj(activeProjects[0].id);
+      setSelSub(activeProjects[0].subjects?.[0]?.id || '');
+    } else if (!activeTimer && !activeProjects.length && selProj) {
+      setSelProj('');
+      setSelSub('');
     }
-  }, [projects, selProj]);
+  }, [activeProjects, activeTimer, selProj]);
 
   const activeProj = useMemo(
-    () => projects.find((p) => p.id === (activeTimer?.projectId || selProj)),
-    [projects, activeTimer, selProj]
+    () => activeTimer
+      ? projects.find((p) => p.id === activeTimer.projectId)
+      : activeProjects.find((p) => p.id === selProj),
+    [projects, activeProjects, activeTimer, selProj]
   );
 
   // Elapsed computation
@@ -209,8 +215,10 @@ export const TimerPage = ({ user }) => {
   // Top 5 Frequently Used Combos
   const topCombos = useMemo(() => {
     const counts = new Map();
+    const activeProjectIds = new Set(activeProjects.map((project) => project.id));
 
     entries.forEach((e) => {
+      if (!activeProjectIds.has(e.projectId)) return;
       const k = `${e.projectId}::${e.subjectId || ''}`;
       const existing = counts.get(k) || {
         projectId: e.projectId,
@@ -233,9 +241,9 @@ export const TimerPage = ({ user }) => {
     );
 
     // If fewer than 5 from history, populate from projects/subjects
-    if (list.length < 5 && projects.length > 0) {
+    if (list.length < 5 && activeProjects.length > 0) {
       const usedKeys = new Set(list.map((c) => `${c.projectId}::${c.subjectId}`));
-      for (const p of projects) {
+      for (const p of activeProjects) {
         if (p.subjects && p.subjects.length > 0) {
           for (const s of p.subjects) {
             const k = `${p.id}::${s.id}`;
@@ -275,10 +283,10 @@ export const TimerPage = ({ user }) => {
     }
 
     return list.slice(0, 5);
-  }, [entries, projects]);
+  }, [entries, activeProjects]);
 
   const searchCombos = useMemo(
-    () => projects.flatMap((project) => {
+    () => activeProjects.flatMap((project) => {
       const subjects = project.subjects?.length ? project.subjects : [{ id: '', name: 'General Study' }];
       return subjects.map((subject) => ({
         projectId: project.id,
@@ -288,7 +296,7 @@ export const TimerPage = ({ user }) => {
         color: subject.color || project.color || '#8086d4',
       }));
     }),
-    [projects]
+    [activeProjects]
   );
   const searchMatches = useMemo(() => {
     const query = comboSearch.trim().toLocaleLowerCase();
@@ -416,7 +424,7 @@ export const TimerPage = ({ user }) => {
     ]);
   };
 
-  const projOptions = projects.map((p) => ({ value: p.id, label: p.name, color: p.color }));
+  const projOptions = activeProjects.map((p) => ({ value: p.id, label: p.name, color: p.color }));
   const subOptions = [
     { value: '', label: 'No subject' },
     ...(activeProj?.subjects || []).map((s) => ({ value: s.id, label: s.name, color: s.color })),
@@ -510,7 +518,7 @@ export const TimerPage = ({ user }) => {
                   }}
                   options={projOptions}
                   placeholder="Select project"
-                  disabled={!projects.length}
+                  disabled={!activeProjects.length}
                 />
               </div>
 

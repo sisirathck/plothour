@@ -6,8 +6,6 @@ import {
   LogOut,
   Sparkles,
   Zap,
-  Check,
-  Shuffle,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import './Dashboard.css';
@@ -35,13 +33,6 @@ export const DARK_HERO_ARTS = [
   '/dashboard_darktheme_7.png',
   '/dashboard_darktheme_8.png',
 ];
-
-// Helper to compute a random duration between 10 and 20 minutes in milliseconds
-const getRandomShuffleDelay = () => {
-  const minMs = 10 * 60 * 1000; // 10 minutes
-  const maxMs = 20 * 60 * 1000; // 20 minutes
-  return Math.floor(minMs + Math.random() * (maxMs - minMs));
-};
 
 const pickNextHeroIndex = (currentIdx, totalCount) => {
   if (totalCount <= 1) return 0;
@@ -296,23 +287,44 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [portfolioRange, setPortfolioRange] = useState('Today');
 
-  // Daily goal customization
-  const [dailyGoalHours, setDailyGoalHours] = useState(() => {
-    const saved = localStorage.getItem('studyduel_daily_goal_hours');
-    return saved ? Math.max(0.5, parseFloat(saved) || 4) : 4;
+  // Project goals are managed in /manage and stored with the project hierarchy.
+  const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
+  const [projects, setProjects] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(projectsKey) || '[]');
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
   });
-  const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [tempGoalHours, setTempGoalHours] = useState(dailyGoalHours);
+  useEffect(() => {
+    const syncProjects = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(projectsKey) || '[]');
+        setProjects(Array.isArray(saved) ? saved : []);
+      } catch {
+        setProjects([]);
+      }
+    };
+    window.addEventListener('storage', syncProjects);
+    return () => window.removeEventListener('storage', syncProjects);
+  }, [projectsKey]);
 
-  // Artwork shuffle state (persisted across reloads with next-switch timer)
+  const dailyGoalHours = useMemo(() => projects.reduce(
+    (total, project) => total + (project.archived ? 0 : (project.subjects || []).reduce(
+      (subjectTotal, subject) => subjectTotal + (Number(subject.goals?.daily) || 0), 0
+    )), 0
+  ), [projects]);
+
+  // Pick a different piece of artwork on each page load.
   const [heroArtIndex, setHeroArtIndex] = useState(() => {
     const totalCount = Math.min(LIGHT_HERO_ARTS.length, DARK_HERO_ARTS.length);
-    const saved = localStorage.getItem('studyduel_hero_art_index');
-    const idx = saved !== null ? parseInt(saved, 10) : 0;
-    return !isNaN(idx) && idx >= 0 && idx < totalCount ? idx : 0;
+    const saved = parseInt(localStorage.getItem('studyduel_hero_art_index') || '-1', 10);
+    const previousIndex = Number.isInteger(saved) && saved >= 0 && saved < totalCount ? saved : -1;
+    return pickNextHeroIndex(previousIndex, totalCount);
   });
 
-  // Preload all hero artwork for instantaneous, flicker-free switching
+  // Preload all hero artwork for instantaneous, flicker-free switching.
   useEffect(() => {
     [...LIGHT_HERO_ARTS, ...DARK_HERO_ARTS].forEach((src) => {
       const img = new Image();
@@ -320,44 +332,22 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     });
   }, []);
 
-  // Random 10-20 min shuffle interval timer
+  // Remember the current image so the next browser refresh picks a different one.
   useEffect(() => {
-    const totalCount = Math.min(LIGHT_HERO_ARTS.length, DARK_HERO_ARTS.length);
-    if (totalCount <= 1) return;
-
-    let nextSwitch = parseInt(localStorage.getItem('studyduel_hero_art_next_switch') || '0', 10);
-    const now = Date.now();
-
-    if (!nextSwitch || now >= nextSwitch) {
-      const nextIdx = pickNextHeroIndex(heroArtIndex, totalCount);
-      setHeroArtIndex(nextIdx);
-      localStorage.setItem('studyduel_hero_art_index', String(nextIdx));
-      nextSwitch = now + getRandomShuffleDelay();
-      localStorage.setItem('studyduel_hero_art_next_switch', String(nextSwitch));
-    }
-
-    const remainingDelay = Math.max(1000, nextSwitch - Date.now());
-
-    const timer = setTimeout(() => {
-      const nextIdx = pickNextHeroIndex(heroArtIndex, totalCount);
-      setHeroArtIndex(nextIdx);
-      localStorage.setItem('studyduel_hero_art_index', String(nextIdx));
-      const newNextSwitch = Date.now() + getRandomShuffleDelay();
-      localStorage.setItem('studyduel_hero_art_next_switch', String(newNextSwitch));
-    }, remainingDelay);
-
-    return () => clearTimeout(timer);
+    localStorage.setItem('studyduel_hero_art_index', String(heroArtIndex));
   }, [heroArtIndex]);
 
-  // Manual shuffle handler (resets the 10-20m timer as well)
-  const handleShuffleHeroArt = () => {
+  // Rotate artwork on a steady 10-minute interval while the dashboard is open.
+  useEffect(() => {
     const totalCount = Math.min(LIGHT_HERO_ARTS.length, DARK_HERO_ARTS.length);
-    const nextIdx = pickNextHeroIndex(heroArtIndex, totalCount);
-    setHeroArtIndex(nextIdx);
-    localStorage.setItem('studyduel_hero_art_index', String(nextIdx));
-    const newNextSwitch = Date.now() + getRandomShuffleDelay();
-    localStorage.setItem('studyduel_hero_art_next_switch', String(newNextSwitch));
-  };
+    if (totalCount <= 1) return undefined;
+
+    const timer = window.setInterval(() => {
+      setHeroArtIndex((currentIndex) => pickNextHeroIndex(currentIndex, totalCount));
+    }, 10 * 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   const currentHeroArt = isDark
     ? (DARK_HERO_ARTS[heroArtIndex] || DARK_HERO_ARTS[0])
@@ -393,14 +383,6 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     };
   }, [entriesKey]);
 
-  // Save updated goal
-  const handleSaveGoal = () => {
-    const hours = Math.max(0.5, Math.min(24, parseFloat(tempGoalHours) || 4));
-    setDailyGoalHours(hours);
-    localStorage.setItem('studyduel_daily_goal_hours', String(hours));
-    setIsEditingGoal(false);
-  };
-
   /* ── Core Computed Metrics ───────────────────── */
   const todayEntries = useMemo(() => entries.filter((e) => isInRange(e, 'Today')), [entries]);
   const weekEntries = useMemo(() => entries.filter((e) => isInRange(e, 'Week')), [entries]);
@@ -430,7 +412,9 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
   // SVG Progress Ring circumference: 2 * PI * 40 = 251.327
   const ringCircumference = 251.327;
-  const strokeDashoffset = ringCircumference * (1 - Math.min(1, todaySecs / Math.max(1, goalSecs)));
+  const strokeDashoffset = goalSecs > 0
+    ? ringCircumference * (1 - Math.min(1, todaySecs / goalSecs))
+    : ringCircumference;
 
   // Yesterday's volume for comparison
   const yestSecs = useMemo(() => {
@@ -1019,52 +1003,18 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             {/* Directional Gradient Scrim: Character & scenery shine on right */}
             <div className="db-hero-gradient-scrim" />
 
-            {/* Discreet manual shuffle control (revealed on card hover) */}
-            <button
-              onClick={handleShuffleHeroArt}
-              className="db-hero-shuffle-btn"
-              title={`Artwork ${heroArtIndex + 1} of ${LIGHT_HERO_ARTS.length} · Auto-shuffles every 10–20m (Click to shuffle now)`}
-              aria-label="Shuffle dashboard background artwork"
-            >
-              <Shuffle className="w-3.5 h-3.5" />
-              <span>Shuffle Art ({heroArtIndex + 1}/{LIGHT_HERO_ARTS.length})</span>
-            </button>
-
-
-
             {/* Frosted Glass Apple Activity Card */}
             <div className="db-hero-goal-glass-card">
               <div className="db-goal-card-header">
                 <span className="db-goal-card-title">Daily Goal</span>
                 <button
-                  onClick={() => setIsEditingGoal((prev) => !prev)}
+                  onClick={() => onNavigate?.('manage')}
                   className="db-goal-edit-btn"
                 >
-                  {isEditingGoal ? 'Cancel' : 'Edit'}
+                  {dailyGoalHours > 0 ? 'Edit' : 'Set goals'}
                 </button>
               </div>
 
-              {isEditingGoal ? (
-                <div className="db-goal-edit-form">
-                  <label className="db-goal-edit-label">Target Hours per Day:</label>
-                  <div className="db-goal-edit-controls">
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      max="24"
-                      value={tempGoalHours}
-                      onChange={(e) => setTempGoalHours(e.target.value)}
-                      className="db-goal-input"
-                      autoFocus
-                    />
-                    <button onClick={handleSaveGoal} className="db-goal-save-btn">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Save</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
                 <div className="db-goal-content-flex">
                   {/* SVG Smooth Progress Ring */}
                   <div className="db-goal-ring-wrapper">
@@ -1109,12 +1059,11 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                     <div className="db-goal-breakdown-row no-border">
                       <span className="db-goal-row-label">Remaining</span>
                       <span className="db-goal-row-val accent">
-                        {todaySecs >= goalSecs ? 'Goal Met! 🎉' : fmtDur(goalRemainingSecs)}
+                        {goalSecs <= 0 ? '—' : todaySecs >= goalSecs ? 'Goal Met! 🎉' : fmtDur(goalRemainingSecs)}
                       </span>
                     </div>
                   </div>
                 </div>
-              )}
             </div>
           </div>
 
@@ -1164,7 +1113,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                   <div className="db-kpi-sub-row">
                     {kpi.badge ? (
                       <>
-                        <span className="db-kpi-trend-pill">{kpi.badge}</span>
+                        <span className={`db-kpi-trend-pill ${weekVelocityPct >= 0 ? 'is-positive' : 'is-negative'}`}>{kpi.badge}</span>
                         <span className="db-kpi-sub">{kpi.sub}</span>
                       </>
                     ) : (
