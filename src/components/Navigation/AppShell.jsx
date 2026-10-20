@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, Square, Timer } from 'lucide-react';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
 import { ThemeToggle } from '../Header/ThemeToggle';
 import { TimerPage } from '../../modules/timer/TimerPage';
@@ -24,8 +24,69 @@ const getRouteFromPath = () => {
   return 'timer';
 };
 
+const readLocalValue = (key, fallback = null) => {
+  try {
+    return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const formatRunningTime = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return [hours, minutes, remainder].map((part) => String(part).padStart(2, '0')).join(':');
+};
+
 export const AppShell = ({ user, onLogout }) => {
   const [currentRoute, setCurrentRoute] = useState(getRouteFromPath);
+  const activeTimerKey = user?.id
+    ? `studyduel_user_${user.id}_active_timer`
+    : 'studyduel_demo_active_timer';
+  const entriesKey = user?.id
+    ? `studyduel_user_${user.id}_time_entries`
+    : 'studyduel_demo_time_entries';
+  const [activeTimer, setActiveTimer] = useState(() => readLocalValue(activeTimerKey));
+  const [timerNow, setTimerNow] = useState(Date.now());
+
+  useEffect(() => {
+    const syncTimer = () => setActiveTimer(readLocalValue(activeTimerKey));
+    syncTimer();
+    const interval = window.setInterval(() => {
+      syncTimer();
+      setTimerNow(Date.now());
+    }, 1000);
+    window.addEventListener('storage', syncTimer);
+    window.addEventListener('studyduel:timer-storage', syncTimer);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('storage', syncTimer);
+      window.removeEventListener('studyduel:timer-storage', syncTimer);
+    };
+  }, [activeTimerKey]);
+
+  const stopRunningTimer = () => {
+    if (!activeTimer) return;
+    const endedAt = Date.now();
+    const durationSeconds = Math.max(1, Math.floor((endedAt - activeTimer.startedAt) / 1000));
+    const savedEntries = readLocalValue(entriesKey, []);
+    const completedEntry = {
+      id: crypto.randomUUID(),
+      ...activeTimer,
+      endedAt,
+      durationSeconds,
+    };
+    localStorage.setItem(entriesKey, JSON.stringify([
+      completedEntry,
+      ...(Array.isArray(savedEntries) ? savedEntries : []),
+    ]));
+    localStorage.setItem(activeTimerKey, 'null');
+    setActiveTimer(null);
+    window.dispatchEvent(new CustomEvent('studyduel:timer-storage', {
+      detail: { activeTimerKey, entriesKey },
+    }));
+  };
 
   useEffect(() => {
     // Sync URL if root or unmatched
@@ -94,6 +155,29 @@ export const AppShell = ({ user, onLogout }) => {
 
         {/* Right Action Controls: Theme, Settings, Log out */}
         <div className="nav-right">
+          {activeTimer && (
+            <div className="running-session-island" role="status" aria-live="off">
+              <span className="running-session-icon" aria-hidden="true"><Timer size={15} /></span>
+              <span className="running-session-context">
+                <span className="running-session-project">{activeTimer.projectName || 'Study session'}</span>
+                {activeTimer.subjectName && (
+                  <span className="running-session-subject">{activeTimer.subjectName}</span>
+                )}
+              </span>
+              <span className="running-session-time">
+                {formatRunningTime(Math.max(0, Math.floor((timerNow - activeTimer.startedAt) / 1000)))}
+              </span>
+              <button
+                type="button"
+                className="running-session-stop"
+                onClick={stopRunningTimer}
+                aria-label={`Stop ${activeTimer.projectName || 'study'} session`}
+                title="Stop and save session"
+              >
+                <Square size={11} fill="currentColor" />
+              </button>
+            </div>
+          )}
           <ThemeToggle />
 
           <button

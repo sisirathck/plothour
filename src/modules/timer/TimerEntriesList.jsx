@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X, Calendar } from 'lucide-react';
 
 const localDateKey = (value) => {
   const date = new Date(value);
@@ -11,9 +11,23 @@ const localTimeKey = (value) => {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
-const formatDateTime = (value) => new Date(value).toLocaleString(undefined, {
-  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
-});
+const formatTimeRange = (startVal, endVal) => {
+  const s = new Date(startVal);
+  const e = new Date(endVal);
+  const sStr = s.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+  const eStr = e.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${sStr} – ${eStr}`;
+};
+
+const formatShortDate = (val) => {
+  const d = new Date(val);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
 
 const getDateRange = (range, now = new Date()) => {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -36,7 +50,7 @@ const durationLabel = (seconds) => {
 };
 
 export const TimerEntriesList = ({ entries, setEntries, projects }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [range, setRange] = useState('today');
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
@@ -55,6 +69,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
     const day = localDateKey(entry.startedAt);
     return day >= dateRange.start && day <= dateRange.end;
   }), [entries, dateRange]);
+
   const effectivePageSize = pageSize === 'all' ? 100 : Number(pageSize);
   const pageCount = Math.max(1, Math.ceil(filteredEntries.length / effectivePageSize));
   const visibleEntries = filteredEntries.slice((page - 1) * effectivePageSize, page * effectivePageSize);
@@ -79,22 +94,24 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
       setError('End time must be later than start time.');
       return;
     }
-    const project = projects.find((item) => item.id === draft.projectId);
-    const subject = project?.subjects?.find((item) => item.id === draft.subjectId);
-    const updated = {
-      ...draft,
-      startedAt,
-      endedAt,
-      durationSeconds: Math.floor((endedAt - startedAt) / 1000),
-      projectName: project?.name || draft.projectName,
-      subjectName: subject?.name || '',
-      color: subject?.color || project?.color || draft.color,
-    };
-    delete updated.startDate;
-    delete updated.startTime;
-    delete updated.endDate;
-    delete updated.endTime;
-    setEntries((items) => items.map((entry) => (entry.id === draft.id ? updated : entry)));
+
+    const durationSeconds = Math.max(1, Math.floor((endedAt - startedAt) / 1000));
+    setEntries((items) => items.map((entry) => {
+      if (entry.id !== draft.id) return entry;
+      return {
+        ...entry,
+        projectId: draft.projectId,
+        projectName: draft.projectName,
+        subjectId: draft.subjectId,
+        subjectName: draft.subjectName,
+        color: draft.color,
+        startedAt,
+        endedAt,
+        durationSeconds,
+        note: draft.note,
+      };
+    }));
+
     setEditingId(null);
     setDraft(null);
     setError('');
@@ -107,6 +124,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
 
   return (
     <section className="demo-entry-card" aria-label="Completed time entries">
+      {/* Panel Header */}
       <div className="entries-panel-heading">
         <button
           type="button"
@@ -114,66 +132,105 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
           onClick={() => setExpanded((current) => !current)}
           aria-expanded={expanded}
         >
-          {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-          <span>Session history</span>
-          <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}</span>
+          <span className="entries-caret-icon">
+            {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </span>
+          <span className="entries-heading-title">SESSION HISTORY</span>
+          <span className="date-badge">
+            {filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}
+          </span>
         </button>
 
         {expanded && (
           <div className="entries-controls">
-            <label>
-              <span>Range</span>
-              <select value={range} onChange={(e) => { setRange(e.target.value); setPage(1); }}>
-                <option value="today">Today</option>
-                <option value="week">This week</option>
-                <option value="month">This month</option>
-                <option value="quarter">This quarter</option>
-              </select>
-            </label>
-            <label>
-              <span>Show</span>
-              <select value={pageSize} onChange={(e) => { setPageSize(e.target.value); setPage(1); }}>
+            {/* Segmented Range Buttons */}
+            <div className="entries-range-pills" role="radiogroup" aria-label="Date range">
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'week', label: 'Week' },
+                { id: 'month', label: 'Month' },
+                { id: 'quarter', label: 'Quarter' },
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={`range-pill-btn${range === r.id ? ' sel' : ''}`}
+                  onClick={() => { setRange(r.id); setPage(1); }}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Page Size */}
+            <div className="entries-size-picker">
+              <span className="size-picker-lbl">Show</span>
+              <select
+                className="entries-native-select"
+                value={pageSize}
+                onChange={(e) => { setPageSize(e.target.value); setPage(1); }}
+              >
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
                 <option value="all">All</option>
               </select>
-            </label>
+            </div>
           </div>
         )}
       </div>
 
+      {/* Expanded Content */}
       {expanded && (
-        <>
+        <div className="entries-content-body">
           {filteredEntries.length === 0 ? (
-            <p className="demo-entry-empty">No tracked time in this date range.</p>
+            <div className="demo-entry-empty">
+              <Calendar size={20} className="empty-icon" />
+              <p>No tracked sessions found in this date range.</p>
+            </div>
           ) : (
             <div className="demo-entry-list">
               {visibleEntries.map((entry) => (
                 <div key={entry.id} className="demo-entry-item">
                   <div className="demo-entry-row">
-                    <span className="demo-entry-color" style={{ backgroundColor: entry.color }} />
-                    <div className="demo-entry-name">
-                      <strong>{entry.projectName}</strong>
-                      <span>{entry.subjectName || 'No subject'}</span>
+                    {/* Left: Project & Subject */}
+                    <div className="demo-entry-left">
+                      <span className="demo-entry-color" style={{ backgroundColor: entry.color || 'var(--sd-coral)' }} />
+                      <div className="demo-entry-name">
+                        <strong className="entry-proj-title">{entry.projectName}</strong>
+                        <span className="entry-sub-title">{entry.subjectName || 'No subject'}</span>
+                        {entry.note && <span className="entry-note-tag">"{entry.note}"</span>}
+                      </div>
                     </div>
+
+                    {/* Center: Timestamp range */}
                     <div className="demo-entry-time">
-                      <strong>{durationLabel(entry.durationSeconds)}</strong>
-                      <span>{formatDateTime(entry.startedAt)} - {formatDateTime(entry.endedAt)}</span>
+                      <span className="entry-range-clock">{formatTimeRange(entry.startedAt, entry.endedAt)}</span>
+                      <span className="demo-entry-date">{formatShortDate(entry.startedAt)}</span>
                     </div>
-                    <span className="demo-entry-date">{localDateKey(entry.startedAt)}</span>
-                    <div className="entry-row-actions">
-                      <button type="button" onClick={() => startEdit(entry)} title="Edit"><Pencil size={15} /></button>
-                      <button type="button" onClick={() => removeEntry(entry.id)} title="Delete"><Trash2 size={15} /></button>
+
+                    {/* Right: Duration badge & actions */}
+                    <div className="demo-entry-right">
+                      <span className="entry-duration-pill">{durationLabel(entry.durationSeconds)}</span>
+                      <div className="entry-row-actions">
+                        <button type="button" className="entry-action-btn" onClick={() => startEdit(entry)} title="Edit session">
+                          <Pencil size={13} />
+                        </button>
+                        <button type="button" className="entry-action-btn delete" onClick={() => removeEntry(entry.id)} title="Delete session">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Inline Edit Form */}
                   {editingId === entry.id && draft && (
                     <form className="entry-edit-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
                       <div className="entry-edit-grid">
-                        <label>
-                          <span>Project</span>
+                        <div className="edit-field">
+                          <label>Project</label>
                           <select
+                            className="edit-select"
                             value={draft.projectId}
                             onChange={(e) => {
                               const nextProject = projects.find((item) => item.id === e.target.value);
@@ -191,11 +248,12 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
                               <option key={project.id} value={project.id}>{project.name}</option>
                             ))}
                           </select>
-                        </label>
+                        </div>
 
-                        <label>
-                          <span>Subject</span>
+                        <div className="edit-field">
+                          <label>Subject</label>
                           <select
+                            className="edit-select"
                             value={draft.subjectId || ''}
                             onChange={(e) => {
                               const project = projects.find((item) => item.id === draft.projectId);
@@ -213,26 +271,51 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
                               <option key={subject.id} value={subject.id}>{subject.name}</option>
                             ))}
                           </select>
-                        </label>
+                        </div>
 
-                        <label>
-                          <span>Start</span>
-                          <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} />
-                          <input type="time" value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} />
-                        </label>
+                        <div className="edit-field">
+                          <label>Date</label>
+                          <input
+                            type="date"
+                            className="edit-input"
+                            value={draft.startDate}
+                            onChange={(e) => setDraft({ ...draft, startDate: e.target.value, endDate: e.target.value })}
+                          />
+                        </div>
 
-                        <label>
-                          <span>End</span>
-                          <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} />
-                          <input type="time" value={draft.endTime} onChange={(e) => setDraft({ ...draft, endTime: e.target.value })} />
-                        </label>
+                        <div className="edit-field">
+                          <label>Start & End Time</label>
+                          <div className="edit-time-inputs">
+                            <input
+                              type="time"
+                              className="edit-input time"
+                              value={draft.startTime}
+                              onChange={(e) => setDraft({ ...draft, startTime: e.target.value })}
+                            />
+                            <span className="time-sep">to</span>
+                            <input
+                              type="time"
+                              className="edit-input time"
+                              value={draft.endTime}
+                              onChange={(e) => setDraft({ ...draft, endTime: e.target.value })}
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       {error && <p className="entries-error">{error}</p>}
 
                       <div className="entry-edit-actions">
-                        <button type="submit" className="entry-save-btn"><Save size={14} /> Save</button>
-                        <button type="button" className="entry-cancel-btn" onClick={() => { setEditingId(null); setDraft(null); setError(''); }}><X size={14} /> Cancel</button>
+                        <button type="submit" className="entry-save-btn">
+                          <Save size={13} /> Save Changes
+                        </button>
+                        <button
+                          type="button"
+                          className="entry-cancel-btn"
+                          onClick={() => { setEditingId(null); setDraft(null); setError(''); }}
+                        >
+                          <X size={13} /> Cancel
+                        </button>
                       </div>
                     </form>
                   )}
@@ -243,14 +326,28 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
 
           {pageCount > 1 && (
             <div className="entries-footer">
-              <span>Page {page} of {pageCount}</span>
-              <div>
-                <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>Prev</button>
-                <button type="button" onClick={() => setPage((current) => Math.min(pageCount, current + 1))} disabled={page === pageCount}>Next</button>
+              <span className="entries-page-indicator">Page {page} of {pageCount}</span>
+              <div className="entries-pagination-btns">
+                <button
+                  type="button"
+                  className="page-nav-btn"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="page-nav-btn"
+                  onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                  disabled={page === pageCount}
+                >
+                  Next
+                </button>
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </section>
   );

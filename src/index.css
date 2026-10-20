@@ -23,75 +23,88 @@
   --sd-transition-fast: 140ms cubic-bezier(0.16, 1, 0.3, 1);
   --font-display: var(--font-sans);
   --sd-orange: var(--sd-coral);
+  --sd-orange-hover: var(--sd-coral-hover);
+  --sd-orange-active: var(--sd-coral-active);
   --sd-orange-glow: var(--sd-coral-glow);
   --sd-orange-subtle: rgba(243, 149, 127, 0.12);
 }
 
 /* --------------------------------------------------------------------------
-   Light Theme
+   Light Theme (Warm Tactile Studio Canvas + Crisp Specular Glass)
    -------------------------------------------------------------------------- */
 [data-theme='light'] {
   color-scheme: light;
-  --sd-bg-base: #f7f5f2;
-  --sd-card-bg: rgba(255, 255, 255, 0.97);
-  --sd-card-border: rgba(35, 31, 28, 0.08);
-  --sd-card-shadow: 0 18px 42px -16px rgba(51, 39, 30, 0.18), 0 1px 2px rgba(51, 39, 30, 0.04);
-  --sd-bg-surface: rgba(255, 255, 255, 0.92);
-  --sd-bg-subtle: rgba(31, 41, 55, 0.035);
-  --sd-border-glass: rgba(31, 41, 55, 0.08);
-  --sd-border-soft: rgba(31, 41, 55, 0.09);
-  --sd-border-strong: rgba(31, 41, 55, 0.18);
-  --sd-shadow-sm: 0 12px 32px -20px rgba(31, 41, 55, 0.22);
-  --sd-shadow-card: 0 18px 46px -20px rgba(31, 41, 55, 0.24);
+  --sd-coral: #8086d4;
+  --sd-coral-hover: #7278c7;
+  --sd-coral-active: #646abb;
+  --sd-coral-glow: rgba(128, 134, 212, 0.26);
+  --sd-orange: var(--sd-coral);
+  --sd-orange-hover: var(--sd-coral-hover);
+  --sd-orange-active: var(--sd-coral-active);
+  --sd-orange-glow: var(--sd-coral-glow);
+  --sd-orange-subtle: rgba(128, 134, 212, 0.12);
 
-  --sd-text-primary: #111827;
-  --sd-text-secondary: #4b5563;
-  --sd-text-muted: #9ca3af;
+  --sd-bg-base: #f0effa;
+  --sd-card-bg: #fbfaff;
+  --sd-card-border: rgba(91, 96, 164, 0.1);
+  --sd-card-shadow: 0 2px 5px rgba(68, 69, 126, 0.035), 0 12px 30px -8px rgba(94, 94, 164, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  --sd-bg-surface: #fbfaff;
+  --sd-bg-subtle: #f6f5fc;
+  --sd-track-bg: #e9e8f5;
+  --sd-border-glass: rgba(91, 96, 164, 0.1);
+  --sd-border-soft: rgba(91, 96, 164, 0.13);
+  --sd-border-strong: rgba(91, 96, 164, 0.22);
+  --sd-shadow-sm: 0 2px 8px rgba(81, 82, 145, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --sd-shadow-card: var(--sd-card-shadow);
 
-  --sd-input-bg: #ffffff;
-  --sd-input-border: #e5e7eb;
-  --sd-input-border-focus: #f3957f;
-  --sd-input-ring: rgba(243, 149, 127, 0.2);
+  --sd-text-primary: #252744;
+  --sd-text-secondary: #555978;
+  --sd-text-muted: #777b99;
 
-  --sd-banner-bg: #fff8f5;
-  --sd-banner-border: #fed7aa;
-  --sd-banner-text: #4b5563;
+  --sd-input-bg: #fcfbff;
+  --sd-input-border: #dedff0;
+  --sd-input-border-focus: #8086d4;
+  --sd-input-ring: rgba(128, 134, 212, 0.2);
 
-  /* Keep header controls visually clear in the bright artwork. */
-  --sd-glass-btn-bg: rgba(255, 252, 247, 0.88);
-  --sd-glass-btn-border: #e7dccb;
-  --sd-glass-btn-hover-bg: rgba(255, 250, 243, 0.96);
-  --sd-glass-btn-hover-border: #d8c8b2;
+  --sd-banner-bg: #f6f5ff;
+  --sd-banner-border: #dadaf3;
+  --sd-banner-text: #4f5278;
+
+  /* Header controls */
+  --sd-glass-btn-bg: rgba(251, 250, 255, 0.92);
+  --sd-glass-btn-border: rgba(91, 96, 164, 0.1);
+  --sd-glass-btn-hover-bg: #ffffff;
+  --sd-glass-btn-hover-border: rgba(91, 96, 164, 0.2);
 
   --sd-backdrop-scrim: linear-gradient(
     90deg,
-    rgba(253, 251, 247, 0.9) 0%,
-    rgba(253, 251, 247, 0.82) 32%,
-    rgba(253, 251, 247, 0.48) 52%,
-    rgba(253, 251, 247, 0) 76%
+    rgba(240, 239, 250, 0.76) 0%,
+    rgba(240, 239, 250, 0.28) 45%,
+    rgba(242, 239, 233, 0) 100%
   );
 }
 
 /* --------------------------------------------------------------------------
-   Dark Theme
+   Dark Theme (Deep Slate + Specular Top-Edge Highlights & 3D Elevation)
    -------------------------------------------------------------------------- */
 [data-theme='dark'] {
   color-scheme: dark;
-  --sd-bg-base: #0a0e17;
-  --sd-card-bg: rgba(17, 24, 39, 0.85);
-  --sd-card-border: rgba(255, 255, 255, 0.08);
-  --sd-card-shadow: 0 24px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-  --sd-bg-surface: rgba(17, 24, 39, 0.88);
-  --sd-bg-subtle: rgba(255, 255, 255, 0.045);
-  --sd-border-glass: rgba(255, 255, 255, 0.08);
+  --sd-bg-base: #090d14;
+  --sd-card-bg: linear-gradient(to bottom, #161d2b, #121722);
+  --sd-card-border: rgba(255, 255, 255, 0.06);
+  --sd-card-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+  --sd-bg-surface: #121722;
+  --sd-bg-subtle: rgba(13, 18, 27, 0.8);
+  --sd-track-bg: #0d121b;
+  --sd-border-glass: rgba(255, 255, 255, 0.06);
   --sd-border-soft: rgba(255, 255, 255, 0.09);
   --sd-border-strong: rgba(255, 255, 255, 0.18);
-  --sd-shadow-sm: 0 12px 32px -20px rgba(0, 0, 0, 0.5);
-  --sd-shadow-card: 0 24px 50px -16px rgba(0, 0, 0, 0.56);
+  --sd-shadow-sm: 0 8px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --sd-shadow-card: 0 12px 32px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
 
-  --sd-text-primary: #f9fafb;
+  --sd-text-primary: #f3f4f6;
   --sd-text-secondary: #9ca3af;
-  --sd-text-muted: #6b7280;
+  --sd-text-muted: #8a94a6;
 
   --sd-input-bg: rgba(15, 23, 42, 0.6);
   --sd-input-border: rgba(255, 255, 255, 0.1);
@@ -102,17 +115,17 @@
   --sd-banner-border: rgba(243, 149, 127, 0.22);
   --sd-banner-text: #e5e7eb;
 
-  /* Transparent / Invisible buttons in Dark Mode */
+  /* Transparent / Specular buttons in Dark Mode */
   --sd-glass-btn-bg: rgba(255, 255, 255, 0.06);
-  --sd-glass-btn-border: rgba(255, 255, 255, 0.12);
+  --sd-glass-btn-border: rgba(255, 255, 255, 0.10);
   --sd-glass-btn-hover-bg: rgba(255, 255, 255, 0.12);
-  --sd-glass-btn-hover-border: rgba(255, 255, 255, 0.22);
+  --sd-glass-btn-hover-border: rgba(255, 255, 255, 0.20);
 
   --sd-backdrop-scrim: linear-gradient(
     90deg,
-    rgba(10, 14, 23, 0.88) 0%,
-    rgba(10, 14, 23, 0.6) 45%,
-    rgba(10, 14, 23, 0) 100%
+    rgba(9, 13, 20, 0.70) 0%,
+    rgba(9, 13, 20, 0.25) 45%,
+    rgba(9, 13, 20, 0) 100%
   );
 }
 

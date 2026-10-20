@@ -1,81 +1,156 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Clock3, FolderKanban, Play, Square, Tag } from 'lucide-react';
-import { TimerClock } from './TimerClock';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Play,
+  Square,
+  Pause,
+  ChevronDown,
+  Flag,
+  Search,
+} from 'lucide-react';
+import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
 import './Timer.css';
 
-const PROJECTS_KEY = 'studyduel_demo_projects';
-const ACTIVE_KEY = 'studyduel_demo_active_timer';
-const ENTRIES_KEY = 'studyduel_demo_time_entries';
+/* ── Storage Keys ───────────────────────────── */
+const K_PROJECTS = 'studyduel_demo_projects';
+const K_ACTIVE = 'studyduel_demo_active_timer';
+const K_ENTRIES = 'studyduel_demo_time_entries';
 
-const readJson = (key, fallback) => {
+const rj = (key, fallback) => {
   try {
-    const value = JSON.parse(localStorage.getItem(key) || 'null');
-    return value ?? fallback;
+    const v = JSON.parse(localStorage.getItem(key) || 'null');
+    return v ?? fallback;
   } catch {
     return fallback;
   }
 };
 
-const formatTime = (totalSeconds) => {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+const pad = (n) => String(Math.floor(n)).padStart(2, '0');
+const fmtClock = (s) => `${pad(s / 3600)}:${pad((s % 3600) / 60)}:${pad(s % 60)}`;
+const fmtDur = (s) => {
+  if (!s || s <= 0) return '0m';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-const formatDateTime = (value) => new Date(value).toLocaleString(undefined, {
-  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
-});
-
-const localDateKey = (value) => {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-};
-
-const initialProjects = [
+/* ── Default Sample Projects ───────────────── */
+const DEFAULT_PROJECTS = [
   {
-    id: 'computer-science',
+    id: 'cs',
     name: 'Computer Science',
-    color: '#f97316',
+    color: '#f3957f',
     subjects: [
-      { id: 'algorithms', name: 'Algorithms', color: '#3b82f6' },
-      { id: 'data-structures', name: 'Data Structures', color: '#8b5cf6' },
+      { id: 'algo', name: 'Algorithms', color: '#f3957f' },
+      { id: 'ds', name: 'Data Structures', color: '#e07a5f' },
+      { id: 'sys', name: 'System Design', color: '#f4a261' },
     ],
   },
   {
-    id: 'languages',
-    name: 'Languages',
-    color: '#10b981',
+    id: 'math',
+    name: 'Mathematics',
+    color: '#818cf8',
     subjects: [
-      { id: 'japanese', name: 'Japanese', color: '#eab308' },
+      { id: 'calc', name: 'Calculus III', color: '#818cf8' },
+      { id: 'lin', name: 'Linear Algebra', color: '#6366f1' },
+    ],
+  },
+  {
+    id: 'lang',
+    name: 'Languages',
+    color: '#34d399',
+    subjects: [
+      { id: 'jp', name: 'Japanese', color: '#34d399' },
+      { id: 'de', name: 'German', color: '#10b981' },
     ],
   },
 ];
 
-export const TimerPage = ({ onNavigate, user }) => {
-  const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : PROJECTS_KEY;
-  const activeKey = user?.id ? `studyduel_user_${user.id}_active_timer` : ACTIVE_KEY;
-  const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : ENTRIES_KEY;
-
-  const [projects, setProjects] = useState(() => readJson(projectsKey, initialProjects));
-  const [activeTimer, setActiveTimer] = useState(() => readJson(activeKey, null));
-  const [entries, setEntries] = useState(() => readJson(entriesKey, []));
-  const [selectedProjectId, setSelectedProjectId] = useState(() => readJson(activeKey, null)?.projectId || (readJson(projectsKey, initialProjects)[0]?.id || ''));
-  const [selectedSubjectId, setSelectedSubjectId] = useState(() => readJson(activeKey, null)?.subjectId || (readJson(projectsKey, initialProjects)[0]?.subjects?.[0]?.id || ''));
-  const [now, setNow] = useState(() => Date.now());
-  const [notice, setNotice] = useState('');
+/* ── Custom Select Component ───────────────── */
+const CustomSelect = ({ value, onChange, options, placeholder, disabled }) => {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = options.find((o) => o.value === value);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    const syncProjects = () => setProjects(readJson(projectsKey, initialProjects));
-    window.addEventListener('storage', syncProjects);
+    const fn = (e) => {
+      if (!rootRef.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', fn);
+    return () => document.removeEventListener('mousedown', fn);
+  }, []);
+
+  return (
+    <div ref={rootRef} className={`t-select${open ? ' open' : ''}${disabled ? ' disabled' : ''}`}>
+      <button
+        type="button"
+        className="t-select-btn"
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+      >
+        {selected?.color && <span className="t-sel-dot" style={{ background: selected.color }} />}
+        <span className="t-sel-text">{selected ? selected.label : placeholder}</span>
+        <ChevronDown size={14} className="t-sel-chevron" />
+      </button>
+      {open && (
+        <div className="t-select-menu">
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              className={`t-select-opt${o.value === value ? ' sel' : ''}`}
+              onClick={() => {
+                onChange(o.value);
+                setOpen(false);
+              }}
+            >
+              {o.color && <span className="t-sel-dot" style={{ background: o.color }} />}
+              <span className="t-opt-label">{o.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ── Main Timer Page ───────────────────────── */
+export const TimerPage = ({ user }) => {
+  const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : K_PROJECTS;
+  const activeKey = user?.id ? `studyduel_user_${user.id}_active_timer` : K_ACTIVE;
+  const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : K_ENTRIES;
+
+  const [projects, setProjects] = useState(() => rj(projectsKey, DEFAULT_PROJECTS));
+  const [activeTimer, setActiveTimer] = useState(() => rj(activeKey, null));
+  const [entries, setEntries] = useState(() => rj(entriesKey, []));
+
+  const [selProj, setSelProj] = useState(
+    () => rj(activeKey, null)?.projectId || rj(projectsKey, DEFAULT_PROJECTS)[0]?.id || ''
+  );
+  const [selSub, setSelSub] = useState(
+    () => rj(activeKey, null)?.subjectId || rj(projectsKey, DEFAULT_PROJECTS)[0]?.subjects?.[0]?.id || ''
+  );
+
+  const [comboSearch, setComboSearch] = useState('');
+  const [pendingSelection, setPendingSelection] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pausedElapsed, setPausedElapsed] = useState(0);
+  const [laps, setLaps] = useState([]);
+  const [notice, setNotice] = useState('');
+  const [now, setNow] = useState(() => new Date());
+
+  // Live clock tick
+  useEffect(() => {
+    const tick = setInterval(() => setNow(new Date()), 1000);
+    const sync = () => setProjects(rj(projectsKey, DEFAULT_PROJECTS));
+    window.addEventListener('storage', sync);
     return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('storage', syncProjects);
+      clearInterval(tick);
+      window.removeEventListener('storage', sync);
     };
   }, [projectsKey]);
 
+  // Sync state
   useEffect(() => {
     localStorage.setItem(activeKey, JSON.stringify(activeTimer));
   }, [activeKey, activeTimer]);
@@ -85,245 +160,592 @@ export const TimerPage = ({ onNavigate, user }) => {
   }, [entriesKey, entries]);
 
   useEffect(() => {
-    if (!selectedProjectId && projects.length) {
-      setSelectedProjectId(projects[0].id);
-      setSelectedSubjectId(projects[0].subjects?.[0]?.id || '');
+    const syncStoppedSession = () => {
+      setActiveTimer(rj(activeKey, null));
+      setEntries(rj(entriesKey, []));
+      setIsPaused(false);
+      setPausedElapsed(0);
+      setLaps([]);
+    };
+    window.addEventListener('studyduel:timer-storage', syncStoppedSession);
+    return () => window.removeEventListener('studyduel:timer-storage', syncStoppedSession);
+  }, [activeKey, entriesKey]);
+
+  useEffect(() => {
+    if (!selProj && projects.length) {
+      setSelProj(projects[0].id);
+      setSelSub(projects[0].subjects?.[0]?.id || '');
     }
-  }, [projects, selectedProjectId]);
+  }, [projects, selProj]);
 
-  const activeProject = useMemo(
-    () => projects.find((project) => project.id === (activeTimer?.projectId || selectedProjectId)),
-    [projects, activeTimer, selectedProjectId]
+  const activeProj = useMemo(
+    () => projects.find((p) => p.id === (activeTimer?.projectId || selProj)),
+    [projects, activeTimer, selProj]
   );
 
-  const activeSubject = useMemo(
-    () => activeProject?.subjects?.find((subject) => subject.id === (activeTimer?.subjectId || selectedSubjectId)),
-    [activeProject, activeTimer, selectedSubjectId]
-  );
-
-  const elapsedSeconds = useMemo(() => {
+  // Elapsed computation
+  const elapsed = useMemo(() => {
     if (!activeTimer) return 0;
-    return Math.max(0, Math.floor((now - activeTimer.startedAt) / 1000));
-  }, [activeTimer, now]);
+    if (isPaused) return pausedElapsed;
+    return Math.max(0, Math.floor((now.getTime() - activeTimer.startedAt) / 1000));
+  }, [activeTimer, now, isPaused, pausedElapsed]);
 
-  const frequentCombinations = useMemo(() => {
-    const counts = new Map();
-    entries.forEach((entry) => {
-      const key = `${entry.projectId}::${entry.subjectId || ''}`;
-      const current = counts.get(key) || {
-        projectId: entry.projectId,
-        projectName: entry.projectName,
-        subjectId: entry.subjectId || '',
-        subjectName: entry.subjectName || '',
-        color: entry.color,
-        count: 0,
-      };
-      current.count += 1;
-      counts.set(key, current);
-    });
-    return Array.from(counts.values()).sort((a, b) => b.count - a.count).slice(0, 5);
+  // Today summary
+  const todaySecs = useMemo(() => {
+    const today = new Date().toDateString();
+    return entries
+      .filter((e) => new Date(e.startedAt).toDateString() === today)
+      .reduce((s, e) => s + (e.durationSeconds || 0), 0);
   }, [entries]);
 
-  const startTimer = (projectId = selectedProjectId, subjectId = selectedSubjectId) => {
+  const todaySessionsCount = useMemo(() => {
+    const today = new Date().toDateString();
+    return entries.filter((e) => new Date(e.startedAt).toDateString() === today).length;
+  }, [entries]);
+
+  const goalSecs = 4 * 3600;
+  const goalPct = Math.min(100, Math.round((todaySecs / goalSecs) * 100));
+
+  // Top 5 Frequently Used Combos
+  const topCombos = useMemo(() => {
+    const counts = new Map();
+
+    entries.forEach((e) => {
+      const k = `${e.projectId}::${e.subjectId || ''}`;
+      const existing = counts.get(k) || {
+        projectId: e.projectId,
+        projectName: e.projectName,
+        subjectId: e.subjectId || '',
+        subjectName: e.subjectName || '',
+        color: e.color || '#f3957f',
+        count: 0,
+        totalSeconds: 0,
+        lastUsed: e.startedAt,
+      };
+      existing.count += 1;
+      existing.totalSeconds += e.durationSeconds || 0;
+      if (e.startedAt > existing.lastUsed) existing.lastUsed = e.startedAt;
+      counts.set(k, existing);
+    });
+
+    const list = Array.from(counts.values()).sort(
+      (a, b) => b.count - a.count || b.totalSeconds - a.totalSeconds
+    );
+
+    // If fewer than 5 from history, populate from projects/subjects
+    if (list.length < 5 && projects.length > 0) {
+      const usedKeys = new Set(list.map((c) => `${c.projectId}::${c.subjectId}`));
+      for (const p of projects) {
+        if (p.subjects && p.subjects.length > 0) {
+          for (const s of p.subjects) {
+            const k = `${p.id}::${s.id}`;
+            if (!usedKeys.has(k)) {
+              usedKeys.add(k);
+              list.push({
+                projectId: p.id,
+                projectName: p.name,
+                subjectId: s.id,
+                subjectName: s.name,
+                color: s.color || p.color || '#f3957f',
+                count: 0,
+                totalSeconds: 0,
+                isRecommended: true,
+              });
+              if (list.length >= 5) break;
+            }
+          }
+        } else {
+          const k = `${p.id}::`;
+          if (!usedKeys.has(k)) {
+            usedKeys.add(k);
+            list.push({
+              projectId: p.id,
+              projectName: p.name,
+              subjectId: '',
+              subjectName: '',
+              color: p.color || '#f3957f',
+              count: 0,
+              totalSeconds: 0,
+              isRecommended: true,
+            });
+          }
+        }
+        if (list.length >= 5) break;
+      }
+    }
+
+    return list.slice(0, 5);
+  }, [entries, projects]);
+
+  const searchCombos = useMemo(
+    () => projects.flatMap((project) => {
+      const subjects = project.subjects?.length ? project.subjects : [{ id: '', name: 'General Study' }];
+      return subjects.map((subject) => ({
+        projectId: project.id,
+        projectName: project.name,
+        subjectId: subject.id || '',
+        subjectName: subject.name,
+        color: subject.color || project.color || '#8086d4',
+      }));
+    }),
+    [projects]
+  );
+  const searchMatches = useMemo(() => {
+    const query = comboSearch.trim().toLocaleLowerCase();
+    if (!query) return [];
+    return searchCombos.filter((item) =>
+      `${item.projectName} ${item.subjectName}`.toLocaleLowerCase().includes(query)
+    ).slice(0, 8);
+  }, [comboSearch, searchCombos]);
+
+  const showSelectionPreview = (projectId, subjectId) => {
     const project = projects.find((item) => item.id === projectId);
-    if (!project) {
-      setNotice('Choose or create a project before starting the timer.');
+    const subject = project?.subjects?.find((item) => item.id === subjectId);
+    if (!project || !subject) {
+      setPendingSelection(null);
       return;
     }
-    const subject = project.subjects?.find((item) => item.id === subjectId);
-    const startedAt = Date.now();
-    const nextTimer = {
-      projectId: project.id,
+    setPendingSelection({
+      projectId,
+      subjectId,
       projectName: project.name,
-      subjectId: subject?.id || '',
-      subjectName: subject?.name || '',
-      color: subject?.color || project.color || '#f97316',
-      startedAt,
-    };
-
-    if (activeTimer) {
-      const durationSeconds = Math.max(1, Math.floor((startedAt - activeTimer.startedAt) / 1000));
-      const finishedEntry = {
-        id: crypto.randomUUID(),
-        ...activeTimer,
-        endedAt: startedAt,
-        durationSeconds,
-      };
-      setEntries((current) => [finishedEntry, ...current]);
-      setNotice(`Switched timer to ${nextTimer.projectName}${nextTimer.subjectName ? ` - ${nextTimer.subjectName}` : ''}.`);
-    } else {
-      setNotice(`Tracking ${nextTimer.projectName}${nextTimer.subjectName ? ` - ${nextTimer.subjectName}` : ''}.`);
-    }
-
-    setActiveTimer(nextTimer);
-    setSelectedProjectId(project.id);
-    setSelectedSubjectId(subject?.id || '');
+      subjectName: subject.name,
+      color: subject.color || project.color || '#8086d4',
+      expiresAt: Date.now() + 30_000,
+    });
   };
 
+  const chooseSearchResult = (item) => {
+    setSelProj(item.projectId);
+    setSelSub(item.subjectId);
+    setComboSearch('');
+    if (activeTimer) startTimer(item.projectId, item.subjectId);
+    else showSelectionPreview(item.projectId, item.subjectId);
+  };
+
+  useEffect(() => {
+    if (!pendingSelection || activeTimer) return undefined;
+    const timeout = window.setTimeout(() => setPendingSelection(null), Math.max(0, pendingSelection.expiresAt - Date.now()));
+    return () => window.clearTimeout(timeout);
+  }, [pendingSelection, activeTimer]);
+
+  // Start Session
+  const startTimer = (pId = selProj, sId = selSub) => {
+    setPendingSelection(null);
+    const proj = projects.find((p) => p.id === pId);
+    if (!proj) {
+      setNotice('Please select a project to start.');
+      return;
+    }
+    const sub = proj.subjects?.find((s) => s.id === sId);
+    const t = Date.now();
+
+    // If a session was already active, save it first
+    if (activeTimer) {
+      const dur = Math.max(1, Math.floor((t - activeTimer.startedAt) / 1000));
+      setEntries((cur) => [
+        {
+          id: crypto.randomUUID(),
+          ...activeTimer,
+          endedAt: t,
+          durationSeconds: dur,
+        },
+        ...cur,
+      ]);
+    }
+
+    setActiveTimer({
+      projectId: proj.id,
+      projectName: proj.name,
+      subjectId: sub?.id || '',
+      subjectName: sub?.name || '',
+      color: sub?.color || proj.color || '#f3957f',
+      startedAt: t,
+    });
+    setSelProj(proj.id);
+    setSelSub(sub?.id || '');
+    setIsPaused(false);
+    setPausedElapsed(0);
+    setLaps([]);
+    setNotice('');
+  };
+
+  // Stop Session
   const stopTimer = () => {
     if (!activeTimer) return;
-    const endedAt = Date.now();
-    const durationSeconds = Math.max(1, Math.floor((endedAt - activeTimer.startedAt) / 1000));
-    const finishedEntry = {
-      id: crypto.randomUUID(),
-      ...activeTimer,
-      endedAt,
-      durationSeconds,
-    };
-    setEntries((current) => [finishedEntry, ...current]);
+    const t = Date.now();
+    const dur = Math.max(1, isPaused ? pausedElapsed : Math.floor((t - activeTimer.startedAt) / 1000));
+
+    setEntries((cur) => [
+      {
+        id: crypto.randomUUID(),
+        ...activeTimer,
+        endedAt: t,
+        durationSeconds: dur,
+      },
+      ...cur,
+    ]);
+
     setActiveTimer(null);
-    setNotice(`Saved ${finishedEntry.projectName}${finishedEntry.subjectName ? ` - ${finishedEntry.subjectName}` : ''} (${formatTime(durationSeconds)}).`);
+    setIsPaused(false);
+    setPausedElapsed(0);
+    setLaps([]);
+    setNotice(`Session Logged · ${fmtDur(dur)}`);
+    setTimeout(() => setNotice(''), 5000);
   };
 
-  const handleProjectSelect = (event) => {
-    const nextProjectId = event.target.value;
-    setSelectedProjectId(nextProjectId);
-    const nextProject = projects.find((item) => item.id === nextProjectId);
-    const nextSubjectId = nextProject?.subjects?.[0]?.id || '';
-    setSelectedSubjectId(nextSubjectId);
-
-    if (activeTimer && nextProjectId && (nextProjectId !== activeTimer.projectId || nextSubjectId !== (activeTimer.subjectId || ''))) {
-      startTimer(nextProjectId, nextSubjectId);
+  // Pause / Resume
+  const togglePause = () => {
+    if (!activeTimer) return;
+    if (isPaused) {
+      const adjustedStart = Date.now() - pausedElapsed * 1000;
+      setActiveTimer((prev) => ({ ...prev, startedAt: adjustedStart }));
+      setIsPaused(false);
+    } else {
+      setPausedElapsed(elapsed);
+      setIsPaused(true);
     }
   };
 
-  const handleSubjectSelect = (event) => {
-    const nextSubjectId = event.target.value;
-    setSelectedSubjectId(nextSubjectId);
-
-    if (activeTimer && selectedProjectId && nextSubjectId !== (activeTimer.subjectId || '')) {
-      startTimer(selectedProjectId, nextSubjectId);
-    }
+  // Add Lap
+  const addLap = () => {
+    if (!activeTimer || elapsed <= 0) return;
+    setLaps((cur) => [
+      { id: Date.now(), seconds: elapsed, label: `Lap ${cur.length + 1}` },
+      ...cur,
+    ]);
   };
+
+  const projOptions = projects.map((p) => ({ value: p.id, label: p.name, color: p.color }));
+  const subOptions = [
+    { value: '', label: 'No subject' },
+    ...(activeProj?.subjects || []).map((s) => ({ value: s.id, label: s.name, color: s.color })),
+  ];
 
   return (
-    <div className="timer-module-container">
-      {/* Current Clock Card */}
-      <TimerClock />
-
-      {/* Main Focus Timer Card */}
-      <section className="timer-hero-card" aria-label="Timer panel">
-        <div className="timer-top-row">
-          <div className="timer-info-col">
-            <span className="task-category-label">READY TO FOCUS</span>
-            <h2 className="current-task-title">
-              {activeTimer ? `Studying ${activeTimer.projectName}` : "Choose what you're studying"}
-            </h2>
-            <div className="task-tags">
-              <span className="task-tag highlight">
-                <Tag size={13} />
-                <span>{activeProject?.name || 'No project selected'}</span>
-              </span>
-              <span className="task-tag">
-                <FolderKanban size={13} />
-                <span>{activeSubject?.name || 'No subject'}</span>
-              </span>
-            </div>
-
-            <div className="timer-selectors">
-              <label className="timer-select-field">
-                <span>Project <b>*</b></span>
-                <select value={selectedProjectId} onChange={handleProjectSelect} disabled={!projects.length}>
-                  {projects.length === 0 ? (
-                    <option value="">No projects available</option>
-                  ) : (
-                    projects.map((project) => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
-                    ))
-                  )}
-                </select>
-              </label>
-
-              <label className="timer-select-field">
-                <span>Subject <small>(optional)</small></span>
-                <select value={selectedSubjectId} onChange={handleSubjectSelect} disabled={!activeProject?.subjects?.length}>
-                  <option value="">No subject</option>
-                  {activeProject?.subjects?.map((subject) => (
-                    <option key={subject.id} value={subject.id}>{subject.name}</option>
-                  ))}
-                </select>
-              </label>
-
-              {!projects.length && (
-                <p className="timer-manage-hint">
-                  No projects yet. Add a project from the{' '}
-                  <button type="button" className="inline-link-btn" onClick={() => onNavigate?.('manage')}>
-                    <strong>Manage</strong>
-                  </button>{' '}
-                  tab first.
-                </p>
+    <div className="timer-root">
+      {/* ── MAIN HOROLOGICAL COMMAND DECK ────────────────── */}
+      <section className="timer-deck-card">
+        {/* ── LEFT COLUMN: Session Command & Top 5 Combos ── */}
+        <div className="timer-cmd-column">
+          {/* Keep the command area clear while idle; show status only for a live session. */}
+          {(activeTimer || notice) && (
+            <header className="timer-cmd-header">
+              {activeTimer && (
+                <div className="timer-deck-badge">
+                  <span className={`deck-badge-dot${!isPaused ? ' live' : ''}`} />
+                  <span className="deck-badge-text">{isPaused ? 'SESSION PAUSED' : 'RECORDING FOCUS'}</span>
+                </div>
               )}
-            </div>
-          </div>
-
-          <div className="timer-display-box">
-            <span className="timer-digits" aria-live="polite">{formatTime(elapsedSeconds)}</span>
-            <span className="timer-label">ELAPSED TIME</span>
-          </div>
-        </div>
-
-        {activeTimer && (
-          <div className="timer-session-meta">
-            <span><CalendarClock size={14} /> Started: {formatDateTime(activeTimer.startedAt)}</span>
-            <span><Clock3 size={14} /> Active: {localDateKey(activeTimer.startedAt)}</span>
-          </div>
-        )}
-
-        {notice && <p className="timer-notice">{notice}</p>}
-
-        <div className="timer-actions-row">
-          {activeTimer ? (
-            <button type="button" className="timer-ctrl-btn primary pause" onClick={stopTimer}>
-              <Square size={17} fill="currentColor" />
-              <span>Stop timer</span>
-            </button>
-          ) : (
-            <button type="button" className="timer-ctrl-btn primary start" onClick={() => startTimer()} disabled={!projects.length}>
-              <Play size={17} fill="currentColor" />
-              <span>Start timer</span>
-            </button>
+              {notice && <span className="timer-flash-notice">{notice}</span>}
+            </header>
           )}
 
-          <div className="timer-status-pulse">
-            <span className={`pulse-dot ${activeTimer ? 'active' : ''}`} />
-            <span className="status-text">{activeTimer ? 'Tracking live session' : 'No active session'}</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Frequent Combinations Card */}
-      <section className="demo-entry-card" aria-label="Frequent combinations">
-        <div className="entries-panel-heading">
-          <h3>Frequent combinations</h3>
-          <span className="date-badge">Top {frequentCombinations.length || 5}</span>
-        </div>
-        {frequentCombinations.length === 0 ? (
-          <p className="demo-entry-empty">Your most-used project and subject combinations will appear here after you complete sessions.</p>
-        ) : (
-          <div className="frequent-combination-list">
-            {frequentCombinations.map((combo) => (
-              <div key={`${combo.projectId}-${combo.subjectId}`} className="frequent-combination-row">
-                <span className="demo-entry-color" style={{ backgroundColor: combo.color }} />
-                <div className="demo-entry-name">
-                  <strong>{combo.projectName}</strong>
-                  <span>{combo.subjectName || 'No subject'}</span>
-                </div>
-                <span className="frequent-session-count">{combo.count} {combo.count === 1 ? 'session' : 'sessions'}</span>
-                <button
-                  type="button"
-                  className="frequent-start-btn"
-                  title="Start with this combination"
-                  onClick={() => startTimer(combo.projectId, combo.subjectId)}
-                >
-                  <Play size={15} fill="currentColor" />
-                </button>
+          {/* Search projects and subprojects before choosing a session. */}
+          <div className="timer-combo-search">
+            <Search size={17} aria-hidden="true" />
+            <input
+              type="search"
+              value={comboSearch}
+              onChange={(event) => setComboSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && searchMatches[0]) {
+                  event.preventDefault();
+                  chooseSearchResult(searchMatches[0]);
+                }
+              }}
+              placeholder="Search projects or subjects to start a session"
+              aria-label="Search projects and subjects"
+              aria-autocomplete="list"
+            />
+            {comboSearch.trim() && (
+              <div className="timer-search-results" role="listbox" aria-label="Project and subject results">
+                {searchMatches.length ? searchMatches.map((item) => (
+                  <button
+                    key={`${item.projectId}-${item.subjectId || 'general'}`}
+                    type="button"
+                    className="timer-search-result"
+                    role="option"
+                    onClick={() => chooseSearchResult(item)}
+                  >
+                    <span className="timer-search-result-dot" style={{ background: item.color }} />
+                    <span className="timer-search-result-copy">
+                      <strong>{item.projectName}</strong>
+                      <span>{item.subjectName}</span>
+                    </span>
+                    <Play size={14} aria-hidden="true" />
+                  </button>
+                )) : (
+                  <div className="timer-search-empty">No matching projects or subjects</div>
+                )}
               </div>
-            ))}
+            )}
           </div>
-        )}
+
+          {/* 1. PROJECT & SUBJECT CONFIGURATION (ON TOP) */}
+          <div className="timer-primary-selectors">
+            <div className="t-section-header">
+              <h2 className="t-section-title">ACTIVE PROJECT & SUBJECT</h2>
+              <span className="t-section-sub">Configure Session</span>
+            </div>
+
+            <div className="timer-selects-row">
+              <div className="timer-field">
+                <label className="timer-field-label">PROJECT</label>
+                <CustomSelect
+                  value={selProj}
+                  onChange={(v) => {
+                    setSelProj(v);
+                    const p = projects.find((x) => x.id === v);
+                    const firstSub = p?.subjects?.[0]?.id || '';
+                    setSelSub(firstSub);
+                    if (!activeTimer && firstSub) showSelectionPreview(v, firstSub);
+                    else if (!activeTimer) setPendingSelection(null);
+                    if (
+                      activeTimer &&
+                      (v !== activeTimer.projectId || firstSub !== (activeTimer.subjectId || ''))
+                    ) {
+                      startTimer(v, firstSub);
+                    }
+                  }}
+                  options={projOptions}
+                  placeholder="Select project"
+                  disabled={!projects.length}
+                />
+              </div>
+
+              <div className="timer-field">
+                <label className="timer-field-label">SUBJECT</label>
+                <CustomSelect
+                  value={selSub}
+                  onChange={(v) => {
+                    setSelSub(v);
+                    if (!activeTimer && v) showSelectionPreview(selProj, v);
+                    else if (!activeTimer) setPendingSelection(null);
+                    if (activeTimer && v !== (activeTimer.subjectId || '')) {
+                      startTimer(selProj, v);
+                    }
+                  }}
+                  options={subOptions}
+                  placeholder="No subject"
+                  disabled={!activeProj?.subjects?.length}
+                />
+              </div>
+            </div>
+
+          </div>
+
+          {/* 2. TOP 5 COMBOS SECTION (BELOW PROJECT/SUBJECT) */}
+          <section className="timer-top-combos-section" aria-label="Top 5 Project Combos">
+            <div className="t-section-header">
+              <h2 className="t-section-title">TOP FREQUENT COMBOS</h2>
+              <span className="t-section-sub">1-Click Launch</span>
+            </div>
+
+            <div className="t-combos-grid">
+              {topCombos.map((combo, index) => {
+                const isComboActive =
+                  activeTimer &&
+                  activeTimer.projectId === combo.projectId &&
+                  (activeTimer.subjectId || '') === (combo.subjectId || '');
+
+                return (
+                  <div
+                    key={`${combo.projectId}-${combo.subjectId || 'none'}`}
+                    className={`t-combo-card${isComboActive ? ' is-active' : ''}`}
+                  >
+                    <div className="t-combo-info">
+                      <div className="t-combo-head">
+                        <span className="t-combo-rank">0{index + 1}</span>
+                        <span className="t-combo-dot" style={{ background: combo.color }} />
+                        <span className="t-combo-proj-name">{combo.projectName}</span>
+                      </div>
+                      <div className="t-combo-sub-name">
+                        {combo.subjectName || 'General Study'}
+                      </div>
+                      <div className="t-combo-meta">
+                        {combo.totalSeconds > 0
+                          ? `${fmtDur(combo.totalSeconds)} logged · ${combo.count} sessions`
+                          : 'Recommended Preset'}
+                      </div>
+                    </div>
+
+                    <div className="t-combo-action">
+                      {isComboActive ? (
+                        <button
+                          type="button"
+                          className="t-combo-btn stop"
+                          onClick={stopTimer}
+                          title="Stop session"
+                        >
+                          <Square size={13} fill="currentColor" strokeWidth={0} />
+                          Stop
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="t-combo-btn start"
+                          onClick={() => startTimer(combo.projectId, combo.subjectId)}
+                          title="Start timer for this combo"
+                        >
+                          <Play size={12} fill="currentColor" strokeWidth={0} />
+                          Start
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+        </div>
+
+        {/* ── RIGHT COLUMN: Horological Center (Clock -> Stopwatch) ── */}
+        <div className="timer-horology-column">
+          <div className={`horology-face-container${activeTimer ? ' mode-stopwatch' : ' mode-clock'}`}>
+            {/* Minimalist Horology Dial Halo Artwork */}
+            <HorologyArt isRunning={!!activeTimer || !!pendingSelection} />
+
+            {/* Central Dial: Swiss Analogue Clock -> High-Precision Chronograph */}
+            <div className="horology-dial-wrapper">
+              {activeTimer ? (
+                <StopwatchFace
+                  elapsed={elapsed}
+                  isRunning={!isPaused}
+                  targetSeconds={null}
+                />
+              ) : pendingSelection ? (
+                <div key={pendingSelection.expiresAt} className="horology-selection-preview">
+                  <span className="selection-preview-kicker">SELECTED FOR THIS SESSION</span>
+                  <strong className="selection-preview-project">{pendingSelection.projectName}</strong>
+                  <span className="selection-preview-divider" />
+                  <span className="selection-preview-subject">{pendingSelection.subjectName}</span>
+                  <span className="selection-preview-caption">Ready when you are</span>
+                  <span className="selection-preview-timeout" aria-hidden="true"><i /></span>
+                </div>
+              ) : (
+                <AnalogueClockFace now={now} />
+              )}
+            </div>
+
+            {/* Digital Readout & Status */}
+            {activeTimer ? (
+              <div className="chronograph-digital-block" aria-live="polite">
+                <div className="chrono-status-line">
+                  <span className="chrono-dot live" />
+                  <span className="chrono-tag">
+                    {activeTimer.projectName}
+                    {activeTimer.subjectName ? ` · ${activeTimer.subjectName}` : ''}
+                  </span>
+                </div>
+                <div className="chrono-elapsed-digits">
+                  <span className="chrono-main">{fmtClock(elapsed)}</span>
+                  <span className="chrono-ms">.{Math.floor((now.getMilliseconds() / 100)) % 10}</span>
+                </div>
+                <div className="chrono-mode-label">PRECISION CHRONOMETER</div>
+              </div>
+            ) : (
+              <div className="horology-wall-block">
+                <time className="horology-wall-time">
+                  {now.toLocaleTimeString(undefined, {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true,
+                  })}
+                </time>
+                <span className="horology-wall-date">
+                  {now.toLocaleDateString(undefined, {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </span>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="horology-actions">
+              {activeTimer ? (
+                <div className="chronograph-buttons">
+                  <button
+                    type="button"
+                    className="horology-btn-stop"
+                    onClick={stopTimer}
+                  >
+                    <Square size={16} fill="currentColor" strokeWidth={0} />
+                    Stop & Save
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`horology-btn-sub${isPaused ? ' paused' : ''}`}
+                    onClick={togglePause}
+                  >
+                    {isPaused ? <Play size={15} fill="currentColor" /> : <Pause size={15} />}
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="horology-btn-sub"
+                    onClick={addLap}
+                    title="Record Lap timestamp"
+                  >
+                    <Flag size={14} />
+                    Lap
+                  </button>
+                </div>
+              ) : (
+                <div className="horology-idle-actions">
+                  <button
+                    type="button"
+                    className="horology-btn-start"
+                    onClick={() => startTimer()}
+                    disabled={!projects.length}
+                  >
+                    <Play size={16} fill="currentColor" strokeWidth={0} />
+                    Start Session
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Laps Record (if any) */}
+            {laps.length > 0 && (
+              <div className="chronograph-laps-strip">
+                {laps.slice(0, 3).map((lap) => (
+                  <div key={lap.id} className="chrono-lap-item">
+                    <span className="lap-label">{lap.label}</span>
+                    <span className="lap-time">{fmtClock(lap.seconds)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Daily Summary Metrics Strip */}
+            <div className="horology-metrics-strip">
+              <div className="h-metric">
+                <span className="h-metric-val">{fmtDur(todaySecs)}</span>
+                <span className="h-metric-lbl">TODAY</span>
+              </div>
+              <div className="h-metric-divider" />
+              <div className="h-metric">
+                <span className="h-metric-val">{todaySessionsCount}</span>
+                <span className="h-metric-lbl">SESSIONS</span>
+              </div>
+              <div className="h-metric-divider" />
+              <div className="h-metric">
+                <span className="h-metric-val">{goalPct}%</span>
+                <span className="h-metric-lbl">DAILY GOAL</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Time Entries History */}
+      {/* ── SESSION HISTORY LIST ─────────────────────────── */}
       <TimerEntriesList entries={entries} setEntries={setEntries} projects={projects} />
     </div>
   );

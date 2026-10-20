@@ -24,6 +24,14 @@
   transition: opacity var(--sd-transition);
 }
 
+.studyduel-logo-lightmark {
+  display: block;
+  width: 144px;
+  height: 36px;
+  object-fit: contain;
+  background: transparent;
+}
+
 [data-theme='dark'] .studyduel-logo-img {
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
 }
@@ -32,10 +40,20 @@
   height: 28px;
 }
 
+.studyduel-logo-wrapper.size-small .studyduel-logo-lightmark {
+  width: 112px;
+  height: 28px;
+}
+
 .studyduel-logo-wrapper.size-medium .studyduel-logo-img {
   height: 36px;
 }
 
 .studyduel-logo-wrapper.size-large .studyduel-logo-img {
+  height: 60px;
+}
+
+.studyduel-logo-wrapper.size-large .studyduel-logo-lightmark {
+  width: 240px;
   height: 60px;
 }
