@@ -1058,6 +1058,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     rangeStart.setHours(0, 0, 0, 0);
     const rangeEnd = new Date(dateWindow.end);
     rangeEnd.setHours(0, 0, 0, 0);
+    const visibleEnd = new Date(rangeEnd);
+    if (dateRange === 'week') visibleEnd.setDate(visibleEnd.getDate() + (6 - visibleEnd.getDay()));
     const start = new Date(rangeStart);
     start.setDate(start.getDate() - start.getDay());
     const weeks = [];
@@ -1065,12 +1067,12 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     let activeDaysCount = 0;
     const monthNames = [];
     const cursor = new Date(start);
-    while (cursor <= rangeEnd) {
+    while (cursor <= visibleEnd) {
       const week = [];
       for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
         const day = new Date(cursor);
         day.setDate(day.getDate() + dayIndex);
-        if (day < rangeStart || day > rangeEnd) {
+        if (day < rangeStart || day > visibleEnd) {
           week.push(null);
           continue;
         }
@@ -1080,7 +1082,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         if (val > 0) activeDaysCount++;
         const monthLabel = day.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
         if (!monthNames.includes(monthLabel)) monthNames.push(monthLabel);
-        week.push({ key, dateStr: day.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), val, isToday: day.toDateString() === new Date().toDateString() });
+        week.push({ key, dateStr: day.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), val, isToday: day.toDateString() === new Date().toDateString(), isFuture: day > new Date() });
       }
       weeks.push(week);
       cursor.setDate(cursor.getDate() + 7);
@@ -1092,7 +1094,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       maxVal,
       activeDaysCount,
     };
-  }, [rangeEntries, dateWindow]);
+  }, [rangeEntries, dateWindow, dateRange]);
 
   // Determine dominant tier to highlight
   const dominantTier = useMemo(() => {
@@ -1175,7 +1177,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       <div className="db-bento-container">
         <section className="db-dashboard-controls" style={{ order: 0 }} aria-label="Dashboard display controls">
           <div className="db-range-control-copy">
-            <span>REPORTING WINDOW</span>
+            <span>STUDY PERIOD</span>
             <strong>{rangeLabel}</strong>
           </div>
           <div className="db-range-control-options" role="group" aria-label="Dashboard date range">
@@ -1192,8 +1194,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             </div>
           )}
           <div className="db-customize-wrap">
-            <button type="button" className={`db-customize-trigger${customizerOpen ? ' active' : ''}`} aria-expanded={customizerOpen} onClick={() => setCustomizerOpen((open) => !open)}>
-              <SlidersHorizontal size={15} /> Personalize
+            <button type="button" className={`db-customize-trigger${customizerOpen ? ' active' : ''}`} aria-label="Customize dashboard sections" aria-expanded={customizerOpen} onClick={() => setCustomizerOpen((open) => !open)}>
+              <SlidersHorizontal size={16} aria-hidden="true" />
             </button>
             {customizerOpen && (
               <div className="db-customizer-panel" role="dialog" aria-label="Personalize dashboard sections">
@@ -1854,11 +1856,11 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                       <div
                         key={day.key}
                         title={`${day.dateStr} · ${day.val > 0 ? fmtDur(day.val) : 'No study'}`}
-                        className={`db-activity-cal-day${day.isToday ? ' is-today' : ''}${day.val > 0 ? ' has-study' : ''}`}
+                        className={`db-activity-cal-day${day.isToday ? ' is-today' : ''}${day.val > 0 ? ' has-study' : ''}${day.isFuture ? ' is-future' : ''}`}
                       >
                         <span>{date.toLocaleDateString(undefined, { weekday: 'short' })}</span>
                         <strong>{date.getDate()}</strong>
-                        <small>{day.val > 0 ? fmtDur(day.val) : '—'}</small>
+                        <small>{day.isFuture ? 'Upcoming' : day.val > 0 ? fmtDur(day.val) : '—'}</small>
                       </div>
                     );
                   })}

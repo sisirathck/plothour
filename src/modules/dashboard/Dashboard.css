@@ -1526,6 +1526,7 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
+  max-width: 100%;
 }
 
 .db-activity-cal-day {
@@ -1544,6 +1545,10 @@
 .db-activity-cal-day.is-today {
   border-color: var(--sd-coral-primary);
   background: var(--db-accent-tint);
+}
+
+.db-activity-cal-day.is-future {
+  opacity: .58;
 }
 
 .db-activity-cal-day.has-study strong,
@@ -1612,44 +1617,50 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 18px;
-  padding: 12px 14px;
-  border: 1px solid var(--db-card-border);
-  border-radius: 18px;
-  background: var(--db-card-bg);
-  box-shadow: var(--db-card-shadow);
+  gap: 14px 22px;
+  padding: 0 4px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--db-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .db-range-control-copy {
   display: flex;
-  min-width: 112px;
+  min-width: 124px;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  padding-right: 20px;
+  border-right: 1px solid var(--db-divider);
 }
 
 .db-range-control-copy span,
 .db-review-kicker {
   color: var(--db-label);
   font-size: 9px;
-  font-weight: 750;
-  letter-spacing: .12em;
+  font-weight: 700;
+  letter-spacing: .11em;
 }
 
 .db-range-control-copy strong {
   color: var(--db-text);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -.015em;
 }
 
 .db-range-control-options {
   display: flex;
-  flex: 1 1 500px;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--db-divider);
-  border-radius: 13px;
-  background: var(--db-pill-bg);
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .db-range-control-options button,
@@ -1658,18 +1669,20 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 36px;
+  flex: 0 0 auto;
+  position: relative;
+  padding: 0 11px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   color: var(--db-muted);
   font: inherit;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: .18s ease;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .db-range-control-options button:hover,
@@ -1678,16 +1691,37 @@
   background: var(--db-accent-tint);
 }
 
-.db-range-control-options button.active,
-.db-customize-trigger.active {
-  color: var(--db-pill-active-text);
-  background: var(--db-pill-active-bg);
-  border-color: var(--db-card-border);
-  box-shadow: 0 2px 7px rgba(56, 57, 112, .1), inset 0 1px 0 rgba(255,255,255,.65);
+.db-range-control-options button.active {
+  color: var(--sd-coral-deep);
+  background: var(--db-accent-tint);
+  border-color: transparent;
+  box-shadow: none;
+  font-weight: 700;
 }
 
-.db-customize-wrap { position: relative; margin-left: auto; }
-.db-customize-trigger { border-color: var(--db-divider); background: var(--db-pill-bg); color: var(--db-text); }
+.db-range-control-options button.active::after {
+  position: absolute;
+  right: 12px;
+  bottom: -4px;
+  left: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--sd-coral-primary);
+  content: '';
+}
+
+.db-range-control-options button:focus-visible,
+.db-customize-trigger:focus-visible {
+  outline: 2px solid var(--sd-coral-primary);
+  outline-offset: 2px;
+}
+
+.db-customize-wrap { position: relative; margin-left: 0; }
+.db-customize-trigger { width: 38px; min-width: 38px; min-height: 38px; padding: 0; border-color: transparent; background: transparent; color: var(--db-muted); }
+.db-customize-trigger.active { color: var(--db-text); background: var(--db-accent-tint); border-color: var(--db-accent-shadow-border); }
+.db-custom-date-inputs { display: flex; gap: 8px; }
+.db-custom-date-inputs label { display: flex; align-items: center; gap: 6px; color: var(--db-muted); font-size: 10px; }
+.db-custom-date-inputs input { width: 132px; min-height: 34px; padding: 0 8px; border: 1px solid var(--db-divider); border-radius: 9px; background: var(--db-pill-bg); color: var(--db-text); font: inherit; font-size: 11px; }
 .db-customizer-panel {
   position: absolute;
   top: calc(100% + 10px);
@@ -1755,15 +1789,16 @@
 .db-project-plan-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--db-muted); font-size: 10px; }
 
 @media (max-width: 760px) {
-  .db-dashboard-controls { align-items: stretch; }
-  .db-range-control-options { flex-basis: 100%; }
-  .db-range-control-options button { flex: 1 1 auto; padding-inline: 8px; }
-  .db-customize-wrap { margin-left: 0; }
-  .db-customizer-panel { left: 0; right: auto; }
+  .db-dashboard-controls { display: grid; grid-template-columns: minmax(0, 1fr) 38px; gap: 10px; padding: 0 0 12px; }
+  .db-range-control-copy { grid-column: 1; grid-row: 1; padding-right: 0; border-right: 0; }
+  .db-range-control-options { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 0; }
+  .db-range-control-options button { min-width: 0; padding-inline: 5px; font-size: 10px; }
+  .db-customize-wrap { grid-column: 2; grid-row: 1; justify-self: end; }
+  .db-custom-date-inputs { grid-column: 1 / -1; flex-wrap: wrap; }
+  .db-customizer-panel { left: auto; right: 0; }
   .db-weekly-review-heading { align-items: flex-start; flex-direction: column; }
   .db-weekly-review-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .db-range-empty { align-items: flex-start; flex-direction: column; }
-  .db-custom-date-inputs { flex-wrap: wrap; }
 }
 
 

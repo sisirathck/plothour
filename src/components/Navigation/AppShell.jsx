@@ -165,6 +165,20 @@ export const AppShell = ({ user, onLogout }) => {
   };
 
   const isSettings = currentRoute === 'settings';
+  const localDateTime = (() => {
+    const now = new Date(timerNow);
+    const time = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(now);
+    const date = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(now);
+    return { label: `${time}, ${date}`, iso: now.toISOString() };
+  })();
 
   return (
     <div className="app-shell-wrapper">
@@ -185,6 +199,12 @@ export const AppShell = ({ user, onLogout }) => {
             </span>
           )}
         </div>
+
+        {!isSettings && (
+          <time className="nav-datetime" dateTime={localDateTime.iso}>
+            {localDateTime.label}
+          </time>
+        )}
 
         {/* 4 Primary Navigation Tabs: /timer, /dashboard, /compare, /manage */}
         {!isSettings && (
