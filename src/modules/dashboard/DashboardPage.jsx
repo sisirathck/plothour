@@ -10,6 +10,10 @@ import {
   ArrowUp,
   ArrowDown,
   Pin,
+  Clock,
+  Target,
+  Trophy,
+  Flame,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import './Dashboard.css';
@@ -69,7 +73,8 @@ const getHourTicks = (seconds) => {
 };
 
 const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
-  const width = Math.max(900, days.length * 34);
+  const isCompact = days.length <= 14;
+  const width = Math.max(isCompact ? 540 : 640, days.length * (isCompact ? 46 : 28));
   const height = 240;
   const margin = { top: 14, right: 18, bottom: 34, left: 44 };
   const plotWidth = width - margin.left - margin.right;
@@ -78,13 +83,15 @@ const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
   const hourTicks = getHourTicks(maxSeconds);
   const maxHours = hourTicks[hourTicks.length - 1];
   const slotWidth = plotWidth / days.length;
-  const barWidth = Math.max(3, slotWidth * 0.64);
+  const barWidth = Math.max(4, Math.min(38, slotWidth * 0.58));
 
   return (
     <div className="db-chart-card db-card">
-      <div className="db-chart-heading">
-        <h3 className="db-section-title">Daily Hours</h3>
-        <span className="db-section-meta">{title}</span>
+      <div className="db-chart-heading db-chart-heading-stack">
+        <div>
+          <h3 className="db-section-title">Daily Hours</h3>
+          <span className="db-section-meta">{title}</span>
+        </div>
       </div>
       {!hasData ? <QuietEmptyState message="No sessions in this date range yet." onStart={onStart} /> : <div className="db-chart-scroll">
         <svg className="db-svg-chart db-daily-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily study hours for ${title}`}>
@@ -229,6 +236,145 @@ const SessionLengthGraph = ({ buckets, hasData, onStart }) => {
           })}
         </svg>
       </div>}
+    </div>
+  );
+};
+
+const StudyVelocityCard = ({ stats, hasData, onStart }) => {
+  return (
+    <div className="db-chart-card db-card db-velocity-card">
+      <div className="db-chart-heading db-chart-heading-stack">
+        <div>
+          <h3 className="db-section-title">Study Velocity & Consistency</h3>
+          <span className="db-section-meta">Cadence, target hit rate, and daily output</span>
+        </div>
+      </div>
+
+      {!hasData ? (
+        <QuietEmptyState
+          message="Velocity and consistency stats will appear after your first session."
+          onStart={onStart}
+        />
+      ) : (
+        <div className="db-velocity-content">
+          {/* Top highlight row: Consistency score + Ring + Rating */}
+          <div className="db-velocity-hero">
+            <div className="db-velocity-ring-wrap">
+              <svg className="db-velocity-ring" viewBox="0 0 44 44" aria-hidden="true">
+                <circle
+                  className="db-ring-track"
+                  cx="22"
+                  cy="22"
+                  r="18"
+                />
+                <circle
+                  className="db-ring-fill"
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  style={{
+                    strokeDasharray: 113.1,
+                    strokeDashoffset: 113.1 - (113.1 * Math.min(100, Math.max(4, stats.consistencyPct))) / 100,
+                  }}
+                />
+              </svg>
+              <div className="db-ring-text">
+                <span className="db-ring-number">{stats.consistencyPct}%</span>
+              </div>
+            </div>
+            <div className="db-velocity-hero-info">
+              <div className="db-velocity-score-title">
+                <strong>{stats.consistencyRating}</strong>
+                <span className="db-velocity-score-sub">
+                  {stats.activeDaysCount} of {stats.totalDaysCount} {stats.totalDaysCount === 1 ? 'day' : 'days'} active in this period
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Bento metric tiles */}
+          <div className="db-velocity-grid">
+            <div className="db-velocity-metric-tile">
+              <div className="db-velocity-metric-top">
+                <span className="db-velocity-tile-label">ACTIVE DAY PACE</span>
+                <Clock className="db-velocity-icon" size={13} />
+              </div>
+              <div className="db-velocity-tile-val">
+                {stats.activeDayAvgSeconds > 0 ? fmtDur(stats.activeDayAvgSeconds) : '—'}
+              </div>
+              <div className="db-velocity-tile-sub">
+                avg per study day
+              </div>
+            </div>
+
+            <div className="db-velocity-metric-tile">
+              <div className="db-velocity-metric-top">
+                <span className="db-velocity-tile-label">GOAL HIT RATE</span>
+                <Target className="db-velocity-icon" size={13} />
+              </div>
+              <div className="db-velocity-tile-val">
+                {stats.goalHitDays} / {stats.totalDaysCount} <span className="db-val-unit">days</span>
+              </div>
+              <div className="db-velocity-tile-sub">
+                {stats.goalHitDays > 0 ? `${stats.goalHitPct}% of active days` : `Target: ${stats.targetHours}h / day`}
+              </div>
+            </div>
+
+            <div className="db-velocity-metric-tile">
+              <div className="db-velocity-metric-top">
+                <span className="db-velocity-tile-label">PEAK RECORD</span>
+                <Trophy className="db-velocity-icon" size={13} />
+              </div>
+              <div className="db-velocity-tile-val">
+                {stats.peakDayOutput > 0 ? fmtDur(stats.peakDayOutput) : '—'}
+              </div>
+              <div className="db-velocity-tile-sub">
+                {stats.peakDayLabel ? `${stats.peakDayLabel} record` : 'Highest day'}
+              </div>
+            </div>
+
+            <div className="db-velocity-metric-tile">
+              <div className="db-velocity-metric-top">
+                <span className="db-velocity-tile-label">STUDY DENSITY</span>
+                <Flame className="db-velocity-icon" size={13} />
+              </div>
+              <div className="db-velocity-tile-val">
+                {stats.sessionsPerActiveDay} <span className="db-val-unit">sess/day</span>
+              </div>
+              <div className="db-velocity-tile-sub">
+                active day frequency
+              </div>
+            </div>
+          </div>
+
+          {/* Micro Habit Trail */}
+          <div className="db-velocity-habit-strip">
+            <div className="db-habit-strip-heading">
+              <span>Recent Day Habit Trail</span>
+              <span className="db-habit-legend">
+                <span className="db-dot-sample dot-goal" /> Goal met
+                <span className="db-dot-sample dot-active" /> Studied
+                <span className="db-dot-sample dot-rest" /> Rest
+              </span>
+            </div>
+            <div className="db-habit-dots-row">
+              {stats.habitTrail.map((day) => {
+                const statusClass = day.isGoalMet ? 'hit-goal' : day.isActive ? 'active-study' : 'rest-day';
+                return (
+                  <div
+                    key={day.key}
+                    className={`db-habit-pill ${statusClass}`}
+                    title={`${day.fullDate}: ${day.seconds > 0 ? fmtDur(day.seconds) : 'Rest day'}${day.isGoalMet ? ' (Goal reached!)' : ''}`}
+                  >
+                    <span className="db-habit-day-num">{day.dateNum}</span>
+                    <span className="db-habit-dot" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -950,6 +1096,91 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       title: `${rangeLabel} · ${useWeeks ? 'weekly totals' : 'daily totals'}`,
     };
   }, [rangeEntries, dateWindow, rangeDaysCount, rangeLabel, weekStart]);
+
+  const studyVelocityStats = useMemo(() => {
+    const totalDaysCount = Math.max(1, rangeDaysCount);
+    const dateMap = new Map();
+    const count = Math.min(60, totalDaysCount);
+    const dayKeys = [];
+
+    for (let i = 0; i < count; i++) {
+      const d = new Date(dateWindow.start);
+      d.setDate(d.getDate() + i);
+      const k = dateKey(d);
+      dayKeys.push(k);
+      dateMap.set(k, { date: d, seconds: 0, sessions: 0 });
+    }
+
+    rangeEntries.forEach((entry) => {
+      if (!entry.startedAt) return;
+      const k = dateKey(entry.startedAt);
+      if (dateMap.has(k)) {
+        const item = dateMap.get(k);
+        item.seconds += Number(entry.durationSeconds) || 0;
+        item.sessions += 1;
+      }
+    });
+
+    const daysList = dayKeys.map((k) => dateMap.get(k));
+    const activeDaysList = daysList.filter((d) => d.seconds > 0);
+    const activeDaysCount = activeDaysList.length;
+
+    const consistencyPct = totalDaysCount > 0 ? Math.round((activeDaysCount / totalDaysCount) * 100) : 0;
+    const activeDayAvgSeconds = activeDaysCount > 0 ? Math.round(rangeSecs / activeDaysCount) : 0;
+    const overallDailyAvgSeconds = totalDaysCount > 0 ? Math.round(rangeSecs / totalDaysCount) : 0;
+
+    const targetSeconds = (dailyGoalHours || 2) * 3600;
+    const goalHitDays = daysList.filter((d) => d.seconds >= targetSeconds).length;
+    const goalHitPct = activeDaysCount > 0 ? Math.round((goalHitDays / activeDaysCount) * 100) : 0;
+
+    const totalSessions = rangeEntries.length;
+    const sessionsPerActiveDay = activeDaysCount > 0 ? (totalSessions / activeDaysCount).toFixed(1) : '0';
+
+    let peakDayOutput = 0;
+    let peakDayLabel = '';
+    let peakDaySessions = 0;
+    daysList.forEach((d) => {
+      if (d.seconds > peakDayOutput) {
+        peakDayOutput = d.seconds;
+        peakDayLabel = d.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        peakDaySessions = d.sessions;
+      }
+    });
+
+    let consistencyRating = 'Building Rhythm';
+    if (consistencyPct >= 75) consistencyRating = 'Optimal Regularity';
+    else if (consistencyPct >= 50) consistencyRating = 'Steady Cadence';
+    else if (consistencyPct >= 25) consistencyRating = 'Moderate Pace';
+
+    const habitTrail = daysList.slice(-Math.min(10, daysList.length)).map((d) => ({
+      key: dateKey(d.date),
+      dayLabel: d.date.toLocaleDateString(undefined, { weekday: 'narrow' }),
+      dateNum: d.date.getDate(),
+      fullDate: d.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      seconds: d.seconds,
+      isGoalMet: d.seconds >= targetSeconds,
+      isActive: d.seconds > 0,
+    }));
+
+    return {
+      hasData: rangeEntries.length > 0,
+      activeDaysCount,
+      totalDaysCount,
+      consistencyPct,
+      consistencyRating,
+      activeDayAvgSeconds,
+      overallDailyAvgSeconds,
+      goalHitDays,
+      goalHitPct,
+      targetSeconds,
+      targetHours: dailyGoalHours || 2,
+      sessionsPerActiveDay,
+      peakDayOutput,
+      peakDayLabel,
+      peakDaySessions,
+      habitTrail,
+    };
+  }, [rangeEntries, dateWindow, rangeDaysCount, rangeSecs, dailyGoalHours]);
 
   const weeklyTrendData = useMemo(() => {
     const totals = new Map();
@@ -1826,7 +2057,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                 <p>Daily output, weekly momentum, and session length</p>
               </div>
             </div>
-            <DailyHoursGraph days={dailyHoursData.days} title={dailyHoursData.title} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
+            <div className="db-bento-grid-row db-two-col db-chart-pair">
+              <DailyHoursGraph days={dailyHoursData.days} title={dailyHoursData.title} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
+              <StudyVelocityCard stats={studyVelocityStats} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
+            </div>
             <div className="db-bento-grid-row db-two-col db-chart-pair">
               <WeeklyTrendGraph weeks={weeklyTrendData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} rangeLabel={rangeLabel} />
               <SessionLengthGraph buckets={sessionLengthData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
