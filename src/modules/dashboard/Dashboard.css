@@ -237,7 +237,7 @@
 
 /* ── Main Bento Container ─────────────────────────────────────────────────── */
 .db-bento-container {
-  max-width: 1400px;
+  max-width: none;
   margin: 0 auto;
   padding: 24px 24px 48px;
   display: flex;
@@ -1386,6 +1386,12 @@
 .db-portfolio-bar-fill {
   height: 100%;
   border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--portfolio-color) 72%, #151923 28%),
+    var(--portfolio-color) 55%,
+    color-mix(in srgb, var(--portfolio-color) 72%, white 28%)
+  );
 }
 
 .db-portfolio-footer {

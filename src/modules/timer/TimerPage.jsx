@@ -119,11 +119,13 @@ export const TimerPage = ({ user }) => {
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : K_PROJECTS;
   const activeKey = user?.id ? `studyduel_user_${user.id}_active_timer` : K_ACTIVE;
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : K_ENTRIES;
+  const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
 
   const [projects, setProjects] = useState(() => rj(projectsKey, DEFAULT_PROJECTS));
   const activeProjects = useMemo(() => projects.filter((project) => !project.archived), [projects]);
   const [activeTimer, setActiveTimer] = useState(() => rj(activeKey, null));
   const [entries, setEntries] = useState(() => rj(entriesKey, []));
+  const [timerPreferences, setTimerPreferences] = useState(() => rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true }));
 
   const [selProj, setSelProj] = useState(
     () => rj(activeKey, null)?.projectId || rj(projectsKey, DEFAULT_PROJECTS).find((project) => !project.archived)?.id || ''
@@ -159,6 +161,19 @@ export const TimerPage = ({ user }) => {
   useEffect(() => {
     localStorage.setItem(entriesKey, JSON.stringify(entries));
   }, [entriesKey, entries]);
+
+  useEffect(() => {
+    const syncPreferences = (event) => {
+      if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
+      setTimerPreferences(rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true }));
+    };
+    window.addEventListener('studyduel:preferences-storage', syncPreferences);
+    window.addEventListener('storage', syncPreferences);
+    return () => {
+      window.removeEventListener('studyduel:preferences-storage', syncPreferences);
+      window.removeEventListener('storage', syncPreferences);
+    };
+  }, [preferencesKey]);
 
   useEffect(() => {
     const syncStoppedSession = () => {
@@ -368,6 +383,7 @@ export const TimerPage = ({ user }) => {
       subjectId: sub?.id || '',
       subjectName: sub?.name || '',
       color: sub?.color || proj.color || '#f3957f',
+      mode: timerPreferences.defaultTimerMode || '50m',
       startedAt: t,
     });
     setSelProj(proj.id);
@@ -400,6 +416,29 @@ export const TimerPage = ({ user }) => {
     setLaps([]);
     setNotice(`Session Logged · ${fmtDur(dur)}`);
     setTimeout(() => setNotice(''), 5000);
+    if (timerPreferences.soundEnabled) {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          const context = new AudioContextClass();
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          const startedAt = context.currentTime;
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(528, startedAt);
+          oscillator.frequency.exponentialRampToValueAtTime(1056, startedAt + 0.12);
+          gain.gain.setValueAtTime(0.14, startedAt);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 1.25);
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start(startedAt);
+          oscillator.stop(startedAt + 1.25);
+          oscillator.onended = () => context.close();
+        }
+      } catch (error) {
+        console.warn('Unable to play the completion chime.', error);
+      }
+    }
   };
 
   // Pause / Resume

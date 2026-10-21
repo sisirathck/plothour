@@ -8,14 +8,14 @@
   flex-direction: column;
   gap: 20px;
   width: 100%;
-  max-width: 1240px;
+  max-width: none;
   margin: 0 auto;
 }
 
 /* ── Main Dual-Column Command Deck ────────────────────────────────────────── */
 .timer-deck-card {
   display: grid;
-  grid-template-columns: 1fr 440px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(520px, 0.9fr);
   gap: 0;
   background: var(--sd-bg-surface);
   border: 1px solid var(--sd-border-glass);
@@ -574,6 +574,10 @@
   justify-content: center;
   z-index: 2;
   filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.08));
+}
+
+@media (min-width: 1440px) {
+  .horology-dial-wrapper { transform: scale(1.12); }
 }
 
 [data-theme='dark'] .horology-dial-wrapper {

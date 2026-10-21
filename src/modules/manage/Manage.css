@@ -4,7 +4,7 @@
   --manage-line: var(--sd-border-soft, rgba(120, 123, 160, .14));
   --manage-muted: var(--sd-text-muted, #8588a0);
   --manage-text: var(--sd-text-primary, #252744);
-  width: min(1180px, 100%);
+  width: 100%;
   margin: 0 auto;
   padding: 22px 24px 56px;
   color: var(--manage-text);

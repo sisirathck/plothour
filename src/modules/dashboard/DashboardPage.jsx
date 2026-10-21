@@ -136,7 +136,7 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
       <div className="db-chart-heading db-chart-heading-stack">
         <div>
           <h3 className="db-section-title">Weekly Study Trend</h3>
-          <span className="db-section-meta">{rangeLabel} · Sunday-start weeks</span>
+          <span className="db-section-meta">{rangeLabel} · {weeks[0]?.weekStartLabel || 'Monday'}-start weeks</span>
         </div>
         <div className="db-chart-legend" aria-label="Chart legend">
           <span><i className="db-legend-bar" /> Study hours</span>
@@ -259,6 +259,13 @@ const dateKey = (d) => {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 };
 
+const weekDayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const getWeekStartDayIndex = (weekStart) => {
+  const index = weekDayKeys.indexOf(weekStart);
+  return index < 0 ? 1 : index;
+};
+const getWeekStartOffset = (date, weekStart) => (date.getDay() - getWeekStartDayIndex(weekStart) + 7) % 7;
+
 const dashboardRangeOptions = [
   { id: 'today', label: 'Today' },
   { id: '7days', label: 'Last 7 days' },
@@ -280,12 +287,12 @@ const dashboardSectionDefaults = [
   { id: 'calendar', label: 'Activity calendar', visible: true, pinned: false, collapsed: false },
 ];
 
-const getDashboardWindow = (range, customStart, customEnd, entries, now = new Date()) => {
+const getDashboardWindow = (range, customStart, customEnd, entries, now = new Date(), weekStart = 'monday') => {
   const end = new Date(now);
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (range === 'today') { /* start already marks today */ }
   else if (range === '7days') start.setDate(start.getDate() - 6);
-  else if (range === 'week') start.setDate(start.getDate() - start.getDay());
+  else if (range === 'week') start.setDate(start.getDate() - getWeekStartOffset(start, weekStart));
   else if (range === 'month') start.setDate(1);
   else if (range === '30days') start.setDate(start.getDate() - 29);
   else if (range === '90days') start.setDate(start.getDate() - 89);
@@ -482,6 +489,33 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
   // Storage key for user session entries
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
+  const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
+  const [weekStart, setWeekStart] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(preferencesKey) || 'null');
+      return weekDayKeys.includes(saved?.weekStart) ? saved.weekStart : 'monday';
+    } catch {
+      return 'monday';
+    }
+  });
+
+  useEffect(() => {
+    const syncPreferences = (event) => {
+      if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
+      try {
+        const saved = JSON.parse(localStorage.getItem(preferencesKey) || 'null');
+        setWeekStart(weekDayKeys.includes(saved?.weekStart) ? saved.weekStart : 'monday');
+      } catch {
+        setWeekStart('monday');
+      }
+    };
+    window.addEventListener('studyduel:preferences-storage', syncPreferences);
+    window.addEventListener('storage', syncPreferences);
+    return () => {
+      window.removeEventListener('studyduel:preferences-storage', syncPreferences);
+      window.removeEventListener('storage', syncPreferences);
+    };
+  }, [preferencesKey]);
 
   const [entries, setEntries] = useState(() => {
     try {
@@ -511,8 +545,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, [entriesKey]);
 
   const dateWindow = useMemo(
-    () => getDashboardWindow(dateRange, customStart, customEnd, entries, now),
-    [dateRange, customStart, customEnd, entries, now]
+    () => getDashboardWindow(dateRange, customStart, customEnd, entries, now, weekStart),
+    [dateRange, customStart, customEnd, entries, now, weekStart]
   );
   const rangeEntries = useMemo(() => entries.filter((entry) => {
     const time = new Date(entry.startedAt).getTime();
@@ -580,12 +614,12 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
   const weeklyReview = useMemo(() => {
     const now = new Date();
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-    const priorStart = new Date(weekStart);
+    const weekStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - getWeekStartOffset(now, weekStart));
+    const priorStart = new Date(weekStartDate);
     priorStart.setDate(priorStart.getDate() - 7);
     const current = entries.filter((entry) => {
       const time = new Date(entry.startedAt).getTime();
-      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= weekStart.getTime() && time <= now.getTime();
+      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= weekStartDate.getTime() && time <= now.getTime();
     });
     const priorEnd = new Date(now.getTime() - 7 * 86400000);
     const prior = entries.filter((entry) => {
@@ -604,7 +638,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const weeklyGoal = projects.filter((project) => !project.archived).reduce(
       (sum, project) => sum + (project.subjects || []).reduce((part, subject) => part + (Number(subject.goals?.weekly) || 0), 0), 0
     ) * 3600;
-    const elapsedDays = Math.min(7, now.getDay() + 1);
+    const elapsedDays = Math.min(7, getWeekStartOffset(now, weekStart) + 1);
     const expectedByNow = weeklyGoal * elapsedDays / 7;
     let suggestion = 'Add a weekly target in Manage to get a pace recommendation.';
     if (!current.length) suggestion = 'Start a session today to give this week some momentum.';
@@ -622,7 +656,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       goalPct: weeklyGoal ? Math.min(100, Math.round((seconds / weeklyGoal) * 100)) : null,
       suggestion,
     };
-  }, [entries, projects, now]);
+  }, [entries, projects, now, weekStart]);
 
   /* ── Core Computed Metrics ───────────────────── */
   const todayEntries = useMemo(() => entries.filter((e) => Number(e.durationSeconds) > 0 && isInRange(e, 'Today')), [entries]);
@@ -768,6 +802,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   /* ── ROW 3: Day-of-Week Power Rhythm ────────── */
   const dayOfWeekStats = useMemo(() => {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const startDay = getWeekStartDayIndex(weekStart);
+    const orderedDays = Array.from({ length: 7 }, (_, offset) => (startDay + offset) % 7);
     const dayTotals = [0, 0, 0, 0, 0, 0, 0];
     rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
@@ -781,7 +817,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     });
 
     return {
-      rows: dayNames.map((name, idx) => {
+      rows: orderedDays.map((idx) => {
+        const name = dayNames[idx];
         const secs = dayTotals[idx];
         const pct = Math.max(2, Math.round((secs / maxDaySecs) * 100));
         const active = secs > 0 && idx === bestIdx;
@@ -797,7 +834,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       powerDayVolume: fmtDur(dayTotals[bestIdx]),
       hasData: dayTotals.some((s) => s > 0),
     };
-  }, [rangeEntries]);
+  }, [rangeEntries, weekStart]);
 
   /* ── Study volume by day or week in the selected range ──────── */
   const weekBarData = useMemo(() => {
@@ -820,7 +857,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       }
     } else {
       const cursor = new Date(dateWindow.start);
-      cursor.setDate(cursor.getDate() - cursor.getDay());
+      const startOffset = getWeekStartOffset(cursor, weekStart);
+      cursor.setDate(cursor.getDate() - startOffset);
       const end = new Date(dateWindow.end);
       while (cursor <= end) {
         const weekStart = new Date(cursor);
@@ -853,7 +891,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       unit: useWeeks ? 'weeks' : 'days',
       minWidth: Math.max(520, days.length * (useWeeks ? 20 : 14)),
     };
-  }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount]);
+  }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount, weekStart]);
 
   const dailyHoursData = useMemo(() => {
     const totals = new Map();
@@ -874,7 +912,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       }
     } else {
       const cursor = new Date(dateWindow.start);
-      cursor.setDate(cursor.getDate() - cursor.getDay());
+      cursor.setDate(cursor.getDate() - getWeekStartOffset(cursor, weekStart));
       while (cursor <= dateWindow.end) {
         const weekStart = new Date(cursor);
         let seconds = 0;
@@ -891,21 +929,21 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       days,
       title: `${rangeLabel} · ${useWeeks ? 'weekly totals' : 'daily totals'}`,
     };
-  }, [rangeEntries, dateWindow, rangeDaysCount, rangeLabel]);
+  }, [rangeEntries, dateWindow, rangeDaysCount, rangeLabel, weekStart]);
 
   const weeklyTrendData = useMemo(() => {
     const totals = new Map();
     rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const date = new Date(entry.startedAt);
-      date.setDate(date.getDate() - date.getDay());
+      date.setDate(date.getDate() - getWeekStartOffset(date, weekStart));
       date.setHours(0, 0, 0, 0);
       const key = dateKey(date);
       totals.set(key, (totals.get(key) || 0) + (entry.durationSeconds || 0));
     });
     const weeks = [];
     const cursor = new Date(dateWindow.start);
-    cursor.setDate(cursor.getDate() - cursor.getDay());
+    cursor.setDate(cursor.getDate() - getWeekStartOffset(cursor, weekStart));
     while (cursor <= dateWindow.end) {
       const start = new Date(cursor);
       const key = dateKey(start);
@@ -916,6 +954,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         averageSeconds: seconds,
         startLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         axisLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        weekStartLabel: `${weekDayKeys[getWeekStartDayIndex(weekStart)][0].toUpperCase()}${weekDayKeys[getWeekStartDayIndex(weekStart)].slice(1)}`,
       });
       cursor.setDate(cursor.getDate() + 7);
     }
@@ -923,7 +962,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       ...week,
       averageSeconds: weeks.slice(Math.max(0, index - 3), index + 1).reduce((sum, item) => sum + item.seconds, 0) / Math.min(4, index + 1),
     }));
-  }, [rangeEntries, dateWindow]);
+  }, [rangeEntries, dateWindow, weekStart]);
 
   const sessionLengthData = useMemo(() => {
     const buckets = [
@@ -950,12 +989,15 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     portfolioEntries.forEach((e) => {
       const proj = e.projectName || 'General Study';
       const sub = e.subjectName || '';
+      const project = projects.find((item) => item.id === e.projectId) || projects.find((item) => item.name === proj);
+      const subject = project?.subjects?.find((item) => item.id === e.subjectId) || project?.subjects?.find((item) => item.name === sub);
+      const selectedColor = subject?.color || project?.color || e.color || '#f3957f';
       const key = `${proj}:::${sub}`;
       if (!map.has(key)) {
         map.set(key, {
           projectName: proj,
           subjectName: sub,
-          color: e.color || '#f3957f',
+          color: selectedColor,
           count: 0,
           secs: 0,
         });
@@ -982,7 +1024,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       topKind: list[0]?.subjectName ? 'subproject' : 'project',
       topPct,
     };
-  }, [portfolioEntries]);
+  }, [portfolioEntries, projects]);
 
   const projectPlans = useMemo(() => projects.filter((project) => !project.archived).map((project) => {
     const matching = entries.filter((entry) => entry.projectId === project.id || (!entry.projectId && entry.projectName === project.name));
@@ -1059,9 +1101,9 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const rangeEnd = new Date(dateWindow.end);
     rangeEnd.setHours(0, 0, 0, 0);
     const visibleEnd = new Date(rangeEnd);
-    if (dateRange === 'week') visibleEnd.setDate(visibleEnd.getDate() + (6 - visibleEnd.getDay()));
+    if (dateRange === 'week') visibleEnd.setDate(visibleEnd.getDate() + (6 - getWeekStartOffset(visibleEnd, weekStart)));
     const start = new Date(rangeStart);
-    start.setDate(start.getDate() - start.getDay());
+    start.setDate(start.getDate() - getWeekStartOffset(start, weekStart));
     const weeks = [];
     let maxVal = 1;
     let activeDaysCount = 0;
@@ -1094,7 +1136,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       maxVal,
       activeDaysCount,
     };
-  }, [rangeEntries, dateWindow, dateRange]);
+  }, [rangeEntries, dateWindow, dateRange, weekStart]);
 
   // Determine dominant tier to highlight
   const dominantTier = useMemo(() => {
@@ -1709,7 +1751,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                           className="db-portfolio-bar-fill"
                           style={{
                             width: `${item.pct}%`,
-                            background: `linear-gradient(to right, ${item.color}, var(--db-portfolio-accent))`,
+                            '--portfolio-color': item.color,
                           }}
                         />
                       </div>
