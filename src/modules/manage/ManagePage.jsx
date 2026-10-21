@@ -194,6 +194,16 @@ export const ManagePage = ({ user }) => {
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [openSubjectPlans, setOpenSubjectPlans] = useState({});
+  const [projectPendingDelete, setProjectPendingDelete] = useState(null);
+
+  useEffect(() => {
+    if (!projectPendingDelete) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setProjectPendingDelete(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [projectPendingDelete]);
 
   useEffect(() => {
     localStorage.setItem(projectsKey, JSON.stringify(projects));
@@ -304,9 +314,10 @@ export const ManagePage = ({ user }) => {
     } : item));
   };
 
-  const deleteProject = (project) => {
-    if (!window.confirm(`Permanently delete “${project.name}” from your project list? Its recorded time entries will remain in your history.`)) return;
-    setProjects((items) => items.filter((item) => item.id !== project.id));
+  const deleteProject = () => {
+    if (!projectPendingDelete) return;
+    setProjects((items) => items.filter((item) => item.id !== projectPendingDelete.id));
+    setProjectPendingDelete(null);
   };
 
   const deleteSubject = (projectId, subjectId) => setProjects((items) => items.map((project) => (
@@ -317,6 +328,35 @@ export const ManagePage = ({ user }) => {
 
   return (
     <main className="manage-module-container">
+      {projectPendingDelete && (
+        <div
+          className="manage-delete-backdrop"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setProjectPendingDelete(null); }}
+        >
+          <section
+            className="manage-delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="manage-delete-title"
+            aria-describedby="manage-delete-description"
+          >
+            <div className="manage-delete-icon"><Trash2 size={19} strokeWidth={1.8} /></div>
+            <span className="manage-delete-eyebrow">REMOVE PROJECT</span>
+            <h2 id="manage-delete-title">Delete “{projectPendingDelete.name}”?</h2>
+            <p id="manage-delete-description">
+              This removes the project and its subprojects from your library. All recorded time entries will remain in your history.
+            </p>
+            <div className="manage-delete-actions">
+              <button type="button" className="manage-delete-cancel" autoFocus onClick={() => setProjectPendingDelete(null)}>
+                Keep project
+              </button>
+              <button type="button" className="manage-delete-confirm" onClick={deleteProject}>
+                <Trash2 size={14} /> Delete project
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
       <header className="manage-page-header">
         <div>
           <div className="manage-eyebrow"><FolderKanban size={14} /> WORKSPACE</div>
@@ -404,7 +444,7 @@ export const ManagePage = ({ user }) => {
                       <button type="button" title={project.archived ? 'Restore project' : 'Archive project'} aria-label={`${project.archived ? 'Restore' : 'Archive'} ${project.name}`} onClick={() => toggleArchive(project)}>
                         {project.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                       </button>
-                      <button type="button" title="Delete project" aria-label={`Delete ${project.name}`} onClick={() => deleteProject(project)}><Trash2 size={15} /></button>
+                      <button type="button" title="Delete project" aria-label={`Delete ${project.name}`} onClick={() => setProjectPendingDelete(project)}><Trash2 size={15} /></button>
                     </div>
                   </div>
 
