@@ -173,6 +173,8 @@
   background: var(--sd-settings-card-bg);
   border: 1px solid var(--sd-settings-card-border);
   box-shadow: var(--sd-settings-shadow);
+  backdrop-filter: blur(22px) saturate(155%);
+  -webkit-backdrop-filter: blur(22px) saturate(155%);
   transition: border-color var(--sd-transition-fast), box-shadow var(--sd-transition-fast);
 }
 

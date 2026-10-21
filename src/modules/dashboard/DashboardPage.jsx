@@ -604,7 +604,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, [dateRange, dateWindow]);
   const previousRangeEntries = useMemo(() => previousWindow ? entries.filter((entry) => {
     const time = new Date(entry.startedAt).getTime();
-      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= previousWindow.start.getTime() && time <= previousWindow.end.getTime();
+    return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= previousWindow.start.getTime() && time <= previousWindow.end.getTime();
   }) : [], [entries, previousWindow]);
   const previousRangeSecs = useMemo(
     () => previousRangeEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0),
@@ -1278,31 +1278,31 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           </div>
         </section>
         <DashboardSection section={dashboardSection('overview')} order={dashboardSectionOrder('overview')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-        {/* ROW 1: PAINTERLY WINDOW HERO (LEFT) + RANGE-SCOPED KPI GRID (RIGHT) */}
-        <div className="db-bento-grid-row db-hero-row">
-          {/* Painterly Illustrated Window + Glassmorphic Daily Goal */}
-          <div className="db-hero-window-card">
-            {/* Background Illustration with Smooth Cross-Fade */}
-            <img
-              key={`${isDark ? 'dark' : 'light'}-${heroArtIndex}`}
-              src={currentHeroArt}
-              alt="Cozy Focus Sanctuary"
-              className="db-hero-art-img"
-            />
-            {/* Directional Gradient Scrim: Character & scenery shine on right */}
-            <div className="db-hero-gradient-scrim" />
+          {/* ROW 1: PAINTERLY WINDOW HERO (LEFT) + RANGE-SCOPED KPI GRID (RIGHT) */}
+          <div className="db-bento-grid-row db-hero-row">
+            {/* Painterly Illustrated Window + Glassmorphic Daily Goal */}
+            <div className="db-hero-window-card">
+              {/* Background Illustration with Smooth Cross-Fade */}
+              <img
+                key={`${isDark ? 'dark' : 'light'}-${heroArtIndex}`}
+                src={currentHeroArt}
+                alt="Cozy Focus Sanctuary"
+                className="db-hero-art-img"
+              />
+              {/* Directional Gradient Scrim: Character & scenery shine on right */}
+              <div className="db-hero-gradient-scrim" />
 
-            {/* Frosted Glass Apple Activity Card */}
-            <div className="db-hero-goal-glass-card">
-              <div className="db-goal-card-header">
-                <span className="db-goal-card-title">Daily Goal</span>
-                <button
-                  onClick={() => onNavigate?.('manage')}
-                  className="db-goal-edit-btn"
-                >
-                  {dailyGoalHours > 0 ? 'Edit' : 'Set goals'}
-                </button>
-              </div>
+              {/* Frosted Glass Apple Activity Card */}
+              <div className="db-hero-goal-glass-card">
+                <div className="db-goal-card-header">
+                  <span className="db-goal-card-title">Daily Goal</span>
+                  <button
+                    onClick={() => onNavigate?.('manage')}
+                    className="db-goal-edit-btn"
+                  >
+                    {dailyGoalHours > 0 ? 'Edit' : 'Set goals'}
+                  </button>
+                </div>
 
                 <div className="db-goal-content-flex">
                   {/* SVG Smooth Progress Ring */}
@@ -1353,613 +1353,611 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                     </div>
                   </div>
                 </div>
+              </div>
             </div>
-          </div>
 
-          {/* 6 KPI Stat Cards (Anchored with Tinted Squircle Badges & Tabular Typography) */}
-          <div className="db-kpi-grid">
-            {[
-              {
-                label: 'TIME TRACKED',
-                value: rangeEntries.length ? fmtDur(rangeSecs) : '—',
-                sub: rangeGoalSecs > 0 ? `${fmtDur(rangeSecs)} / ${fmtDur(rangeGoalSecs)} goal` : rangeLabel,
-              },
-              {
-                label: 'VS PREVIOUS',
-                value: previousWindow ? `${rangeDeltaSecs > 0 ? '+' : rangeDeltaSecs < 0 ? '−' : ''}${fmtDur(Math.abs(rangeDeltaSecs))}` : '—',
-                sub: dateRange === 'week' ? 'vs same days last week' : 'vs previous period',
-                badge: rangeDeltaPct === null ? null : `${rangeDeltaPct > 0 ? '+' : ''}${rangeDeltaPct}%`,
-              },
-              {
-                label: 'SESSIONS',
-                value: rangeEntries.length || '—',
-                sub: `in ${rangeLabel.toLocaleLowerCase()}`,
-              },
-              {
-                label: 'ACTIVE DAYS',
-                value: rangeActiveDays || '—',
-                sub: `of ${rangeDaysCount} days · ${rangeActiveDays ? `${fmtDur(averageActiveDaySecs)} avg / active day` : 'no active days'}`,
-              },
-              {
-                label: 'AVG / SESSION',
-                value: rangeEntries.length ? fmtDur(averageSessionSecs) : '—',
-                sub: 'tracked session length',
-              },
-              {
-                label: 'AVG SESSIONS / DAY',
-                value: rangeEntries.length ? (rangeEntries.length / rangeDaysCount).toFixed(1) : '—',
-                sub: `over ${rangeDaysCount} ${rangeDaysCount === 1 ? 'day' : 'days'}`,
-              },
-            ].map((kpi, idx) => {
-              return (
-                <div key={idx} className="db-kpi-card">
-                  <div className="db-kpi-header">
-                    <span className="db-kpi-label">{kpi.label}</span>
-                  </div>
-                  <div className="db-kpi-val-container">
-                    <div className="db-kpi-value">{kpi.value}</div>
-                  </div>
-                  <div className="db-kpi-sub-row">
-                    {kpi.badge ? (
-                      <>
-                        <span className={`db-kpi-trend-pill ${rangeDeltaSecs >= 0 ? 'is-positive' : 'is-negative'}`}>{kpi.badge}</span>
+            {/* 6 KPI Stat Cards (Anchored with Tinted Squircle Badges & Tabular Typography) */}
+            <div className="db-kpi-grid">
+              {[
+                {
+                  label: 'TIME TRACKED',
+                  value: rangeEntries.length ? fmtDur(rangeSecs) : '—',
+                  sub: rangeGoalSecs > 0 ? `${fmtDur(rangeSecs)} / ${fmtDur(rangeGoalSecs)} goal` : rangeLabel,
+                },
+                {
+                  label: 'VS PREVIOUS',
+                  value: previousWindow ? `${rangeDeltaSecs > 0 ? '+' : rangeDeltaSecs < 0 ? '−' : ''}${fmtDur(Math.abs(rangeDeltaSecs))}` : '—',
+                  sub: dateRange === 'week' ? 'vs same days last week' : 'vs previous period',
+                  badge: rangeDeltaPct === null ? null : `${rangeDeltaPct > 0 ? '+' : ''}${rangeDeltaPct}%`,
+                },
+                {
+                  label: 'SESSIONS',
+                  value: rangeEntries.length || '—',
+                  sub: `in ${rangeLabel.toLocaleLowerCase()}`,
+                },
+                {
+                  label: 'ACTIVE DAYS',
+                  value: rangeActiveDays || '—',
+                  sub: `of ${rangeDaysCount} days · ${rangeActiveDays ? `${fmtDur(averageActiveDaySecs)} avg / active day` : 'no active days'}`,
+                },
+                {
+                  label: 'AVG / SESSION',
+                  value: rangeEntries.length ? fmtDur(averageSessionSecs) : '—',
+                  sub: 'tracked session length',
+                },
+                {
+                  label: 'AVG SESSIONS / DAY',
+                  value: rangeEntries.length ? (rangeEntries.length / rangeDaysCount).toFixed(1) : '—',
+                  sub: `over ${rangeDaysCount} ${rangeDaysCount === 1 ? 'day' : 'days'}`,
+                },
+              ].map((kpi, idx) => {
+                return (
+                  <div key={idx} className="db-kpi-card">
+                    <div className="db-kpi-header">
+                      <span className="db-kpi-label">{kpi.label}</span>
+                    </div>
+                    <div className="db-kpi-val-container">
+                      <div className="db-kpi-value">{kpi.value}</div>
+                    </div>
+                    <div className="db-kpi-sub-row">
+                      {kpi.badge ? (
+                        <>
+                          <span className={`db-kpi-trend-pill ${rangeDeltaSecs >= 0 ? 'is-positive' : 'is-negative'}`}>{kpi.badge}</span>
+                          <span className="db-kpi-sub">{kpi.sub}</span>
+                        </>
+                      ) : (
                         <span className="db-kpi-sub">{kpi.sub}</span>
-                      </>
-                    ) : (
-                      <span className="db-kpi-sub">{kpi.sub}</span>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="db-weekly-review-card">
-          <div className="db-weekly-review-heading">
-            <div><span className="db-review-kicker">{weekStart === 'sunday' ? 'SUNDAY–SATURDAY · THIS WEEK' : 'MONDAY–SUNDAY · THIS WEEK'}</span><h2>Weekly review</h2></div>
-            <span className={`db-review-delta ${weeklyReview.delta >= 0 ? 'positive' : 'negative'}`}>
-              {weeklyReview.delta > 0 ? '+' : weeklyReview.delta < 0 ? '−' : ''}{fmtDur(Math.abs(weeklyReview.delta))} vs same days last week
-            </span>
-          </div>
-          <div className="db-weekly-review-metrics">
-            <div><strong>{fmtDur(weeklyReview.seconds)}</strong><span>this week</span></div>
-            <div><strong>{weeklyReview.activeDays} / {new Date().getDay() + 1}</strong><span>active days so far</span></div>
-            <div><strong>{weeklyReview.sessions}</strong><span>sessions</span></div>
-            <div><strong>{weeklyReview.topProject ? weeklyReview.topProject[0] : '—'}</strong><span>most studied project</span></div>
-            <div><strong>{currentStreak} {currentStreak === 1 ? 'day' : 'days'}</strong><span>current study streak</span></div>
-            <div><strong>{longestStreak} {longestStreak === 1 ? 'day' : 'days'}</strong><span>longest study streak</span></div>
-          </div>
-          {weeklyReview.weeklyGoal > 0 && (
-            <div className="db-review-goal-track" aria-label={`Weekly goal progress ${weeklyReview.goalPct}%`}>
-              <span style={{ width: `${weeklyReview.goalPct}%` }} />
+                );
+              })}
             </div>
-          )}
-          <p className="db-weekly-review-suggestion">{weeklyReview.suggestion}</p>
-        </div>
+          </div>
+          <div className="db-weekly-review-card">
+            <div className="db-weekly-review-heading">
+              <div><span className="db-review-kicker">{weekStart === 'sunday' ? 'SUNDAY–SATURDAY · THIS WEEK' : 'MONDAY–SUNDAY · THIS WEEK'}</span><h2>Weekly review</h2></div>
+              <span className={`db-review-delta ${weeklyReview.delta >= 0 ? 'positive' : 'negative'}`}>
+                {weeklyReview.delta > 0 ? '+' : weeklyReview.delta < 0 ? '−' : ''}{fmtDur(Math.abs(weeklyReview.delta))} vs same days last week
+              </span>
+            </div>
+            <div className="db-weekly-review-metrics">
+              <div><strong>{fmtDur(weeklyReview.seconds)}</strong><span>this week</span></div>
+              <div><strong>{weeklyReview.activeDays} / {new Date().getDay() + 1}</strong><span>active days so far</span></div>
+              <div><strong>{weeklyReview.sessions}</strong><span>sessions</span></div>
+              <div><strong>{weeklyReview.topProject ? weeklyReview.topProject[0] : '—'}</strong><span>most studied project</span></div>
+              <div><strong>{currentStreak} {currentStreak === 1 ? 'day' : 'days'}</strong><span>current study streak</span></div>
+              <div><strong>{longestStreak} {longestStreak === 1 ? 'day' : 'days'}</strong><span>longest study streak</span></div>
+            </div>
+            {weeklyReview.weeklyGoal > 0 && (
+              <div className="db-review-goal-track" aria-label={`Weekly goal progress ${weeklyReview.goalPct}%`}>
+                <span style={{ width: `${weeklyReview.goalPct}%` }} />
+              </div>
+            )}
+            <p className="db-weekly-review-suggestion">{weeklyReview.suggestion}</p>
+          </div>
         </DashboardSection>
 
         <DashboardSection section={dashboardSection('focus')} order={dashboardSectionOrder('focus')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-        {/* ROW 2: FOCUS DEPTH & FLOW STATE (FULL WIDTH) */}
-        <div className="db-card db-flow-card">
-          {rangeEntries.length === 0 ? <><h2 className="db-section-title">Focus Depth & Flow State</h2><QuietEmptyState message="Focus breakdowns appear after you log a session in this range." onStart={() => onNavigate?.('timer')} /></> : <>
-          <div className="db-card-header-flex">
-            <div className="db-card-title-group">
-              <h2 className="db-section-title">Focus Depth & Flow State</h2>
-            </div>
-            <span className="db-section-meta">Cognitive Session Distribution</span>
-          </div>
-
-          {/* Harmonized Proportional Segmented Bar in Recessed Track */}
-          <div className="db-segmented-bar-track">
-            {sessionTierStats.total === 0 ? (
-              <div className="db-segmented-empty" />
-            ) : (
-              <>
-                {sessionTierStats.sprintPct > 0 && (
-                  <div
-                    className="db-segmented-slice slice-sprint"
-                    style={{ width: `${sessionTierStats.sprintPct}%` }}
-                    title={`Sprint (<20m): ${sessionTierStats.sprintPct}%`}
-                  />
-                )}
-                {sessionTierStats.pomodoroPct > 0 && (
-                  <div
-                    className="db-segmented-slice slice-pomodoro"
-                    style={{ width: `${sessionTierStats.pomodoroPct}%` }}
-                    title={`Pomodoro (20–45m): ${sessionTierStats.pomodoroPct}%`}
-                  />
-                )}
-                {sessionTierStats.deepFlowPct > 0 && (
-                  <div
-                    className="db-segmented-slice slice-deepflow"
-                    style={{ width: `${sessionTierStats.deepFlowPct}%` }}
-                    title={`Deep Flow (45–90m): ${sessionTierStats.deepFlowPct}%`}
-                  />
-                )}
-                {sessionTierStats.marathonPct > 0 && (
-                  <div
-                    className="db-segmented-slice slice-marathon"
-                    style={{ width: `${sessionTierStats.marathonPct}%` }}
-                    title={`Marathon (>90m): ${sessionTierStats.marathonPct}%`}
-                  />
-                )}
-              </>
-            )}
-          </div>
-
-          {/* 4 Session Sub-Cards with Internal Mini Progress Bars */}
-          <div className="db-tier-cards-grid">
-            {[
-              {
-                id: 'sprint',
-                name: 'Sprint (<20m)',
-                sess: `${sessionTierStats.sprint} sess`,
-                pct: `${sessionTierStats.sprintPct}%`,
-                pctNum: sessionTierStats.sprintPct,
-                dotClass: 'dot-sprint',
-                active: dominantTier === 'sprint' && sessionTierStats.sprint > 0,
-              },
-              {
-                id: 'pomodoro',
-                name: 'Pomodoro (20–45m)',
-                sess: `${sessionTierStats.pomodoro} sess`,
-                pct: `${sessionTierStats.pomodoroPct}%`,
-                pctNum: sessionTierStats.pomodoroPct,
-                dotClass: 'dot-pomodoro',
-                active: dominantTier === 'pomodoro' && sessionTierStats.pomodoro > 0,
-              },
-              {
-                id: 'deepFlow',
-                name: 'Deep Flow (45–90m)',
-                sess: `${sessionTierStats.deepFlow} sess`,
-                pct: `${sessionTierStats.deepFlowPct}%`,
-                pctNum: sessionTierStats.deepFlowPct,
-                dotClass: 'dot-deepflow',
-                active: dominantTier === 'deepFlow' && sessionTierStats.deepFlow > 0,
-              },
-              {
-                id: 'marathon',
-                name: 'Marathon (>90m)',
-                sess: `${sessionTierStats.marathon} sess`,
-                pct: `${sessionTierStats.marathonPct}%`,
-                pctNum: sessionTierStats.marathonPct,
-                dotClass: 'dot-marathon',
-                active: dominantTier === 'marathon' && sessionTierStats.marathon > 0,
-              },
-            ].map((tier) => (
-              <div key={tier.id} className={`db-tier-card ${tier.active ? 'active-tier' : ''}`}>
-                <div className="db-tier-meta">
-                  <span className={`db-tier-dot ${tier.dotClass}`} />
-                  <span>{tier.name}</span>
+          {/* ROW 2: FOCUS DEPTH & FLOW STATE (FULL WIDTH) */}
+          <div className="db-card db-flow-card">
+            {rangeEntries.length === 0 ? <><h2 className="db-section-title">Focus Depth & Flow State</h2><QuietEmptyState message="Focus breakdowns appear after you log a session in this range." onStart={() => onNavigate?.('timer')} /></> : <>
+              <div className="db-card-header-flex">
+                <div className="db-card-title-group">
+                  <h2 className="db-section-title">Focus Depth & Flow State</h2>
                 </div>
-                <div className="db-tier-val-flex">
-                  <span className="db-tier-sess">{tier.sess}</span>
-                  <span className="db-tier-pct">{tier.pct}</span>
+                <span className="db-section-meta">Cognitive Session Distribution</span>
+              </div>
+
+              {/* Harmonized Proportional Segmented Bar in Recessed Track */}
+              <div className="db-segmented-bar-track">
+                {sessionTierStats.total === 0 ? (
+                  <div className="db-segmented-empty" />
+                ) : (
+                  <>
+                    {sessionTierStats.sprintPct > 0 && (
+                      <div
+                        className="db-segmented-slice slice-sprint"
+                        style={{ width: `${sessionTierStats.sprintPct}%` }}
+                        title={`Sprint (<20m): ${sessionTierStats.sprintPct}%`}
+                      />
+                    )}
+                    {sessionTierStats.pomodoroPct > 0 && (
+                      <div
+                        className="db-segmented-slice slice-pomodoro"
+                        style={{ width: `${sessionTierStats.pomodoroPct}%` }}
+                        title={`Pomodoro (20–45m): ${sessionTierStats.pomodoroPct}%`}
+                      />
+                    )}
+                    {sessionTierStats.deepFlowPct > 0 && (
+                      <div
+                        className="db-segmented-slice slice-deepflow"
+                        style={{ width: `${sessionTierStats.deepFlowPct}%` }}
+                        title={`Deep Flow (45–90m): ${sessionTierStats.deepFlowPct}%`}
+                      />
+                    )}
+                    {sessionTierStats.marathonPct > 0 && (
+                      <div
+                        className="db-segmented-slice slice-marathon"
+                        style={{ width: `${sessionTierStats.marathonPct}%` }}
+                        title={`Marathon (>90m): ${sessionTierStats.marathonPct}%`}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* 4 Session Sub-Cards with Internal Mini Progress Bars */}
+              <div className="db-tier-cards-grid">
+                {[
+                  {
+                    id: 'sprint',
+                    name: 'Sprint (<20m)',
+                    sess: `${sessionTierStats.sprint} sess`,
+                    pct: `${sessionTierStats.sprintPct}%`,
+                    pctNum: sessionTierStats.sprintPct,
+                    dotClass: 'dot-sprint',
+                    active: dominantTier === 'sprint' && sessionTierStats.sprint > 0,
+                  },
+                  {
+                    id: 'pomodoro',
+                    name: 'Pomodoro (20–45m)',
+                    sess: `${sessionTierStats.pomodoro} sess`,
+                    pct: `${sessionTierStats.pomodoroPct}%`,
+                    pctNum: sessionTierStats.pomodoroPct,
+                    dotClass: 'dot-pomodoro',
+                    active: dominantTier === 'pomodoro' && sessionTierStats.pomodoro > 0,
+                  },
+                  {
+                    id: 'deepFlow',
+                    name: 'Deep Flow (45–90m)',
+                    sess: `${sessionTierStats.deepFlow} sess`,
+                    pct: `${sessionTierStats.deepFlowPct}%`,
+                    pctNum: sessionTierStats.deepFlowPct,
+                    dotClass: 'dot-deepflow',
+                    active: dominantTier === 'deepFlow' && sessionTierStats.deepFlow > 0,
+                  },
+                  {
+                    id: 'marathon',
+                    name: 'Marathon (>90m)',
+                    sess: `${sessionTierStats.marathon} sess`,
+                    pct: `${sessionTierStats.marathonPct}%`,
+                    pctNum: sessionTierStats.marathonPct,
+                    dotClass: 'dot-marathon',
+                    active: dominantTier === 'marathon' && sessionTierStats.marathon > 0,
+                  },
+                ].map((tier) => (
+                  <div key={tier.id} className={`db-tier-card ${tier.active ? 'active-tier' : ''}`}>
+                    <div className="db-tier-meta">
+                      <span className={`db-tier-dot ${tier.dotClass}`} />
+                      <span>{tier.name}</span>
+                    </div>
+                    <div className="db-tier-val-flex">
+                      <span className="db-tier-sess">{tier.sess}</span>
+                      <span className="db-tier-pct">{tier.pct}</span>
+                    </div>
+                    {/* Visual Micro Progress Bar inside each sub-card */}
+                    <div className="db-tier-micro-track">
+                      <div
+                        className={`db-tier-micro-fill ${tier.dotClass}`}
+                        style={{ width: `${tier.pctNum}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bottom 4 Summary Metrics with Clean Dividers */}
+              <div className="db-flow-bottom-stats">
+                <div className="db-flow-stat-col">
+                  <div className="db-metric-label">AVG FOCUS DEPTH</div>
+                  <div className="db-metric-val">
+                    {avgFocusDepth > 0 ? fmtDur(avgFocusDepth) : '—'}
+                  </div>
                 </div>
-                {/* Visual Micro Progress Bar inside each sub-card */}
-                <div className="db-tier-micro-track">
-                  <div
-                    className={`db-tier-micro-fill ${tier.dotClass}`}
-                    style={{ width: `${tier.pctNum}%` }}
-                  />
+                <div className="db-flow-stat-col">
+                  <div className="db-metric-label">LONGEST SESSION</div>
+                  <div className="db-metric-val">
+                    {longestSession > 0 ? fmtDur(longestSession) : '—'}
+                  </div>
+                </div>
+                <div className="db-flow-stat-col">
+                  <div className="db-metric-label">CONTEXT SWITCHING</div>
+                  <div className="db-metric-val">{contextSwitching}</div>
+                </div>
+                <div className="db-flow-stat-col">
+                  <div className="db-metric-label">PEAK HOUR</div>
+                  <div className="db-metric-val">{peakHourLabel}</div>
                 </div>
               </div>
-            ))}
+            </>}
           </div>
-
-          {/* Bottom 4 Summary Metrics with Clean Dividers */}
-          <div className="db-flow-bottom-stats">
-            <div className="db-flow-stat-col">
-              <div className="db-metric-label">AVG FOCUS DEPTH</div>
-              <div className="db-metric-val">
-                {avgFocusDepth > 0 ? fmtDur(avgFocusDepth) : '—'}
-              </div>
-            </div>
-            <div className="db-flow-stat-col">
-              <div className="db-metric-label">LONGEST SESSION</div>
-              <div className="db-metric-val">
-                {longestSession > 0 ? fmtDur(longestSession) : '—'}
-              </div>
-            </div>
-            <div className="db-flow-stat-col">
-              <div className="db-metric-label">CONTEXT SWITCHING</div>
-              <div className="db-metric-val">{contextSwitching}</div>
-            </div>
-            <div className="db-flow-stat-col">
-              <div className="db-metric-label">PEAK HOUR</div>
-              <div className="db-metric-val">{peakHourLabel}</div>
-            </div>
-          </div>
-          </>}
-        </div>
         </DashboardSection>
 
         <DashboardSection section={dashboardSection('rhythms')} order={dashboardSectionOrder('rhythms')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-        {/* ROW 3: CIRCADIAN FOCUS WINDOW (LEFT) + DAY-OF-WEEK POWER RHYTHM (RIGHT) */}
-        <div className="db-bento-grid-row db-two-col">
-          {rangeEntries.length === 0 ? <div className="db-card"><QuietEmptyState message="Study timing patterns appear after your first session in this range." onStart={() => onNavigate?.('timer')} /></div> : <>
-          {/* Circadian Focus Window */}
-          <div className="db-card db-card-column">
-            <div>
-              <div className="db-card-header-flex mb-5">
-                <h2 className="db-section-title">Circadian Focus Window</h2>
-                <span className="db-section-meta">When you actually study</span>
-              </div>
-
-              <div className="db-circadian-grid">
-                {circadianStats.slots.map((slot, i) => (
-                  <div
-                    key={i}
-                    className={`db-circadian-card ${slot.active ? 'active-slot' : ''}`}
-                    title={`${slot.title} (${slot.sub}): ${fmtDur(slot.secs)} · ${slot.pct}`}
-                  >
-                    <div className="db-circadian-top">
-                      <span>{slot.title}</span>
-                      <span className="db-circadian-hours">{slot.sub}</span>
-                    </div>
-                    <div className="db-circadian-val">{slot.val}</div>
-                    <div className="db-circadian-bar-track">
-                      {slot.active && (
-                        <div
-                          className="db-circadian-bar-fill"
-                          style={{ width: `${Math.max(10, slot.pctNum)}%` }}
-                        />
-                      )}
-                    </div>
-                    <div className="db-circadian-pct">{slot.pct}</div>
+          {/* ROW 3: CIRCADIAN FOCUS WINDOW (LEFT) + DAY-OF-WEEK POWER RHYTHM (RIGHT) */}
+          <div className="db-bento-grid-row db-two-col">
+            {rangeEntries.length === 0 ? <div className="db-card"><QuietEmptyState message="Study timing patterns appear after your first session in this range." onStart={() => onNavigate?.('timer')} /></div> : <>
+              {/* Circadian Focus Window */}
+              <div className="db-card db-card-column">
+                <div>
+                  <div className="db-card-header-flex mb-5">
+                    <h2 className="db-section-title">Circadian Focus Window</h2>
+                    <span className="db-section-meta">When you actually study</span>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="db-insight-footer">
-              <div className="db-insight-main">
-                <span className="db-insight-icon"><Sparkles /></span>
-                <span className="db-insight-label">Peak Cognitive Timing</span>
-                <strong className="db-insight-value">{circadianStats.hasData ? circadianStats.bestSlotTitle : '—'}</strong>
-              </div>
-              <span className="db-insight-metric">
-                {circadianStats.hasData ? `${circadianStats.bestPct}% of study` : '—'}
-              </span>
-            </div>
-          </div>
-
-          {/* Day-of-Week Power Rhythm */}
-          <div className="db-card db-card-column">
-            <div>
-              <div className="db-card-header-flex mb-5">
-                <h2 className="db-section-title">Day-of-Week Power Rhythm</h2>
-                <span className="db-section-meta">Study output per weekday</span>
-              </div>
-
-              <div className="db-power-rhythm-list">
-                {dayOfWeekStats.rows.map((row, i) => (
-                    <div
-                      key={i}
-                      className="db-power-rhythm-row"
-                      title={`${row.day}: ${row.val}`}
-                    >
-                    <span className={`db-power-day-label ${row.active ? 'active' : ''}`}>
-                      {row.day}
-                    </span>
-                    <div className="db-power-track">
+                  <div className="db-circadian-grid">
+                    {circadianStats.slots.map((slot, i) => (
                       <div
-                        className={`db-power-fill ${row.active ? 'active' : ''}`}
-                        style={{ width: `${row.pct}%` }}
-                      />
-                    </div>
-                    <span className={`db-power-val-label ${row.active ? 'active' : ''}`}>
-                      {row.val}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="db-insight-footer">
-              <div className="db-insight-main">
-                <span className="db-insight-icon"><Zap /></span>
-                <span className="db-insight-label">Power Day</span>
-                <strong className="db-insight-value">{dayOfWeekStats.powerDayName}</strong>
-              </div>
-              <span className="db-insight-metric">
-                {dayOfWeekStats.hasData ? `${dayOfWeekStats.powerDayVolume} total volume` : '—'}
-              </span>
-            </div>
-          </div>
-          </>}
-        </div>
-        </DashboardSection>
-
-        <DashboardSection section={dashboardSection('projects')} order={dashboardSectionOrder('projects')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-        {/* ROW 4: WEEKLY STUDY BAR CHART (LEFT) + PROJECT PORTFOLIO (RIGHT) */}
-        <div className="db-bento-grid-row db-two-col">
-          {/* Weekly Study Bar Chart */}
-          <div className="db-card">
-            <div className="db-card-header-flex mb-6">
-              <h2 className="db-section-title">Weekly Study</h2>
-              <span className="db-section-meta">
-                {rangeLabel} · {weekBarData.totalWeeklyFmt} total · Peak: {weekBarData.peakDayLabel}{' '}
-                ({weekBarData.peakDayFmt})
-              </span>
-            </div>
-
-            {/* Zero Overlap Bar Chart Container with Headroom */}
-            {rangeEntries.length === 0 ? <QuietEmptyState message="No study logged in this date range." onStart={() => onNavigate?.('timer')} /> : <div className="db-weekly-chart-scroll">
-            <div className="db-weekly-bar-chart-stage" style={{ minWidth: weekBarData.minWidth }}>
-              {weekBarData.cols.map((col, i) => (
-                  <div
-                    key={i}
-                    className="db-weekly-bar-column"
-                    title={`${col.day}: ${col.label || 'No study logged'}`}
-                    aria-label={`${col.day}: ${col.label || 'No study logged'}`}
-                  >
-                  {col.label ? (
-                    <span className={`db-weekly-bar-val-text ${col.active ? 'active' : ''}`}>
-                      {col.label}
-                    </span>
-                  ) : (
-                    <span className="db-weekly-bar-val-spacer" />
-                  )}
-                  <div
-                    className={`db-weekly-bar-element ${col.active ? 'active' : ''} ${
-                      col.muted ? 'muted' : ''
-                    }`}
-                    style={{ height: `${Math.max(col.val > 0 ? 8 : 0, col.h)}%` }}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="db-weekly-bar-days-footer" style={{ minWidth: weekBarData.minWidth }}>
-              {weekBarData.cols.map((col, idx) => (
-                <span
-                  key={idx}
-                  className={`db-weekly-day-item ${col.active ? 'active' : ''}`}
-                >
-                  {col.day}
-                </span>
-              ))}
-            </div>
-            </div>}
-          </div>
-
-          {/* Project Portfolio */}
-          <div className="db-card db-card-column">
-            <div>
-              <div className="db-card-header-flex mb-6">
-                <h2 className="db-section-title">Project Portfolio</h2>
-                <span className="db-section-meta">{rangeLabel}</span>
-              </div>
-
-              {/* Dynamic Project Items */}
-              {portfolioStats.list.length === 0 ? (
-                <div className="db-portfolio-empty">
-                  <p>No study logged for this range.</p>
-                  <button onClick={() => onNavigate?.('timer')} className="db-portfolio-timer-btn">
-                    Start a session
-                  </button>
-                </div>
-              ) : (
-                <div className="db-portfolio-list">
-                  {portfolioStats.list.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="db-portfolio-item"
-                      title={`${item.projectName}${item.subjectName ? ` · ${item.subjectName}` : ''}: ${item.durationFmt} across ${item.count} ${item.count === 1 ? 'session' : 'sessions'}`}
-                    >
-                      <div className="db-portfolio-item-meta">
-                        <div className="db-portfolio-item-name-group">
-                          <span
-                            className="db-portfolio-dot"
-                            style={{ backgroundColor: item.color }}
-                          />
-                          <span className="db-portfolio-item-title">
-                            {item.projectName}
-                            {item.subjectName ? ` · ${item.subjectName}` : ''}
-                          </span>
-                        </div>
-                        <div className="db-portfolio-item-stats">
-                          <span className="db-portfolio-sess-count">
-                            {item.count} {item.count === 1 ? 'session' : 'sessions'}
-                          </span>
-                          <span className="db-portfolio-duration">{item.durationFmt}</span>
-                        </div>
-                      </div>
-                      <div className="db-portfolio-bar-track">
-                        <div
-                          className="db-portfolio-bar-fill"
-                          style={{
-                            width: `${item.pct}%`,
-                            '--portfolio-color': item.color,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="db-portfolio-footer">
-              <span>Top {portfolioStats.topKind} accounts for {portfolioStats.topPct}% of {rangeLabel.toLowerCase()} study</span>
-              <span className="accent">
-                {portfolioStats.totalProjects} active{' '}
-                {portfolioStats.totalProjects === 1 ? 'project' : 'projects'}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="db-card db-project-plans-card">
-          <div className="db-card-header-flex">
-            <div><h2 className="db-section-title">Project plans</h2><span className="db-section-meta">Estimate, progress, and a pace-based finish forecast</span></div>
-            <button type="button" className="db-manage-link" onClick={() => onNavigate?.('manage')}>Edit plans <span aria-hidden="true">→</span></button>
-          </div>
-          {projectPlans.length === 0 ? (
-            <div className="db-range-empty"><span>Add a project to plan its estimate, deadline, and milestones.</span><button type="button" onClick={() => onNavigate?.('manage')}>Open project library <span aria-hidden="true">→</span></button></div>
-          ) : (
-            <div className="db-project-plans-list">
-              {projectPlans.map((plan) => (
-                <article className="db-project-plan-row" key={plan.id}>
-                  <span className="db-project-plan-dot" style={{ backgroundColor: plan.color || 'var(--db-portfolio-accent)' }} />
-                  <div className="db-project-plan-main">
-                    <div className="db-project-plan-title"><strong>{plan.name}</strong>{plan.estimateHours > 0 && <span>{fmtDur(plan.seconds)} / {fmtDur(plan.estimateHours * 3600)}</span>}</div>
-                    {plan.estimateHours > 0 ? <div className="db-project-plan-track"><span style={{ width: `${plan.progress}%` }} /></div> : <p>Set a total estimate in Manage to track progress.</p>}
-                    <div className="db-project-plan-meta">
-                      <span>{plan.estimateHours > 0 ? `${plan.progress}% complete · ${fmtDur(plan.remainingSeconds)} left` : 'No total estimate set'}</span>
-                      <span>{plan.milestones.length ? `${plan.completedMilestones}/${plan.milestones.length} milestones` : 'No milestones yet'}</span>
-                      <span>{plan.deadline ? `Due ${plan.deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${plan.forecastDate ? ` · pace ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}` : plan.estimateHours > 0 && plan.remainingSeconds === 0 ? 'Time estimate reached' : plan.forecastDate ? `At recent pace: ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Log sessions to estimate finish'}</span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
-        </DashboardSection>
-
-        {/* Study trend charts */}
-        <DashboardSection section={dashboardSection('patterns')} order={dashboardSectionOrder('patterns')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-        <section className="db-chart-section" aria-labelledby="db-study-patterns-title">
-          <div className="db-chart-section-heading">
-            <div>
-              <h2 id="db-study-patterns-title">Study patterns</h2>
-              <p>Daily output, weekly momentum, and session length</p>
-            </div>
-          </div>
-          <DailyHoursGraph days={dailyHoursData.days} title={dailyHoursData.title} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
-          <div className="db-bento-grid-row db-two-col db-chart-pair">
-            <WeeklyTrendGraph weeks={weeklyTrendData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} rangeLabel={rangeLabel} />
-            <SessionLengthGraph buckets={sessionLengthData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
-          </div>
-        </section>
-        </DashboardSection>
-
-        <DashboardSection section={dashboardSection('heatmap')} order={dashboardSectionOrder('heatmap')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-        {/* ROW 5: TIME-OF-DAY HEATMAP (24H x 7 DAYS) */}
-        <div className="db-card">
-          <div className="db-card-header-flex mb-5">
-            <h2 className="db-section-title">Time-of-Day Heatmap</h2>
-            <span className="db-section-meta">Study hours by day and hour</span>
-          </div>
-
-          {rangeEntries.length === 0 ? <QuietEmptyState message="The heatmap fills in as you log sessions." onStart={() => onNavigate?.('timer')} /> : <div className="db-heatmap-scroll">
-            <div className="db-heatmap-matrix-min">
-              {/* Hour Headers */}
-              <div className="db-heatmap-hour-headers">
-                <div className="db-heatmap-hour-spacer" />
-                {Array.from({ length: 24 }).map((_, h) => (
-                  <div key={h} className="db-heatmap-hour-tag">
-                    {h % 3 === 0 ? `${h}h` : ''}
-                  </div>
-                ))}
-              </div>
-
-              {/* 7 Day Rows */}
-              <div className="db-heatmap-rows-stack">
-                {heatmapStats.days.map((day, dayIdx) => (
-                  <div key={day} className="db-heatmap-day-row">
-                    <span className="db-heatmap-day-label">{day}</span>
-                    {Array.from({ length: 24 }).map((_, h) => {
-                      const secs = heatmapStats.matrix[dayIdx][h];
-                      const isPeak =
-                        secs > 0 &&
-                        dayIdx === heatmapStats.peakDayIdx &&
-                        h === heatmapStats.peakHour;
-                      const hasStudy = secs > 0;
-                      const opacity = hasStudy
-                        ? Math.min(1, Math.max(0.25, secs / heatmapStats.maxCell))
-                        : 0;
-
-                      return (
-                        <div
-                          key={h}
-                          title={`${day} ${h}:00 · ${secs > 0 ? fmtDur(secs) : 'No study'}`}
-                          className={`db-heatmap-slot ${isPeak ? 'peak-slot' : ''} ${
-                            hasStudy ? 'study-slot' : 'empty-slot'
-                          }`}
-                          style={hasStudy && !isPeak ? { opacity } : {}}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          }
-        </div>
-        </DashboardSection>
-
-        <DashboardSection section={dashboardSection('calendar')} order={dashboardSectionOrder('calendar')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-        {/* Activity calendar for the selected range */}
-        <div className="db-card">
-          <div className="db-card-header-flex mb-5">
-            <h2 className="db-section-title">Activity Calendar</h2>
-            <span className="db-section-meta">
-              {rangeLabel} · {activityCalStats.activeDaysCount} active days · {fmtDur(rangeSecs)} logged
-            </span>
-          </div>
-
-          {rangeEntries.length === 0 ? <QuietEmptyState message="Your activity calendar will appear after the first session in this range." onStart={() => onNavigate?.('timer')} /> : (
-          <div className="db-activity-cal-scroll">
-            <div className="db-activity-cal-min" style={{ minWidth: Math.max(320, activityCalStats.weeks.length * 17 + 48) }}>
-              <div className="db-activity-cal-months">
-                {activityCalStats.monthNames.map((m, idx) => (
-                  <span key={idx}>{m}</span>
-                ))}
-              </div>
-
-              {activityCalStats.weeks.length <= 2 ? (
-                <div className="db-activity-cal-days">
-                  {activityCalStats.weeks.flat().filter(Boolean).map((day) => {
-                    const date = new Date(`${day.key}T12:00:00`);
-                    return (
-                      <div
-                        key={day.key}
-                        title={`${day.dateStr} · ${day.val > 0 ? fmtDur(day.val) : 'No study'}`}
-                        className={`db-activity-cal-day${day.isToday ? ' is-today' : ''}${day.val > 0 ? ' has-study' : ''}${day.isFuture ? ' is-future' : ''}`}
+                        key={i}
+                        className={`db-circadian-card ${slot.active ? 'active-slot' : ''}`}
+                        title={`${slot.title} (${slot.sub}): ${fmtDur(slot.secs)} · ${slot.pct}`}
                       >
-                        <span>{date.toLocaleDateString(undefined, { weekday: 'short' })}</span>
-                        <strong>{date.getDate()}</strong>
-                        <small>{day.isFuture ? 'Upcoming' : day.val > 0 ? fmtDur(day.val) : '—'}</small>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="db-activity-cal-body">
-                  <div className="db-activity-cal-weekdays" aria-hidden="true">
-                    <span>Sun</span>
-                    <span>Wed</span>
-                    <span>Sat</span>
-                  </div>
-                  <div className="db-activity-cal-grid" style={{ gridTemplateColumns: `repeat(${activityCalStats.weeks.length}, 12px)` }}>
-                    {activityCalStats.weeks.map((week, weekIdx) => (
-                      <div key={weekIdx} className="db-activity-cal-week-col">
-                        {week.map((day, dayIdx) => {
-                          if (!day) return <div key={dayIdx} className="db-activity-cal-cell empty-ghost" />;
-                          const hasVal = day.val > 0;
-                          const isMax = hasVal && day.val === activityCalStats.maxVal;
-                          const opacity = hasVal ? Math.min(1, Math.max(0.3, day.val / activityCalStats.maxVal)) : 0;
-                          return (
+                        <div className="db-circadian-top">
+                          <span>{slot.title}</span>
+                          <span className="db-circadian-hours">{slot.sub}</span>
+                        </div>
+                        <div className="db-circadian-val">{slot.val}</div>
+                        <div className="db-circadian-bar-track">
+                          {slot.active && (
                             <div
-                              key={dayIdx}
-                              title={`${day.dateStr} · ${hasVal ? fmtDur(day.val) : 'No study'}`}
-                              className={`db-activity-cal-cell ${day.isToday ? 'is-today-ring' : ''} ${isMax ? 'is-max' : hasVal ? 'is-active' : 'is-empty'}`}
-                              style={hasVal && !isMax ? { opacity } : {}}
+                              className="db-circadian-bar-fill"
+                              style={{ width: `${Math.max(10, slot.pctNum)}%` }}
                             />
-                          );
-                        })}
+                          )}
+                        </div>
+                        <div className="db-circadian-pct">{slot.pct}</div>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
+
+                <div className="db-insight-footer">
+                  <div className="db-insight-main">
+                    <span className="db-insight-icon"><Sparkles /></span>
+                    <span className="db-insight-label">Peak Cognitive Timing</span>
+                    <strong className="db-insight-value">{circadianStats.hasData ? circadianStats.bestSlotTitle : '—'}</strong>
+                  </div>
+                  <span className="db-insight-metric">
+                    {circadianStats.hasData ? `${circadianStats.bestPct}% of study` : '—'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Day-of-Week Power Rhythm */}
+              <div className="db-card db-card-column">
+                <div>
+                  <div className="db-card-header-flex mb-5">
+                    <h2 className="db-section-title">Day-of-Week Power Rhythm</h2>
+                    <span className="db-section-meta">Study output per weekday</span>
+                  </div>
+
+                  <div className="db-power-rhythm-list">
+                    {dayOfWeekStats.rows.map((row, i) => (
+                      <div
+                        key={i}
+                        className="db-power-rhythm-row"
+                        title={`${row.day}: ${row.val}`}
+                      >
+                        <span className={`db-power-day-label ${row.active ? 'active' : ''}`}>
+                          {row.day}
+                        </span>
+                        <div className="db-power-track">
+                          <div
+                            className={`db-power-fill ${row.active ? 'active' : ''}`}
+                            style={{ width: `${row.pct}%` }}
+                          />
+                        </div>
+                        <span className={`db-power-val-label ${row.active ? 'active' : ''}`}>
+                          {row.val}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="db-insight-footer">
+                  <div className="db-insight-main">
+                    <span className="db-insight-icon"><Zap /></span>
+                    <span className="db-insight-label">Power Day</span>
+                    <strong className="db-insight-value">{dayOfWeekStats.powerDayName}</strong>
+                  </div>
+                  <span className="db-insight-metric">
+                    {dayOfWeekStats.hasData ? `${dayOfWeekStats.powerDayVolume} total volume` : '—'}
+                  </span>
+                </div>
+              </div>
+            </>}
+          </div>
+        </DashboardSection>
+
+        <DashboardSection section={dashboardSection('projects')} order={dashboardSectionOrder('projects')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
+          {/* ROW 4: WEEKLY STUDY BAR CHART (LEFT) + PROJECT PORTFOLIO (RIGHT) */}
+          <div className="db-bento-grid-row db-two-col">
+            {/* Weekly Study Bar Chart */}
+            <div className="db-card">
+              <div className="db-card-header-flex mb-6">
+                <h2 className="db-section-title">Weekly Study</h2>
+                <span className="db-section-meta">
+                  {rangeLabel} · {weekBarData.totalWeeklyFmt} total · Peak: {weekBarData.peakDayLabel}{' '}
+                  ({weekBarData.peakDayFmt})
+                </span>
+              </div>
+
+              {/* Zero Overlap Bar Chart Container with Headroom */}
+              {rangeEntries.length === 0 ? <QuietEmptyState message="No study logged in this date range." onStart={() => onNavigate?.('timer')} /> : <div className="db-weekly-chart-scroll">
+                <div className="db-weekly-bar-chart-stage" style={{ minWidth: weekBarData.minWidth }}>
+                  {weekBarData.cols.map((col, i) => (
+                    <div
+                      key={i}
+                      className="db-weekly-bar-column"
+                      title={`${col.day}: ${col.label || 'No study logged'}`}
+                      aria-label={`${col.day}: ${col.label || 'No study logged'}`}
+                    >
+                      {col.label ? (
+                        <span className={`db-weekly-bar-val-text ${col.active ? 'active' : ''}`}>
+                          {col.label}
+                        </span>
+                      ) : (
+                        <span className="db-weekly-bar-val-spacer" />
+                      )}
+                      <div
+                        className={`db-weekly-bar-element ${col.active ? 'active' : ''} ${col.muted ? 'muted' : ''
+                          }`}
+                        style={{ height: `${Math.max(col.val > 0 ? 8 : 0, col.h)}%` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="db-weekly-bar-days-footer" style={{ minWidth: weekBarData.minWidth }}>
+                  {weekBarData.cols.map((col, idx) => (
+                    <span
+                      key={idx}
+                      className={`db-weekly-day-item ${col.active ? 'active' : ''}`}
+                    >
+                      {col.day}
+                    </span>
+                  ))}
+                </div>
+              </div>}
+            </div>
+
+            {/* Project Portfolio */}
+            <div className="db-card db-card-column">
+              <div>
+                <div className="db-card-header-flex mb-6">
+                  <h2 className="db-section-title">Project Portfolio</h2>
+                  <span className="db-section-meta">{rangeLabel}</span>
+                </div>
+
+                {/* Dynamic Project Items */}
+                {portfolioStats.list.length === 0 ? (
+                  <div className="db-portfolio-empty">
+                    <p>No study logged for this range.</p>
+                    <button onClick={() => onNavigate?.('timer')} className="db-portfolio-timer-btn">
+                      Start a session
+                    </button>
+                  </div>
+                ) : (
+                  <div className="db-portfolio-list">
+                    {portfolioStats.list.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="db-portfolio-item"
+                        title={`${item.projectName}${item.subjectName ? ` · ${item.subjectName}` : ''}: ${item.durationFmt} across ${item.count} ${item.count === 1 ? 'session' : 'sessions'}`}
+                      >
+                        <div className="db-portfolio-item-meta">
+                          <div className="db-portfolio-item-name-group">
+                            <span
+                              className="db-portfolio-dot"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span className="db-portfolio-item-title">
+                              {item.projectName}
+                              {item.subjectName ? ` · ${item.subjectName}` : ''}
+                            </span>
+                          </div>
+                          <div className="db-portfolio-item-stats">
+                            <span className="db-portfolio-sess-count">
+                              {item.count} {item.count === 1 ? 'session' : 'sessions'}
+                            </span>
+                            <span className="db-portfolio-duration">{item.durationFmt}</span>
+                          </div>
+                        </div>
+                        <div className="db-portfolio-bar-track">
+                          <div
+                            className="db-portfolio-bar-fill"
+                            style={{
+                              width: `${item.pct}%`,
+                              '--portfolio-color': item.color,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="db-portfolio-footer">
+                <span>Top {portfolioStats.topKind} accounts for {portfolioStats.topPct}% of {rangeLabel.toLowerCase()} study</span>
+                <span className="accent">
+                  {portfolioStats.totalProjects} active{' '}
+                  {portfolioStats.totalProjects === 1 ? 'project' : 'projects'}
+                </span>
+              </div>
             </div>
           </div>
-          )}
-        </div>
+          <div className="db-card db-project-plans-card">
+            <div className="db-card-header-flex">
+              <div><h2 className="db-section-title">Project plans</h2><span className="db-section-meta">Estimate, progress, and a pace-based finish forecast</span></div>
+              <button type="button" className="db-manage-link" onClick={() => onNavigate?.('manage')}>Edit plans <span aria-hidden="true">→</span></button>
+            </div>
+            {projectPlans.length === 0 ? (
+              <div className="db-range-empty"><span>Add a project to plan its estimate, deadline, and milestones.</span><button type="button" onClick={() => onNavigate?.('manage')}>Open project library <span aria-hidden="true">→</span></button></div>
+            ) : (
+              <div className="db-project-plans-list">
+                {projectPlans.map((plan) => (
+                  <article className="db-project-plan-row" key={plan.id}>
+                    <span className="db-project-plan-dot" style={{ backgroundColor: plan.color || 'var(--db-portfolio-accent)' }} />
+                    <div className="db-project-plan-main">
+                      <div className="db-project-plan-title"><strong>{plan.name}</strong>{plan.estimateHours > 0 && <span>{fmtDur(plan.seconds)} / {fmtDur(plan.estimateHours * 3600)}</span>}</div>
+                      {plan.estimateHours > 0 ? <div className="db-project-plan-track"><span style={{ width: `${plan.progress}%` }} /></div> : <p>Set a total estimate in Manage to track progress.</p>}
+                      <div className="db-project-plan-meta">
+                        <span>{plan.estimateHours > 0 ? `${plan.progress}% complete · ${fmtDur(plan.remainingSeconds)} left` : 'No total estimate set'}</span>
+                        <span>{plan.milestones.length ? `${plan.completedMilestones}/${plan.milestones.length} milestones` : 'No milestones yet'}</span>
+                        <span>{plan.deadline ? `Due ${plan.deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${plan.forecastDate ? ` · pace ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}` : plan.estimateHours > 0 && plan.remainingSeconds === 0 ? 'Time estimate reached' : plan.forecastDate ? `At recent pace: ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Log sessions to estimate finish'}</span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </DashboardSection>
+
+        {/* Study trend charts */}
+        <DashboardSection section={dashboardSection('patterns')} order={dashboardSectionOrder('patterns')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
+          <section className="db-chart-section" aria-labelledby="db-study-patterns-title">
+            <div className="db-chart-section-heading">
+              <div>
+                <h2 id="db-study-patterns-title">Study patterns</h2>
+                <p>Daily output, weekly momentum, and session length</p>
+              </div>
+            </div>
+            <DailyHoursGraph days={dailyHoursData.days} title={dailyHoursData.title} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
+            <div className="db-bento-grid-row db-two-col db-chart-pair">
+              <WeeklyTrendGraph weeks={weeklyTrendData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} rangeLabel={rangeLabel} />
+              <SessionLengthGraph buckets={sessionLengthData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
+            </div>
+          </section>
+        </DashboardSection>
+
+        <DashboardSection section={dashboardSection('heatmap')} order={dashboardSectionOrder('heatmap')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
+          {/* ROW 5: TIME-OF-DAY HEATMAP (24H x 7 DAYS) */}
+          <div className="db-card">
+            <div className="db-card-header-flex mb-5">
+              <h2 className="db-section-title">Time-of-Day Heatmap</h2>
+              <span className="db-section-meta">Study hours by day and hour</span>
+            </div>
+
+            {rangeEntries.length === 0 ? <QuietEmptyState message="The heatmap fills in as you log sessions." onStart={() => onNavigate?.('timer')} /> : <div className="db-heatmap-scroll">
+              <div className="db-heatmap-matrix-min">
+                {/* Hour Headers */}
+                <div className="db-heatmap-hour-headers">
+                  <div className="db-heatmap-hour-spacer" />
+                  {Array.from({ length: 24 }).map((_, h) => (
+                    <div key={h} className="db-heatmap-hour-tag">
+                      {h % 3 === 0 ? `${h}h` : ''}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 7 Day Rows */}
+                <div className="db-heatmap-rows-stack">
+                  {heatmapStats.days.map((day, dayIdx) => (
+                    <div key={day} className="db-heatmap-day-row">
+                      <span className="db-heatmap-day-label">{day}</span>
+                      {Array.from({ length: 24 }).map((_, h) => {
+                        const secs = heatmapStats.matrix[dayIdx][h];
+                        const isPeak =
+                          secs > 0 &&
+                          dayIdx === heatmapStats.peakDayIdx &&
+                          h === heatmapStats.peakHour;
+                        const hasStudy = secs > 0;
+                        const opacity = hasStudy
+                          ? Math.min(1, Math.max(0.25, secs / heatmapStats.maxCell))
+                          : 0;
+
+                        return (
+                          <div
+                            key={h}
+                            title={`${day} ${h}:00 · ${secs > 0 ? fmtDur(secs) : 'No study'}`}
+                            className={`db-heatmap-slot ${isPeak ? 'peak-slot' : ''} ${hasStudy ? 'study-slot' : 'empty-slot'
+                              }`}
+                            style={hasStudy && !isPeak ? { opacity } : {}}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+        </DashboardSection>
+
+        <DashboardSection section={dashboardSection('calendar')} order={dashboardSectionOrder('calendar')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
+          {/* Activity calendar for the selected range */}
+          <div className="db-card">
+            <div className="db-card-header-flex mb-5">
+              <h2 className="db-section-title">Activity Calendar</h2>
+              <span className="db-section-meta">
+                {rangeLabel} · {activityCalStats.activeDaysCount} active days · {fmtDur(rangeSecs)} logged
+              </span>
+            </div>
+
+            {rangeEntries.length === 0 ? <QuietEmptyState message="Your activity calendar will appear after the first session in this range." onStart={() => onNavigate?.('timer')} /> : (
+              <div className="db-activity-cal-scroll">
+                <div className="db-activity-cal-min" style={{ minWidth: Math.max(320, activityCalStats.weeks.length * 17 + 48) }}>
+                  <div className="db-activity-cal-months">
+                    {activityCalStats.monthNames.map((m, idx) => (
+                      <span key={idx}>{m}</span>
+                    ))}
+                  </div>
+
+                  {activityCalStats.weeks.length <= 2 ? (
+                    <div className="db-activity-cal-days">
+                      {activityCalStats.weeks.flat().filter(Boolean).map((day) => {
+                        const date = new Date(`${day.key}T12:00:00`);
+                        return (
+                          <div
+                            key={day.key}
+                            title={`${day.dateStr} · ${day.val > 0 ? fmtDur(day.val) : 'No study'}`}
+                            className={`db-activity-cal-day${day.isToday ? ' is-today' : ''}${day.val > 0 ? ' has-study' : ''}${day.isFuture ? ' is-future' : ''}`}
+                          >
+                            <span>{date.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                            <strong>{date.getDate()}</strong>
+                            <small>{day.isFuture ? 'Upcoming' : day.val > 0 ? fmtDur(day.val) : '—'}</small>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="db-activity-cal-body">
+                      <div className="db-activity-cal-weekdays" aria-hidden="true">
+                        <span>Sun</span>
+                        <span>Wed</span>
+                        <span>Sat</span>
+                      </div>
+                      <div className="db-activity-cal-grid" style={{ gridTemplateColumns: `repeat(${activityCalStats.weeks.length}, 12px)` }}>
+                        {activityCalStats.weeks.map((week, weekIdx) => (
+                          <div key={weekIdx} className="db-activity-cal-week-col">
+                            {week.map((day, dayIdx) => {
+                              if (!day) return <div key={dayIdx} className="db-activity-cal-cell empty-ghost" />;
+                              const hasVal = day.val > 0;
+                              const isMax = hasVal && day.val === activityCalStats.maxVal;
+                              const opacity = hasVal ? Math.min(1, Math.max(0.3, day.val / activityCalStats.maxVal)) : 0;
+                              return (
+                                <div
+                                  key={dayIdx}
+                                  title={`${day.dateStr} · ${hasVal ? fmtDur(day.val) : 'No study'}`}
+                                  className={`db-activity-cal-cell ${day.isToday ? 'is-today-ring' : ''} ${isMax ? 'is-max' : hasVal ? 'is-active' : 'is-empty'}`}
+                                  style={hasVal && !isMax ? { opacity } : {}}
+                                />
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </DashboardSection>
       </div>
     </div>

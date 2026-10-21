@@ -68,7 +68,8 @@
   border-radius: 19px;
   background: var(--sd-bg-surface, rgba(255,255,255,.78));
   box-shadow: var(--sd-shadow-card, 0 12px 34px rgba(65,65,115,.08));
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(22px) saturate(155%);
+  -webkit-backdrop-filter: blur(22px) saturate(155%);
 }
 
 .manage-library-toolbar {
@@ -224,6 +225,8 @@
   border-radius: 15px;
   background: var(--sd-bg-surface, #fff);
   box-shadow: 0 3px 12px rgba(54,57,105,.035);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 
