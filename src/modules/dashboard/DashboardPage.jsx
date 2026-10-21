@@ -444,11 +444,59 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     return () => window.removeEventListener('storage', syncProjects);
   }, [projectsKey]);
 
-  const dailyGoalHours = useMemo(() => projects.reduce(
-    (total, project) => total + (project.archived ? 0 : (project.subjects || []).reduce(
-      (subjectTotal, subject) => subjectTotal + (Number(subject.goals?.daily) || 0), 0
-    )), 0
-  ), [projects]);
+  // Storage key for user session entries
+  const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
+  const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
+  const [preferences, setPreferences] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(preferencesKey) || 'null');
+      return saved || {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [weekStart, setWeekStart] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(preferencesKey) || 'null');
+      return weekDayKeys.includes(saved?.weekStart) ? saved.weekStart : 'monday';
+    } catch {
+      return 'monday';
+    }
+  });
+
+  useEffect(() => {
+    const syncPreferences = (event) => {
+      if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
+      try {
+        const saved = JSON.parse(localStorage.getItem(preferencesKey) || 'null');
+        setPreferences(saved || {});
+        setWeekStart(weekDayKeys.includes(saved?.weekStart) ? saved.weekStart : 'monday');
+      } catch {
+        setPreferences({});
+        setWeekStart('monday');
+      }
+    };
+    window.addEventListener('studyduel:preferences-storage', syncPreferences);
+    window.addEventListener('storage', syncPreferences);
+    return () => {
+      window.removeEventListener('studyduel:preferences-storage', syncPreferences);
+      window.removeEventListener('storage', syncPreferences);
+    };
+  }, [preferencesKey]);
+
+  const dailyGoalHours = useMemo(() => {
+    if (preferences.dailyGoalHours !== undefined && preferences.dailyGoalHours !== null && preferences.dailyGoalHours !== '') {
+      const parsed = Number(preferences.dailyGoalHours);
+      if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+    }
+    const projectTotal = projects.reduce(
+      (total, project) => total + (project.archived ? 0 : (project.subjects || []).reduce(
+        (subjectTotal, subject) => subjectTotal + (Number(subject.goals?.daily) || 0), 0
+      )), 0
+    );
+    return projectTotal > 0 ? projectTotal : 4;
+  }, [projects, preferences.dailyGoalHours]);
 
   // Pick a different piece of artwork on each page load.
   const [heroArtIndex, setHeroArtIndex] = useState(() => {
@@ -487,35 +535,6 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     ? (DARK_HERO_ARTS[heroArtIndex] || DARK_HERO_ARTS[0])
     : (LIGHT_HERO_ARTS[heroArtIndex] || LIGHT_HERO_ARTS[0]);
 
-  // Storage key for user session entries
-  const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
-  const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
-  const [weekStart, setWeekStart] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(preferencesKey) || 'null');
-      return weekDayKeys.includes(saved?.weekStart) ? saved.weekStart : 'monday';
-    } catch {
-      return 'monday';
-    }
-  });
-
-  useEffect(() => {
-    const syncPreferences = (event) => {
-      if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
-      try {
-        const saved = JSON.parse(localStorage.getItem(preferencesKey) || 'null');
-        setWeekStart(weekDayKeys.includes(saved?.weekStart) ? saved.weekStart : 'monday');
-      } catch {
-        setWeekStart('monday');
-      }
-    };
-    window.addEventListener('studyduel:preferences-storage', syncPreferences);
-    window.addEventListener('storage', syncPreferences);
-    return () => {
-      window.removeEventListener('studyduel:preferences-storage', syncPreferences);
-      window.removeEventListener('storage', syncPreferences);
-    };
-  }, [preferencesKey]);
 
   const [entries, setEntries] = useState(() => {
     try {
@@ -848,7 +867,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const days = [];
     const dayCount = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
     if (!useWeeks) {
-      for (let offset = 0; offset < dayCount; offset++) {
+      const daysCount = dateRange === 'week' ? 7 : dayCount;
+      for (let offset = 0; offset < daysCount; offset++) {
         const date = new Date(dateWindow.start);
         date.setDate(date.getDate() + offset);
         const key = dateKey(date);
@@ -891,7 +911,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       unit: useWeeks ? 'weeks' : 'days',
       minWidth: Math.max(520, days.length * (useWeeks ? 20 : 14)),
     };
-  }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount, weekStart]);
+  }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount, weekStart, dateRange]);
 
   const dailyHoursData = useMemo(() => {
     const totals = new Map();
@@ -1396,7 +1416,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         </div>
         <div className="db-weekly-review-card">
           <div className="db-weekly-review-heading">
-            <div><span className="db-review-kicker">SUNDAY–SATURDAY · THIS WEEK</span><h2>Weekly review</h2></div>
+            <div><span className="db-review-kicker">{weekStart === 'sunday' ? 'SUNDAY–SATURDAY · THIS WEEK' : 'MONDAY–SUNDAY · THIS WEEK'}</span><h2>Weekly review</h2></div>
             <span className={`db-review-delta ${weeklyReview.delta >= 0 ? 'positive' : 'negative'}`}>
               {weeklyReview.delta > 0 ? '+' : weeklyReview.delta < 0 ? '−' : ''}{fmtDur(Math.abs(weeklyReview.delta))} vs same days last week
             </span>

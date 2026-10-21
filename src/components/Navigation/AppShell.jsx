@@ -49,9 +49,24 @@ export const AppShell = ({ user, onLogout }) => {
     : 'studyduel_demo_time_entries';
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const remindersKey = user?.id ? `studyduel_user_${user.id}_reminders` : 'studyduel_demo_reminders';
+  const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
+  const [preferences, setPreferences] = useState(() => readLocalValue(preferencesKey, {}));
   const [reminderNotice, setReminderNotice] = useState(null);
   const [activeTimer, setActiveTimer] = useState(() => readLocalValue(activeTimerKey));
   const [timerNow, setTimerNow] = useState(Date.now());
+
+  useEffect(() => {
+    const syncPreferences = (event) => {
+      if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
+      setPreferences(readLocalValue(preferencesKey, {}));
+    };
+    window.addEventListener('studyduel:preferences-storage', syncPreferences);
+    window.addEventListener('storage', syncPreferences);
+    return () => {
+      window.removeEventListener('studyduel:preferences-storage', syncPreferences);
+      window.removeEventListener('storage', syncPreferences);
+    };
+  }, [preferencesKey]);
 
   useEffect(() => {
     const syncTimer = () => setActiveTimer(readLocalValue(activeTimerKey));
@@ -195,7 +210,7 @@ export const AppShell = ({ user, onLogout }) => {
           </button>
           {!isSettings && (
             <span className="demo-mode-pill">
-              {user ? user.display_name : 'Guest'}
+              {preferences.displayName || user?.display_name || 'Guest'}
             </span>
           )}
         </div>

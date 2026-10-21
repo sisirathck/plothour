@@ -421,19 +421,36 @@ export const TimerPage = ({ user }) => {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (AudioContextClass) {
           const context = new AudioContextClass();
-          const oscillator = context.createOscillator();
-          const gain = context.createGain();
+          if (context.state === 'suspended') context.resume();
           const startedAt = context.currentTime;
-          oscillator.type = 'sine';
-          oscillator.frequency.setValueAtTime(528, startedAt);
-          oscillator.frequency.exponentialRampToValueAtTime(1056, startedAt + 0.12);
-          gain.gain.setValueAtTime(0.14, startedAt);
-          gain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 1.25);
-          oscillator.connect(gain);
-          gain.connect(context.destination);
-          oscillator.start(startedAt);
-          oscillator.stop(startedAt + 1.25);
-          oscillator.onended = () => context.close();
+          const osc1 = context.createOscillator();
+          const gain1 = context.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(528, startedAt);
+
+          const osc2 = context.createOscillator();
+          const gain2 = context.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(1056, startedAt);
+
+          gain1.gain.setValueAtTime(0.24, startedAt);
+          gain1.gain.exponentialRampToValueAtTime(0.0001, startedAt + 1.3);
+
+          gain2.gain.setValueAtTime(0.08, startedAt);
+          gain2.gain.exponentialRampToValueAtTime(0.0001, startedAt + 1.3);
+
+          osc1.connect(gain1);
+          osc2.connect(gain2);
+          gain1.connect(context.destination);
+          gain2.connect(context.destination);
+
+          osc1.start(startedAt);
+          osc2.start(startedAt);
+          osc1.stop(startedAt + 1.3);
+          osc2.stop(startedAt + 1.3);
+          osc1.onended = () => {
+            try { context.close(); } catch {}
+          };
         }
       } catch (error) {
         console.warn('Unable to play the completion chime.', error);
