@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/Auth/LoginPage';
-import { AppShell } from './components/Navigation/AppShell';
 import './App.css';
+
+// Lazy-load the heavy AppShell module (dashboard, timer, charts) so login loads instantly
+const AppShell = lazy(() =>
+  import('./components/Navigation/AppShell').then((m) => ({ default: m.AppShell }))
+);
 
 const validAppRoutes = ['/timer', '/dashboard', '/compare', '/manage', '/settings'];
 
@@ -25,7 +29,7 @@ function App() {
     }
   }, [isDemoMode]);
 
-  // Check existing session on load
+  // Check existing session on load & preload AppShell in background during idle time
   useEffect(() => {
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
@@ -38,6 +42,16 @@ function App() {
       .finally(() => {
         setIsCheckingAuth(false);
       });
+
+    // Idle-preload AppShell chunk so transitions into the dashboard are instantaneous
+    const preload = () => {
+      import('./components/Navigation/AppShell');
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(preload);
+    } else {
+      setTimeout(preload, 1500);
+    }
   }, []);
 
   // Listen to browser navigation between login and app routes
@@ -66,18 +80,34 @@ function App() {
     window.history.pushState({}, '', '/');
   };
 
-  if (isCheckingAuth) {
-    return null;
+  // If user is directly loading an app route (/timer, /dashboard) while checking auth, show a refined themed spinner
+  const isDirectAppRoute = validAppRoutes.some((route) => window.location.pathname.startsWith(route));
+  if (isCheckingAuth && (isDirectAppRoute || isDemoMode)) {
+    return (
+      <ThemeProvider>
+        <div className="app-loading-screen" aria-label="Loading StudyDuel...">
+          <div className="app-loading-spinner" />
+        </div>
+      </ThemeProvider>
+    );
   }
 
   return (
     <ThemeProvider>
       <div className="app-root">
         {user || isDemoMode ? (
-          <AppShell
-            user={user}
-            onLogout={handleLogout}
-          />
+          <Suspense
+            fallback={
+              <div className="app-loading-screen" aria-label="Loading workspace...">
+                <div className="app-loading-spinner" />
+              </div>
+            }
+          >
+            <AppShell
+              user={user}
+              onLogout={handleLogout}
+            />
+          </Suspense>
         ) : (
           <LoginPage
             onTryDemo={() => {

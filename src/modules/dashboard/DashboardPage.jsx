@@ -21,25 +21,25 @@ import './Dashboard.css';
 // Dedicated dashboard artwork assets (8 pictures each for light and dark modes)
 // Easily add more picture paths to these arrays as needed!
 export const LIGHT_HERO_ARTS = [
-  '/dashboard_whitetheme_1.png',
-  '/dashboard_whitetheme_2.png',
-  '/dashboard_whitetheme_3.png',
-  '/dashboard_whitetheme_4.png',
-  '/dashboard_whitetheme_5.png',
-  '/dashboard_whitetheme_6.png',
-  '/dashboard_whitetheme_7.png',
-  '/dashboard_whitetheme_8.png',
+  '/dashboard_whitetheme_1.webp',
+  '/dashboard_whitetheme_2.webp',
+  '/dashboard_whitetheme_3.webp',
+  '/dashboard_whitetheme_4.webp',
+  '/dashboard_whitetheme_5.webp',
+  '/dashboard_whitetheme_6.webp',
+  '/dashboard_whitetheme_7.webp',
+  '/dashboard_whitetheme_8.webp',
 ];
 
 export const DARK_HERO_ARTS = [
-  '/dashboard_darktheme_1.png',
-  '/dashboard_darktheme_2.png',
-  '/dashboard_darktheme_3.png',
-  '/dashboard_darktheme_4.png',
-  '/dashboard_darktheme_5.png',
-  '/dashboard_darktheme_6.png',
-  '/dashboard_darktheme_7.png',
-  '/dashboard_darktheme_8.png',
+  '/dashboard_darktheme_1.webp',
+  '/dashboard_darktheme_2.webp',
+  '/dashboard_darktheme_3.webp',
+  '/dashboard_darktheme_4.webp',
+  '/dashboard_darktheme_5.webp',
+  '/dashboard_darktheme_6.webp',
+  '/dashboard_darktheme_7.webp',
+  '/dashboard_darktheme_8.webp',
 ];
 
 const pickNextHeroIndex = (currentIdx, totalCount) => {

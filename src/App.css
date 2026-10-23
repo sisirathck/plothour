@@ -4,3 +4,31 @@
   min-height: 100vh;
   position: relative;
 }
+
+.app-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background: var(--sd-bg-primary, #0c0e17);
+  color: var(--sd-text-primary, #ffffff);
+  gap: 16px;
+}
+
+.app-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(139, 92, 246, 0.2);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: sd-spin 0.7s linear infinite;
+}
+
+@keyframes sd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

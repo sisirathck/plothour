@@ -1,13 +1,13 @@
 import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import './StudyDuelLogo.css';
-import lightLogo from '../../assets/studyduel_logo_light.png';
+import lightLogo from '../../assets/studyduel_logo_light.webp';
 
 /**
  * StudyDuelLogo Component
  * Transparent logo with zero background, consistent across both light and dark modes.
- * In light mode: renders /studyduel_logo_light.png with the warm logo accents recolored violet.
- * In dark mode: renders /studyduel_logo_dark.png (white 'Study' text with transparent background)
+ * In light mode: renders studyduel_logo_light.webp
+ * In dark mode: renders /studyduel_logo_dark.webp
  */
 export const StudyDuelLogo = ({ className = '', size = 'medium' }) => {
   const { theme } = useTheme();
@@ -21,7 +21,7 @@ export const StudyDuelLogo = ({ className = '', size = 'medium' }) => {
     >
       {isDark ? (
         <img
-          src="/studyduel_logo_dark.png"
+          src="/studyduel_logo_dark.webp"
           alt=""
           className="studyduel-logo-img"
           draggable={false}
