@@ -70,7 +70,7 @@ authRouter.post('/register', async (req, res) => {
     const token = createSessionToken(user);
     setSessionCookie(res, token);
 
-    return res.status(201).json({ user });
+    return res.status(201).json({ user, token });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'An account with this email address already exists.' });
@@ -126,7 +126,7 @@ authRouter.post('/login', async (req, res) => {
       week_starts_on: user.week_starts_on,
     };
 
-    return res.json({ user: safeUser });
+    return res.json({ user: safeUser, token });
   } catch (err) {
     console.error('[Auth Login Error]:', err);
     return res.status(500).json({ error: 'Login failed due to a server error. Please try again.' });
@@ -209,7 +209,9 @@ authRouter.post('/google', async (req, res) => {
  */
 authRouter.get('/me', async (req, res) => {
   try {
-    const token = req.cookies?.studyduel_session;
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = req.cookies?.studyduel_session || bearerToken;
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated' });
     }

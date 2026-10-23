@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyDuel — Time Tracking</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app" class="sd-app-root">
+
+    <!-- ═════════════════════════════════════════════════════
+         HEADER (Consistent StudyDuel Brand Header)
+         ═════════════════════════════════════════════════════ -->
+    <header class="sd-header">
+      <div class="sd-header-content">
+        <!-- Logo -->
+        <div class="sd-logo-container" id="header-logo-container">
+          <img
+            id="sd-logo-img"
+            src="assets/studyduel_logo_dark.png"
+            alt="StudyDuel"
+            class="sd-logo-img"
+            draggable="false"
+          />
+        </div>
+
+        <!-- Header Actions: Theme Toggle + Status Pill -->
+        <div class="sd-header-actions">
+          <button type="button" id="btn-theme-toggle" class="sd-icon-btn" title="Toggle Light/Dark Theme">
+            <svg id="theme-icon-sun" class="sd-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg id="theme-icon-moon" class="sd-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+
+          <div id="sd-status-pill" class="sd-deck-badge" title="Live Synced with StudyDuel">
+            <span id="sd-status-dot" class="sd-badge-dot live"></span>
+            <span id="sd-status-text" class="sd-badge-text">READY</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═════════════════════════════════════════════════════
+         VIEW 1: MAIN COMMAND DECK (Idle vs Running)
+         ═════════════════════════════════════════════════════ -->
+    <section id="view-main" class="sd-view active">
+      <main class="sd-deck-body">
+
+        <!-- Deck Section Header -->
+        <div class="sd-section-header">
+          <span class="sd-section-title">CURRENT SESSION</span>
+          <span id="sd-today-summary-label" class="sd-section-sub">Today · 0m</span>
+        </div>
+
+        <!-- Timer Command Card -->
+        <div class="sd-timer-card">
+          <!-- State A: Idle Box (No active session) -->
+          <div id="sd-idle-box" class="sd-timer-box-idle">
+            <div class="sd-idle-graphic">
+              <img src="icons/icon48.png" alt="" class="sd-idle-hourglass" />
+            </div>
+            <div class="sd-idle-info">
+              <span class="sd-idle-title">Ready to Track</span>
+              <span class="sd-idle-sub">Select a project and start your study session</span>
+            </div>
+          </div>
+
+          <!-- State B: Active Running Timer -->
+          <div id="sd-running-box" class="sd-timer-box-running" style="display: none;">
+            <div class="sd-running-head">
+              <div class="sd-project-tag">
+                <span id="running-dot" class="sd-tag-dot"></span>
+                <span id="running-project-name" class="sd-proj-name">Computer Science</span>
+                <span id="running-sep" class="sd-proj-sep">›</span>
+                <span id="running-subject-name" class="sd-sub-name">Algorithms</span>
+              </div>
+              <span class="sd-recording-tag">RECORDING</span>
+            </div>
+
+            <!-- Precision Digital Horology Display -->
+            <div class="sd-clock-display-row">
+              <div id="running-clock" class="sd-digital-clock">00:00:00</div>
+            </div>
+
+            <!-- Optional Active Session Note -->
+            <div id="running-note-preview" class="sd-note-snippet-card" style="display: none;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sd-quote-icon">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span id="running-note-text" class="sd-snippet-text"></span>
+            </div>
+
+            <div class="sd-running-foot">
+              <span id="running-started-at" class="sd-meta-label">Started at --:--</span>
+              <button type="button" id="btn-quick-stop" class="sd-btn-danger-pill" title="Stop & save session">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                </svg>
+                <span>Stop</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Frequently Tracked Project Combos -->
+        <div class="sd-combos-section">
+          <div class="sd-section-header">
+            <span class="sd-section-title">FREQUENT COMBOS</span>
+            <span class="sd-section-sub">1-Click Start</span>
+          </div>
+          <div id="sd-combos-list" class="sd-combos-grid">
+            <!-- Dynamically populated chips -->
+          </div>
+        </div>
+
+      </main>
+
+      <!-- Bottom Command Bar -->
+      <footer class="sd-footer">
+        <div class="sd-footer-row">
+          <!-- Primary StudyDuel Coral Play Action Button -->
+          <button type="button" id="btn-primary-action" class="sd-btn-primary-play" title="Start Session">
+            <svg id="play-icon-svg" class="sd-play-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg id="stop-icon-svg" class="sd-stop-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+              <rect x="5" y="5" width="14" height="14" rx="2"/>
+            </svg>
+          </button>
+
+          <!-- Go to Timesheet button -->
+          <button type="button" id="btn-go-timesheet" class="sd-btn-timesheet" title="Open StudyDuel Dashboard">
+            <svg class="sd-timesheet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>Open Timesheet</span>
+          </button>
+
+          <!-- User Profile Avatar Pill -->
+          <div class="sd-profile-wrapper">
+            <button type="button" id="btn-profile-avatar" class="sd-btn-avatar" title="Account Menu">
+              <span id="avatar-initials">SD</span>
+            </button>
+
+            <!-- Profile Popover Dropdown -->
+            <div id="profile-popover" class="sd-popover" style="display: none;">
+              <div class="sd-popover-head">
+                <div class="sd-popover-avatar">
+                  <span id="popover-initials">SD</span>
+                </div>
+                <div class="sd-popover-meta">
+                  <span id="popover-name" class="sd-popover-name">StudyDuel User</span>
+                  <span id="popover-email" class="sd-popover-email">user@studyduel.local</span>
+                </div>
+              </div>
+              <div class="sd-popover-divider"></div>
+              <div class="sd-popover-stats">
+                <div class="sd-stat-col">
+                  <span class="sd-stat-lbl">TODAY</span>
+                  <span id="pstat-today-time" class="sd-stat-val">0h 00m</span>
+                </div>
+                <div class="sd-stat-col">
+                  <span class="sd-stat-lbl">SESSIONS</span>
+                  <span id="pstat-today-sessions" class="sd-stat-val">0</span>
+                </div>
+              </div>
+              <div class="sd-popover-divider"></div>
+              <button type="button" id="btn-popover-open-app" class="sd-popover-link">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                <span>Go to StudyDuel Web App</span>
+              </button>
+              <button type="button" id="btn-popover-logout" class="sd-popover-link sd-link-danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </section>
+
+    <!-- ═════════════════════════════════════════════════════
+         VIEW 2: START SESSION VIEW
+         ═════════════════════════════════════════════════════ -->
+    <section id="view-create" class="sd-view">
+      <header class="sd-sub-header">
+        <button type="button" id="btn-back-from-create" class="sd-icon-btn" title="Back">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span class="sd-sub-title">Start Study Session</span>
+        <div style="width: 28px;"></div>
+      </header>
+
+      <main class="sd-create-body">
+        <!-- Task Selection Field -->
+        <div class="sd-form-group">
+          <label class="sd-form-label">Project & Subject</label>
+          <button type="button" id="btn-open-task-picker" class="sd-selector-field">
+            <div class="sd-selector-left">
+              <span id="selected-task-dot" class="sd-tag-dot"></span>
+              <span id="selected-task-text" class="sd-selector-text">Select project or task</span>
+            </div>
+            <svg class="sd-chevron-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Session Note with character count -->
+        <div class="sd-form-group">
+          <div class="sd-label-row">
+            <label for="timer-note-input" class="sd-form-label">Session Note</label>
+            <span id="note-char-counter" class="sd-char-counter">0/1024</span>
+          </div>
+          <textarea
+            id="timer-note-input"
+            class="sd-textarea"
+            rows="3"
+            maxlength="1024"
+            placeholder="What are you studying or working on?"
+          ></textarea>
+        </div>
+
+        <!-- Precision Time Breakdown -->
+        <div class="sd-metrics-row">
+          <div class="sd-metric-box">
+            <span class="sd-metric-lbl">START</span>
+            <input type="text" id="metric-start-time" class="sd-metric-val" value="--:--" readonly />
+          </div>
+          <div class="sd-metric-box">
+            <span class="sd-metric-lbl">STOP</span>
+            <input type="text" id="metric-stop-time" class="sd-metric-val" value="Running" readonly />
+          </div>
+          <div class="sd-metric-box">
+            <span class="sd-metric-lbl">DURATION</span>
+            <input type="text" id="metric-duration" class="sd-metric-val" value="00h 00m" readonly />
+          </div>
+        </div>
+      </main>
+
+      <footer class="sd-create-footer">
+        <button type="button" id="btn-cancel-create" class="sd-btn-secondary">
+          Cancel
+        </button>
+        <button type="button" id="btn-start-timer-confirm" class="sd-btn-coral">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <span>Start Timer</span>
+        </button>
+      </footer>
+    </section>
+
+    <!-- ═════════════════════════════════════════════════════
+         VIEW 3: SEARCHABLE TASK PICKER MODAL
+         ═════════════════════════════════════════════════════ -->
+    <div id="task-picker-modal" class="sd-modal-overlay" style="display: none;">
+      <div class="sd-modal-dialog">
+        <!-- Search Bar with StudyDuel Coral Ring -->
+        <div class="sd-search-head">
+          <div class="sd-search-wrapper">
+            <svg class="sd-search-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              id="picker-search-input"
+              class="sd-search-input"
+              placeholder="Search projects or subjects..."
+              autocomplete="off"
+            />
+            <button type="button" id="btn-clear-search" class="sd-clear-search" style="display: none;">✕</button>
+          </div>
+          <button type="button" id="btn-close-picker" class="sd-close-btn" title="Close">✕</button>
+        </div>
+
+        <div class="sd-picker-scroll">
+          <!-- Suggested Combos Section -->
+          <div class="sd-picker-group" id="suggested-section">
+            <span class="sd-picker-section-title">SUGGESTED</span>
+            <div class="sd-suggested-list" id="suggested-items-container">
+              <!-- Dynamically populated suggested items -->
+            </div>
+          </div>
+
+          <!-- Projects & Tasks Hierarchy -->
+          <div class="sd-picker-group">
+            <span class="sd-picker-section-title">PROJECTS & SUBJECTS</span>
+            <div class="sd-tree-container" id="projects-tree-container">
+              <!-- Dynamically populated project tree -->
+            </div>
+          </div>
+
+          <!-- Quick Add Project -->
+          <div class="sd-quick-add-area">
+            <button type="button" id="btn-toggle-quick-add" class="sd-btn-add-toggle">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Create New Project</span>
+            </button>
+            <div id="quick-add-form" class="sd-quick-add-form" style="display: none;">
+              <input type="text" id="new-project-name" class="sd-input-sm" placeholder="New project name" />
+              <div class="sd-quick-actions">
+                <button type="button" id="btn-confirm-add-project" class="sd-btn-coral-sm">Create</button>
+                <button type="button" id="btn-cancel-add-project" class="sd-btn-secondary-sm">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════════════════════════════════════════════════
+         VIEW 4: AUTHENTICATION / LOGIN VIEW
+         ═════════════════════════════════════════════════════ -->
+    <section id="view-login" class="sd-view">
+      <div class="sd-login-body">
+        <div class="sd-login-hero">
+          <img src="icons/icon48.png" alt="" class="sd-login-logo" />
+          <h2 class="sd-login-title">Sign In to StudyDuel</h2>
+          <p class="sd-login-desc">Track study time for projects across all your browser tabs.</p>
+        </div>
+
+        <!-- 1-Click Browser Tab Connect Banner -->
+        <div class="sd-tab-connect-card" id="quick-connect-banner">
+          <div class="sd-tab-info">
+            <span class="sd-tab-badge">Active Tab Found</span>
+            <span class="sd-tab-text" id="qc-text">StudyDuel is open in your browser</span>
+          </div>
+          <button type="button" id="btn-quick-connect" class="sd-btn-coral-sm">
+            Connect Tab
+          </button>
+        </div>
+
+        <form id="login-form" class="sd-login-form">
+          <div class="sd-form-group">
+            <label for="login-email" class="sd-form-label">Email</label>
+            <input type="email" id="login-email" class="sd-input" placeholder="name@example.com" autocomplete="email" required />
+          </div>
+
+          <div class="sd-form-group">
+            <label for="login-password" class="sd-form-label">Password</label>
+            <input type="password" id="login-password" class="sd-input" placeholder="••••••••" autocomplete="current-password" required />
+          </div>
+
+          <div class="sd-auth-options">
+            <label class="sd-checkbox">
+              <input type="checkbox" id="remember-me" checked />
+              <span>Remember me</span>
+            </label>
+            <button type="button" id="btn-demo-mode" class="sd-link-coral">Quick Demo</button>
+          </div>
+
+          <div id="login-error" class="sd-error-alert" style="display: none;"></div>
+
+          <button type="submit" id="btn-submit-login" class="sd-btn-coral sd-btn-block">
+            <span class="btn-text">Log In</span>
+            <div class="btn-spinner" style="display: none;"></div>
+          </button>
+        </form>
+
+        <div class="sd-server-config">
+          <button type="button" id="toggle-server-settings" class="sd-config-link">
+            <span>⚙ Connection Settings</span> <span id="server-settings-arrow">▾</span>
+          </button>
+          <div id="server-settings-panel" class="sd-config-panel" style="display: none;">
+            <label class="sd-form-label">Web App Host</label>
+            <input type="text" id="input-server-url" class="sd-input-sm" value="http://localhost:5173" />
+            <span class="sd-hint">Default: http://localhost:5173</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="sd-toast" style="display: none;">
+      <span id="toast-message"></span>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

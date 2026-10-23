@@ -213,11 +213,66 @@ The database uses PostgreSQL with UTC timestamps, enforced foreign keys, and ind
 
 | Command | Action |
 |---|---|
-| `npm run dev` | Launches frontend (`:5173`) and API server (`:3001`) simultaneously |
+| `npm run dev` | Launches frontend (`:5173`) and API server (`:3001`) simultaneously for local development |
 | `npm run build` | Compiles production bundle with Vite into `/dist` |
-| `npm run server` | Starts only the Express API server |
+| `npm start` | Runs the production Express server on port `3001` (or `$PORT`), serving both API and static frontend |
+| `npm run build:start` | Builds production bundle and starts the production server |
+| `npm run server` | Starts only the Express API server (without building) |
 | `npm run lint` | Runs ultra-fast code linting via Oxlint |
-| `npm run preview` | Previews the compiled production build locally |
+| `npm run preview` | Previews the compiled production build locally via Vite |
+
+---
+
+## 🚀 Production Deployment & Nginx Setup
+
+When deploying to a production server (Ubuntu/Debian, VPS, or cloud instance):
+
+### 1. Build & Run with PM2
+
+```bash
+# 1. Install dependencies and build client
+npm install
+npm run build
+
+# 2. Start PostgreSQL via Docker Compose
+docker compose up -d db
+
+# 3. Start or reload the production server with PM2
+pm2 start npm --name "studyduel" -- start
+
+# Save PM2 process list to restart automatically on server reboot
+pm2 save
+pm2 startup
+```
+
+### 2. Sample Nginx Reverse Proxy Configuration
+
+Ensure your Nginx configuration proxies to the port StudyDuel is listening on (default **3001**, or your custom `PORT` in `.env`):
+
+```nginx
+server {
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+> **Resolving 502 Bad Gateway:** If you receive a 502 Bad Gateway:
+> 1. Check if the Node process is running: `pm2 status` or `ps aux | grep node`
+> 2. Check PM2 error logs: `pm2 logs studyduel --err`
+> 3. Verify Nginx port matches StudyDuel: check `/etc/nginx/sites-available/` to ensure `proxy_pass` targets port `3001` (or your configured `PORT`)
+> 4. Ensure PostgreSQL is active: `docker compose ps`
+
 
 ---
 
