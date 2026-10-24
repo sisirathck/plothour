@@ -168,7 +168,7 @@ const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
 
 const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'week' }) => {
   const chartTooltip = useSvgChartTooltip();
-  const width = Math.max(900, weeks.length * 56);
+  const width = Math.max(520, weeks.length * 64);
   const height = 300;
   const margin = { top: 20, right: 22, bottom: 42, left: 48 };
   const plotWidth = width - margin.left - margin.right;
@@ -1319,11 +1319,13 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, [rangeEntries, dateWindow, rangeDaysCount, rangeSecs, dailyGoalHours]);
 
   const weeklyTrendData = useMemo(() => {
-    const useYears = dateRange === 'all' && rangeDaysCount > 365 * 5;
+    const showRecentWeeks = dateRange === 'week';
+    const sourceEntries = showRecentWeeks ? entries : rangeEntries;
+    const useYears = !showRecentWeeks && dateRange === 'all' && rangeDaysCount > 365 * 5;
     const useQuarters = dateRange === 'all' && rangeDaysCount > 180 && !useYears;
     const unit = useYears ? 'year' : useQuarters ? 'quarter' : 'week';
     const totals = new Map();
-    rangeEntries.forEach((entry) => {
+    sourceEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const date = new Date(entry.startedAt);
       if (useYears) date.setMonth(0, 1);
@@ -1337,7 +1339,11 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       totals.set(key, total);
     });
     const weeks = [];
-    const cursor = new Date(dateWindow.start);
+    const chartStart = new Date(showRecentWeeks ? dateWindow.end : dateWindow.start);
+    if (showRecentWeeks) {
+      chartStart.setDate(chartStart.getDate() - getWeekStartOffset(chartStart, weekStart) - 42);
+    }
+    const cursor = chartStart;
     if (useYears) cursor.setMonth(0, 1);
     else if (useQuarters) cursor.setMonth(Math.floor(cursor.getMonth() / 3) * 3, 1);
     else cursor.setDate(cursor.getDate() - getWeekStartOffset(cursor, weekStart));
@@ -1363,12 +1369,13 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     }
     return {
       unit,
+      rangeLabel: showRecentWeeks ? 'Last 7 weeks' : rangeLabel,
       points: weeks.map((week, index) => ({
         ...week,
         averageSeconds: weeks.slice(Math.max(0, index - 3), index + 1).reduce((sum, item) => sum + item.seconds, 0) / Math.min(4, index + 1),
       })),
     };
-  }, [rangeEntries, dateWindow, weekStart, dateRange, rangeDaysCount]);
+  }, [entries, rangeEntries, dateWindow, weekStart, dateRange, rangeDaysCount, rangeLabel]);
 
   const sessionLengthData = useMemo(() => {
     const buckets = [
@@ -2292,7 +2299,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               <StudyVelocityCard stats={studyVelocityStats} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
             </div>
             <div className="db-bento-grid-row db-two-col db-chart-pair">
-              <WeeklyTrendGraph weeks={weeklyTrendData.points} periodUnit={weeklyTrendData.unit} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} rangeLabel={rangeLabel} />
+              <WeeklyTrendGraph weeks={weeklyTrendData.points} periodUnit={weeklyTrendData.unit} hasData={weeklyTrendData.points.some((week) => week.seconds > 0)} onStart={() => onNavigate?.('timer')} rangeLabel={weeklyTrendData.rangeLabel} />
               <SessionLengthGraph buckets={sessionLengthData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
             </div>
           </section>
@@ -2365,7 +2372,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
             {rangeEntries.length === 0 ? <QuietEmptyState message="Your activity calendar will appear after the first session in this range." onStart={() => onNavigate?.('timer')} /> : (
               <div className="db-activity-cal-scroll">
-                <div className="db-activity-cal-min" style={{ minWidth: Math.max(320, activityCalStats.weeks.length * 17 + 48) }}>
+                <div className="db-activity-cal-min">
                   <div className="db-activity-cal-months">
                     {activityCalStats.monthNames.map((m, idx) => (
                       <span key={idx}>{m}</span>

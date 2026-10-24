@@ -67,7 +67,7 @@ const DEFAULT_PROJECTS = [
 ];
 
 /* ── Custom Select Component ───────────────── */
-const CustomSelect = ({ value, onChange, options, placeholder, disabled }) => {
+const CustomSelect = ({ value, onChange, options, placeholder, disabled, accentValue = false }) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const selected = options.find((o) => o.value === value);
@@ -81,7 +81,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, disabled }) => {
   }, []);
 
   return (
-    <div ref={rootRef} className={`t-select${open ? ' open' : ''}${disabled ? ' disabled' : ''}`}>
+    <div ref={rootRef} className={`t-select${open ? ' open' : ''}${disabled ? ' disabled' : ''}${accentValue ? ' t-select-subject' : ''}`}>
       <button
         type="button"
         className="t-select-btn"
@@ -599,6 +599,7 @@ export const TimerPage = ({ user }) => {
                   options={subOptions}
                   placeholder="No subject"
                   disabled={!activeProj?.subjects?.length}
+                  accentValue
                 />
               </div>
             </div>
@@ -705,15 +706,21 @@ export const TimerPage = ({ user }) => {
                 <div className="chrono-status-line">
                   <span className="chrono-dot live" />
                   <span className="chrono-tag">
-                    {activeTimer.projectName}
-                    {activeTimer.subjectName ? ` · ${activeTimer.subjectName}` : ''}
+                    <span className="chrono-project-name">
+                      {activeTimer.projectName}
+                    </span>
+                    {activeTimer.subjectName && <>
+                      <span className="chrono-name-separator" aria-hidden="true">·</span>
+                      <span className="chrono-subject-name" style={{ color: sessionSubject?.color || sessionProject?.color || activeTimer.color || 'var(--sd-coral)' }}>
+                        {activeTimer.subjectName}
+                      </span>
+                    </>}
                   </span>
                 </div>
                 <div className="chrono-elapsed-digits">
                   <span className="chrono-main">{fmtClock(elapsed)}</span>
                   <span className="chrono-ms">.{Math.floor((now.getMilliseconds() / 100)) % 10}</span>
                 </div>
-                <div className="chrono-mode-label">PRECISION CHRONOMETER</div>
               </div>
             ) : (
               <div className="horology-wall-block">

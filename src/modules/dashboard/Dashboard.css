@@ -1998,10 +1998,10 @@
 }
 
 .db-activity-cal-min {
-  min-width: 820px;
+  min-width: 0;
   width: 100%;
   padding-right: 8px;
-  /* Keep the final cell and its focus/hover outline inside the scroll area. */
+  /* Let the selected range set the number and width of calendar columns. */
 }
 
 .db-activity-cal-months {
@@ -2027,7 +2027,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 128px;
+  height: 224px;
   padding: 4px 0;
   font-size: 11px;
   font-weight: 500;
@@ -2038,14 +2038,15 @@
   flex: 1;
   display: grid;
   grid-template-columns: repeat(53, minmax(0, 1fr));
-  gap: 5px;
+  height: 224px;
+  gap: 8px;
 }
 
 .db-activity-cal-week-col {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 12px;
+  display: grid;
+  min-width: 0;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .db-activity-cal-days {
@@ -2096,9 +2097,9 @@
 
 .db-activity-cal-cell {
   width: 100%;
-  height: 14px;
-  flex: 0 0 14px;
-  border-radius: 4px;
+  height: 100%;
+  min-height: 0;
+  border-radius: 7px;
   transition: transform 100ms ease;
   cursor: pointer;
 }

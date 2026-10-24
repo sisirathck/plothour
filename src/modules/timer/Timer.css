@@ -207,6 +207,11 @@
   white-space: nowrap;
 }
 
+.t-select-subject .t-sel-text {
+  color: var(--sd-coral);
+  font-weight: 700;
+}
+
 .t-sel-chevron {
   color: var(--sd-text-muted);
   transition: transform 0.2s ease;
@@ -336,10 +341,15 @@
 }
 
 .t-combo-sub-name {
+  width: fit-content;
+  max-width: calc(100% - 23px);
+  margin-left: 23px;
   font-size: 12px;
-  font-weight: 500;
-  color: var(--sd-text-secondary);
-  padding-left: 23px;
+  font-weight: 700;
+  color: var(--sd-coral);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .t-combo-meta {
@@ -460,7 +470,7 @@
 .timer-search-result-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; }
 .timer-search-result-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
 .timer-search-result-copy strong { overflow: hidden; font-size: 12.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.timer-search-result-copy span { color: var(--sd-text-muted); font-size: 11px; }
+.timer-search-result-copy span { color: var(--sd-coral); font-size: 11px; font-weight: 650; }
 .timer-search-result > svg { color: var(--sd-coral); }
 .timer-search-empty { padding: 13px 11px; color: var(--sd-text-muted); font-size: 12px; }
 
@@ -642,9 +652,13 @@
 
 .chrono-tag {
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--sd-text-secondary);
 }
+
+.chrono-project-name,
+.chrono-subject-name { font-weight: 750; }
+.chrono-name-separator { color: var(--sd-text-muted); padding: 0 1px; }
 
 .chrono-elapsed-digits {
   display: flex;
