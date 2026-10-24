@@ -10,6 +10,8 @@ export const SocialAuth = ({ onGoogleClick, isLoading = false }) => {
         <span className="divider-line" />
       </div>
 
+      <div id="google-signin-btn-container" className="google-signin-btn-wrapper" />
+
       <button
         type="button"
         id="google-login-btn"

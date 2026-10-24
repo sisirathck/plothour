@@ -52,3 +52,14 @@
 .compact-google-btn:active {
   transform: scale(0.99);
 }
+
+.google-signin-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.google-signin-btn-wrapper:not(:empty) + #google-login-btn {
+  display: none;
+}
+

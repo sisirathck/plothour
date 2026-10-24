@@ -444,6 +444,7 @@ authRouter.post('/google', async (req, res) => {
 
       if (existingUser.rows.length > 0) {
         user = existingUser.rows[0];
+        await query('UPDATE users SET email_verified = true WHERE id = $1', [user.id]);
         // Link OAuth account to existing user
         await query(
           `INSERT INTO oauth_accounts (user_id, provider, provider_subject, email_at_provider)

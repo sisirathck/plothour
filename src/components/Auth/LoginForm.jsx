@@ -76,18 +76,39 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
   useEffect(() => {
     if (!serverStatus.googleClientId) return;
 
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
+    const setupGsi = () => {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
           client_id: serverStatus.googleClientId,
           callback: handleGoogleCredentialResponse,
         });
+
+        const btnEl = document.getElementById('google-signin-btn-container');
+        if (btnEl) {
+          btnEl.innerHTML = '';
+          window.google.accounts.id.renderButton(btnEl, {
+            theme: 'outline',
+            size: 'large',
+            type: 'standard',
+            text: 'continue_with',
+            shape: 'rectangular',
+            logo_alignment: 'left',
+            width: 320,
+          });
+        }
       }
     };
+
+    if (window.google?.accounts?.id) {
+      setupGsi();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = setupGsi;
     document.body.appendChild(script);
 
     return () => {
@@ -95,7 +116,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         document.body.removeChild(script);
       }
     };
-  }, [serverStatus.googleClientId, handleGoogleCredentialResponse]);
+  }, [serverStatus.googleClientId, handleGoogleCredentialResponse, isSignUp]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -194,8 +215,10 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
   const handleGoogleLogin = () => {
     if (serverStatus.googleAuth && window.google?.accounts?.id) {
       window.google.accounts.id.prompt();
+    } else if (!serverStatus.googleAuth) {
+      setError('Google Sign-In is not configured yet. Add GOOGLE_CLIENT_ID to .env to enable it.');
     } else {
-      setError('Google Sign-In is not configured yet. Add GOOGLE_CLIENT_ID to .env to enable it. Email & password sign-in is ready!');
+      setError('Google Sign-In is still initializing. Please try again in a moment.');
     }
   };
 
@@ -353,7 +376,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
       )}
 
       {/* Social Auth Option */}
-      {!isSignUp && !verificationEmail && <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />}
+      {!verificationEmail && <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />}
 
       {/* Footer Link */}
       {!verificationEmail && <footer className="login-card-footer">

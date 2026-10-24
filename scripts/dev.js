@@ -8,7 +8,7 @@ const processes = [
     stdio: 'inherit',
     env: process.env,
   }),
-  spawn(process.execPath, ['--watch', resolve(root, 'server/index.js')], {
+  spawn(process.execPath, ['--watch', '--watch-path=.env', resolve(root, 'server/index.js')], {
     cwd: root,
     stdio: 'inherit',
     env: process.env,
