@@ -7,7 +7,6 @@ import { useTheme } from '../../context/ThemeContext';
 import './LoginForm.css';
 
 let googleIdentityScriptPromise;
-let initializedGoogleClientId;
 
 const loadGoogleIdentityScript = () => {
   if (window.google?.accounts?.id) return Promise.resolve();
@@ -158,12 +157,12 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
 
     const setupGsi = () => {
       if (window.google?.accounts?.id) {
-        if (initializedGoogleClientId !== serverStatus.googleClientId) {
+        if (window.__studyDuelGoogleInitializedClientId !== serverStatus.googleClientId) {
           window.google.accounts.id.initialize({
             client_id: serverStatus.googleClientId,
             callback: stableGoogleCredentialCallback,
           });
-          initializedGoogleClientId = serverStatus.googleClientId;
+          window.__studyDuelGoogleInitializedClientId = serverStatus.googleClientId;
         }
 
         renderGoogleBtn();
