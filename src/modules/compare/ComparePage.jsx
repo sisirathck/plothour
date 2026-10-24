@@ -111,7 +111,7 @@ function DailyCharts({ profiles, dates, byProfile }) {
   const width = 900; const height = 230; const pad = { l: 46, r: 22, t: 18, b: 34 }; const chartW = width - pad.l - pad.r; const chartH = height - pad.t - pad.b;
   const totals = profiles.flatMap((p) => dates.map((d) => byProfile[p.id]?.[d] || 0)); const max = Math.max(3600, ...totals); const cumulative = Object.fromEntries(profiles.map((p) => [p.id, 0]));
   const cumulativePoints = Object.fromEntries(profiles.map((p) => [p.id, []]));
-  dates.forEach((d, i) => profiles.forEach((p) => { cumulative[p.id] += byProfile[p.id]?.[d] || 0; cumulativePoints[p.id].push(cumulative[p.id]); }));
+  dates.forEach((d) => profiles.forEach((p) => { cumulative[p.id] += byProfile[p.id]?.[d] || 0; cumulativePoints[p.id].push(cumulative[p.id]); }));
   const cumulativeMax = Math.max(3600, ...Object.values(cumulativePoints).flat());
   const point = (i, value, limit) => [pad.l + (dates.length < 2 ? chartW / 2 : i * chartW / (dates.length - 1)), pad.t + chartH - (value / limit) * chartH];
   const smoothPath = (points) => points.reduce((path, current, i) => {
@@ -126,7 +126,7 @@ function DailyCharts({ profiles, dates, byProfile }) {
     <article className="compare-section-card compare-chart-card"><div className="compare-section-heading"><div><span className="compare-eyebrow">CUMULATIVE STUDY TIME</span><h2>Cumulative hours over time</h2><p>{dates.length} calendar days{dates.length === 90 ? ' · latest 90 days' : ''}</p></div><Legend profiles={profiles} /></div>
       <svg className="compare-line-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Cumulative study time by profile">
         <defs>{profiles.map((p) => <linearGradient key={p.id} id={`compare-area-${safeId(p.id)}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={profileColor(p.id)} stopOpacity=".16" /><stop offset="100%" stopColor={profileColor(p.id)} stopOpacity="0" /></linearGradient>)}</defs>
-        <ChartGrid height={height} pad={pad} chartH={chartH} max={cumulativeMax} />
+        <ChartGrid pad={pad} chartH={chartH} max={cumulativeMax} />
         {profiles.map((p) => {
           const values = cumulativePoints[p.id]; const pts = values.map((v, i) => point(i, v, cumulativeMax)); const line = smoothPath(pts);
           const area = `${line} L ${pts.at(-1)[0]} ${baselineY} L ${pts[0][0]} ${baselineY} Z`;
@@ -141,7 +141,7 @@ function DailyCharts({ profiles, dates, byProfile }) {
     </article>
   </div>;
 }
-function ChartGrid({ height, pad, chartH, max }) {
+function ChartGrid({ pad, chartH, max }) {
   return <g className="compare-grid-lines">{[0, 1, 2, 3].map((i) => { const y = pad.t + chartH - chartH * i / 3; return <g key={i}><line x1={pad.l} x2="878" y1={y} y2={y} /><text className="compare-axis-label" x={pad.l - 9} y={y + 3.5} textAnchor="end">{duration(max * i / 3, '0m')}</text></g>; })}</g>;
 }
 function Legend({ profiles }) { return <div className="compare-legend">{profiles.map((p, i) => <span key={p.id}><i style={{ '--profile-color': profileColor(p.id) }} />{p.name}</span>)}</div>; }

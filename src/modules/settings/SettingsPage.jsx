@@ -138,13 +138,15 @@ export const SettingsPage = ({ onBack, user }) => {
   const [preferences, setPreferences] = useState(() => {
     const saved = readJson(preferencesKey, {});
     return {
-      displayName: user?.display_name || user?.email?.split('@')[0] || 'Alex Rivera',
       dailyGoalHours: 4,
       weekStart: weekDays[Number.isInteger(user?.week_starts_on) ? user.week_starts_on : 1] || 'monday',
       timezone: systemTimezone,
       defaultTimerMode: '50m',
       soundEnabled: true,
       ...saved,
+      // The account profile is shared with connections; stale local preferences
+      // must not mask the public display name stored on the account.
+      displayName: user?.display_name || saved.displayName || user?.email?.split('@')[0] || 'Alex Rivera',
     };
   });
 
@@ -350,6 +352,13 @@ export const SettingsPage = ({ onBack, user }) => {
     if (!cleanCode) return;
 
     if (user?.id) {
+      if (!/^DUEL-[0-9A-F]{10}$/.test(cleanCode)) {
+        setFriendNotice({
+          type: 'error',
+          message: 'This invite code is out of date. Current codes look like DUEL-1A2B3C4D5E; copy the code shown in Settings after refreshing StudyDuel.',
+        });
+        return;
+      }
       try {
         const response = await fetch('/api/connections', {
           method: 'POST',
@@ -822,7 +831,7 @@ export const SettingsPage = ({ onBack, user }) => {
                   type="text"
                   value={peerCodeInput}
                   onChange={(e) => setPeerCodeInput(e.target.value)}
-                  placeholder="Enter peer's invite code (e.g., DUEL-4821)..."
+                  placeholder="Enter peer's invite code (e.g., DUEL-1A2B3C4D5E)..."
                   className="settings-text-input"
                   aria-label="Peer invite code"
                 />
