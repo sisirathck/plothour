@@ -108,9 +108,8 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
     <div className="calendar-page">
       <header className="calendar-page-heading">
         <div>
-          <span className="calendar-eyebrow"><CalendarDays size={14} /> STUDY CALENDAR</span>
-          <h1>Study calendar</h1>
-          <p>Your study sessions, day by day.</p>
+          <span className="calendar-eyebrow"><CalendarDays size={14} /> CALENDAR</span>
+          <h1>Calendar</h1>
         </div>
       </header>
 
@@ -177,9 +176,9 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   if (!onClose) return calendarContent;
   return (
     <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="calendar-modal-dialog" role="dialog" aria-modal="true" aria-label="Study calendar">
+      <section className="calendar-modal-dialog" role="dialog" aria-modal="true" aria-label="Calendar">
         <div className="calendar-modal-topbar">
-          <span><CalendarDays size={15} /> Study calendar</span>
+          <span><CalendarDays size={15} /> Calendar</span>
           <button type="button" className="calendar-modal-close" onClick={onClose} aria-label="Close calendar"><X size={18} /></button>
         </div>
         <div className="calendar-modal-scroll">{calendarContent}</div>

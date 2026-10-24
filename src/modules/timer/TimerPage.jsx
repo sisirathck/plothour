@@ -4,7 +4,6 @@ import {
   Square,
   Pause,
   ChevronDown,
-  Flag,
   Search,
 } from 'lucide-react';
 import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
@@ -139,7 +138,6 @@ export const TimerPage = ({ user }) => {
   const [pendingSelection, setPendingSelection] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const [pausedElapsed, setPausedElapsed] = useState(0);
-  const [laps, setLaps] = useState([]);
   const [notice, setNotice] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -184,7 +182,6 @@ export const TimerPage = ({ user }) => {
       setEntries(rj(entriesKey, []));
       setIsPaused(false);
       setPausedElapsed(0);
-      setLaps([]);
     };
     window.addEventListener('studyduel:timer-storage', syncStoppedSession);
     return () => window.removeEventListener('studyduel:timer-storage', syncStoppedSession);
@@ -206,6 +203,23 @@ export const TimerPage = ({ user }) => {
       : activeProjects.find((p) => p.id === selProj),
     [projects, activeProjects, activeTimer, selProj]
   );
+
+  const sessionProjectId = activeTimer?.projectId || selProj;
+  const sessionProject = projects.find((project) => project.id === sessionProjectId);
+  const sessionSubjectId = activeTimer ? activeTimer.subjectId || '' : selSub;
+  const sessionSubject = sessionProject?.subjects?.find((subject) => subject.id === sessionSubjectId);
+  const comboEntries = useMemo(() => entries.filter((entry) => {
+    const projectMatches = entry.projectId
+      ? entry.projectId === sessionProjectId
+      : entry.projectName === sessionProject?.name;
+    const subjectMatches = entry.subjectId
+      ? entry.subjectId === sessionSubjectId
+      : (entry.subjectName || '') === (sessionSubject?.name || '');
+    return projectMatches && subjectMatches;
+  }), [entries, sessionProjectId, sessionProject?.name, sessionSubjectId, sessionSubject?.name]);
+  const averageComboSeconds = comboEntries.length
+    ? Math.round(comboEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0) / comboEntries.length)
+    : 0;
 
   // Elapsed computation
   const elapsed = useMemo(() => {
@@ -393,7 +407,6 @@ export const TimerPage = ({ user }) => {
     setSelSub(sub?.id || '');
     setIsPaused(false);
     setPausedElapsed(0);
-    setLaps([]);
     setNotice('');
   };
 
@@ -416,7 +429,6 @@ export const TimerPage = ({ user }) => {
     setActiveTimer(null);
     setIsPaused(false);
     setPausedElapsed(0);
-    setLaps([]);
     setNotice(`Session Logged · ${fmtDur(dur)}`);
     setTimeout(() => setNotice(''), 5000);
     if (timerPreferences.soundEnabled) {
@@ -472,15 +484,6 @@ export const TimerPage = ({ user }) => {
       setPausedElapsed(elapsed);
       setIsPaused(true);
     }
-  };
-
-  // Add Lap
-  const addLap = () => {
-    if (!activeTimer || elapsed <= 0) return;
-    setLaps((cur) => [
-      { id: Date.now(), seconds: elapsed, label: `Lap ${cur.length + 1}` },
-      ...cur,
-    ]);
   };
 
   const projOptions = activeProjects.map((p) => ({ value: p.id, label: p.name, color: p.color }));
@@ -753,16 +756,6 @@ export const TimerPage = ({ user }) => {
                     {isPaused ? <Play size={15} fill="currentColor" /> : <Pause size={15} />}
                     {isPaused ? 'Resume' : 'Pause'}
                   </button>
-
-                  <button
-                    type="button"
-                    className="horology-btn-sub"
-                    onClick={addLap}
-                    title="Record Lap timestamp"
-                  >
-                    <Flag size={14} />
-                    Lap
-                  </button>
                 </div>
               ) : (
                 <div className="horology-idle-actions">
@@ -779,16 +772,19 @@ export const TimerPage = ({ user }) => {
               )}
             </div>
 
-            {/* Laps Record (if any) */}
-            {laps.length > 0 && (
-              <div className="chronograph-laps-strip">
-                {laps.slice(0, 3).map((lap) => (
-                  <div key={lap.id} className="chrono-lap-item">
-                    <span className="lap-label">{lap.label}</span>
-                    <span className="lap-time">{fmtClock(lap.seconds)}</span>
-                  </div>
-                ))}
-              </div>
+            {activeTimer && (
+              <label className="timer-session-note-wrap">
+                <span>SESSION NOTE</span>
+                <textarea
+                  className="timer-session-note"
+                  value={activeTimer.note || ''}
+                  onChange={(event) => setActiveTimer((current) => current ? { ...current, note: event.target.value } : current)}
+                  placeholder="Add a note about this session…"
+                  maxLength={240}
+                  rows={2}
+                  aria-label="Session note to save with this entry"
+                />
+              </label>
             )}
 
             {/* Daily Summary Metrics Strip */}
@@ -806,6 +802,11 @@ export const TimerPage = ({ user }) => {
               <div className="h-metric">
                 <span className="h-metric-val">{goalPct}%</span>
                 <span className="h-metric-lbl">DAILY GOAL</span>
+              </div>
+              <div className="h-metric-divider" />
+              <div className="h-metric" title={`Average for ${sessionProject?.name || 'this project'}${sessionSubject?.name ? ` · ${sessionSubject.name}` : ''}`}>
+                <span className="h-metric-val">{averageComboSeconds ? fmtDur(averageComboSeconds) : '—'}</span>
+                <span className="h-metric-lbl">AVG SESSION</span>
               </div>
             </div>
           </div>
