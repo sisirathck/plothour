@@ -3,9 +3,11 @@ import { Mail, Lock, Eye, EyeOff, Loader2, User } from 'lucide-react';
 import { FormInput } from './FormInput';
 import { NoticeBanner } from './NoticeBanner';
 import { SocialAuth } from './SocialAuth';
+import { useTheme } from '../../context/ThemeContext';
 import './LoginForm.css';
 
 export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onLogInClick }) => {
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -99,13 +101,13 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         if (btnEl) {
           btnEl.innerHTML = '';
           window.google.accounts.id.renderButton(btnEl, {
-            theme: 'outline',
+            theme: theme === 'dark' ? 'filled_black' : 'outline',
             size: 'large',
             type: 'standard',
             text: 'continue_with',
-            shape: 'rectangular',
+            shape: 'pill',
             logo_alignment: 'left',
-            width: 320,
+            width: Math.min(400, Math.floor(btnEl.clientWidth) || 336),
           });
         }
       }
@@ -128,7 +130,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         document.body.removeChild(script);
       }
     };
-  }, [serverStatus.googleClientId, handleGoogleCredentialResponse, isSignUp]);
+  }, [serverStatus.googleClientId, handleGoogleCredentialResponse, isSignUp, theme]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

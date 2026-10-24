@@ -57,6 +57,13 @@
   display: flex;
   justify-content: center;
   width: 100%;
+  min-height: 44px;
+  overflow: hidden;
+}
+
+.google-signin-btn-wrapper iframe {
+  max-width: 100%;
+  border-radius: 999px;
 }
 
 .google-signin-btn-wrapper:not(:empty) + #google-login-btn {
