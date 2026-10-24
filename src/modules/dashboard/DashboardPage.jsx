@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Sun,
   Moon,
@@ -72,7 +73,32 @@ const getHourTicks = (seconds) => {
   return Array.from({ length: Math.round(max / step) + 1 }, (_, index) => index * step);
 };
 
+const useSvgChartTooltip = () => {
+  const [tooltip, setTooltip] = useState(null);
+  const show = (event, title, details) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX || bounds.left + bounds.width / 2;
+    const y = event.clientY || bounds.top + bounds.height / 2;
+    setTooltip({
+      title,
+      details,
+      x: Math.max(8, Math.min(x + 14, window.innerWidth - 248)),
+      y: Math.max(8, Math.min(y + 14, window.innerHeight - 76)),
+    });
+  };
+  const hide = () => setTooltip(null);
+  const node = tooltip && createPortal(
+    <div className="db-chart-tooltip" role="tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+      <strong>{tooltip.title}</strong>
+      <span>{tooltip.details}</span>
+    </div>,
+    document.querySelector('.db-apple-root') || document.body
+  );
+  return { show, hide, node };
+};
+
 const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
+  const chartTooltip = useSvgChartTooltip();
   const isCompact = days.length <= 14;
   const width = Math.max(isCompact ? 540 : 640, days.length * (isCompact ? 46 : 28));
   const height = 240;
@@ -110,8 +136,22 @@ const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
             const y = margin.top + plotHeight - barHeight;
             return (
               <g key={day.key}>
-                <rect className="db-chart-bar" x={x} y={y} width={barWidth} height={Math.max(day.seconds ? 2 : 0, barHeight)} rx="4">
-                  <title>{`${day.dateLabel} · ${day.seconds ? fmtDur(day.seconds) : 'No study logged'}`}</title>
+                <rect
+                  className="db-chart-bar"
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={Math.max(day.seconds ? 2 : 0, barHeight)}
+                  rx="4"
+                  tabIndex="0"
+                  aria-label={`${day.dateLabel}: ${fmtDur(day.seconds)}, ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`}
+                  onMouseEnter={(event) => chartTooltip.show(event, day.dateLabel, `${fmtDur(day.seconds)} · ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`)}
+                  onMouseMove={(event) => chartTooltip.show(event, day.dateLabel, `${fmtDur(day.seconds)} · ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`)}
+                  onMouseLeave={chartTooltip.hide}
+                  onFocus={(event) => chartTooltip.show(event, day.dateLabel, `${fmtDur(day.seconds)} · ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`)}
+                  onBlur={chartTooltip.hide}
+                >
+                  <title>{`${day.dateLabel} · ${fmtDur(day.seconds)} · ${day.sessions} sessions`}</title>
                 </rect>
                 {(index === 0 || index % Math.max(1, Math.ceil(days.length / 10)) === 0 || index === days.length - 1) && (
                   <text className="db-chart-axis-label" x={x + barWidth / 2} y={height - 10} textAnchor="middle">{day.dayOfMonth}</text>
@@ -120,12 +160,14 @@ const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
             );
           })}
         </svg>
+        {chartTooltip.node}
       </div>}
     </div>
   );
 };
 
 const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
+  const chartTooltip = useSvgChartTooltip();
   const width = Math.max(900, weeks.length * 56);
   const height = 300;
   const margin = { top: 20, right: 22, bottom: 42, left: 48 };
@@ -169,13 +211,40 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
             const y = margin.top + plotHeight - barHeight;
             return (
               <g key={week.key}>
-                <rect className="db-chart-bar db-chart-bar-muted" x={x} y={y} width={barWidth} height={Math.max(week.seconds ? 2 : 0, barHeight)} rx="4">
-                  <title>{`Week of ${week.startLabel} · ${fmtDur(week.seconds)}`}</title>
+                <rect
+                  className="db-chart-bar db-chart-bar-muted"
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={Math.max(week.seconds ? 2 : 0, barHeight)}
+                  rx="4"
+                  tabIndex="0"
+                  aria-label={`Week of ${week.startLabel}: ${fmtDur(week.seconds)}, ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`}
+                  onMouseEnter={(event) => chartTooltip.show(event, `Week of ${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
+                  onMouseMove={(event) => chartTooltip.show(event, `Week of ${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
+                  onMouseLeave={chartTooltip.hide}
+                  onFocus={(event) => chartTooltip.show(event, `Week of ${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
+                  onBlur={chartTooltip.hide}
+                >
+                  <title>{`Week of ${week.startLabel} · ${fmtDur(week.seconds)} · ${week.sessions} sessions`}</title>
                 </rect>
                 {(index === 0 || index % Math.max(1, Math.ceil(weeks.length / 8)) === 0 || index === weeks.length - 1) && (
                   <text className="db-chart-axis-label" x={xFor(index)} y={height - 12} textAnchor="middle">{week.axisLabel}</text>
                 )}
-                <circle className="db-chart-line-point" cx={xFor(index)} cy={yFor(week.averageSeconds)} r="3.2">
+                <circle
+                  className="db-chart-line-hit-target"
+                  cx={xFor(index)}
+                  cy={yFor(week.averageSeconds)}
+                  r="10"
+                  tabIndex="0"
+                  aria-label={`Four-week average through ${week.startLabel}: ${fmtDur(week.averageSeconds)}`}
+                  onMouseEnter={(event) => chartTooltip.show(event, `4-week average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
+                  onMouseMove={(event) => chartTooltip.show(event, `4-week average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
+                  onMouseLeave={chartTooltip.hide}
+                  onFocus={(event) => chartTooltip.show(event, `4-week average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
+                  onBlur={chartTooltip.hide}
+                />
+                <circle className="db-chart-line-point" cx={xFor(index)} cy={yFor(week.averageSeconds)} r="3.2" pointerEvents="none">
                   <title>{`4-week average through ${week.startLabel} · ${fmtDur(week.averageSeconds)}`}</title>
                 </circle>
               </g>
@@ -183,6 +252,7 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
           })}
           <polyline className="db-chart-average-line" points={linePoints} />
         </svg>
+        {chartTooltip.node}
       </div>}
     </div>
   );
@@ -805,9 +875,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     ) * 3600;
     const elapsedDays = Math.min(7, getWeekStartOffset(now, weekStart) + 1);
     const expectedByNow = weeklyGoal * elapsedDays / 7;
+    const remainingThisWeek = Math.max(0, weeklyGoal - seconds);
     let suggestion = 'Add a weekly target in Manage to get a pace recommendation.';
     if (!current.length) suggestion = 'Start a session today to give this week some momentum.';
-    else if (weeklyGoal > 0 && seconds < expectedByNow) suggestion = `${fmtDur(expectedByNow - seconds)} more today keeps you on pace for your weekly goal.`;
+    else if (weeklyGoal > 0 && seconds < expectedByNow) suggestion = `${fmtDur(expectedByNow - seconds)} behind this week’s planned pace. ${fmtDur(remainingThisWeek)} of study remains this week; adjust your weekly targets in Manage if that total is unrealistic.`;
     else if (weeklyGoal > 0) suggestion = 'You are on pace for this week’s goal. Keep your next session focused.';
     else if (topProject) suggestion = `Your most studied project is ${topProject[0]}. Set a weekly target to track its pace.`;
     return {
@@ -818,6 +889,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       activeDays,
       topProject,
       weeklyGoal,
+      elapsedDays,
+      remainingThisWeek,
       goalPct: weeklyGoal ? Math.min(100, Math.round((seconds / weeklyGoal) * 100)) : null,
       suggestion,
     };
@@ -1064,7 +1137,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const key = dateKey(entry.startedAt);
-      totals.set(key, (totals.get(key) || 0) + (entry.durationSeconds || 0));
+      const total = totals.get(key) || { seconds: 0, sessions: 0 };
+      total.seconds += Number(entry.durationSeconds) || 0;
+      total.sessions += 1;
+      totals.set(key, total);
     });
     const useWeeks = rangeDaysCount > 45;
     const days = [];
@@ -1074,7 +1150,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         const date = new Date(dateWindow.start);
         date.setDate(date.getDate() + index);
         const key = dateKey(date);
-        days.push({ key, dayOfMonth: date.getDate(), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), seconds: totals.get(key) || 0 });
+        const total = totals.get(key) || { seconds: 0, sessions: 0 };
+        days.push({ key, dayOfMonth: date.getDate(), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), seconds: total.seconds, sessions: total.sessions });
       }
     } else {
       const cursor = new Date(dateWindow.start);
@@ -1082,12 +1159,15 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       while (cursor <= dateWindow.end) {
         const weekStart = new Date(cursor);
         let seconds = 0;
+        let sessions = 0;
         for (let offset = 0; offset < 7; offset++) {
           const date = new Date(weekStart);
           date.setDate(date.getDate() + offset);
-          seconds += totals.get(dateKey(date)) || 0;
+          const total = totals.get(dateKey(date)) || { seconds: 0, sessions: 0 };
+          seconds += total.seconds;
+          sessions += total.sessions;
         }
-        days.push({ key: dateKey(weekStart), dayOfMonth: weekStart.getDate(), dateLabel: `Week of ${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`, seconds });
+        days.push({ key: dateKey(weekStart), dayOfMonth: weekStart.getDate(), dateLabel: `Week of ${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`, seconds, sessions });
         cursor.setDate(cursor.getDate() + 7);
       }
     }
@@ -1190,7 +1270,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       date.setDate(date.getDate() - getWeekStartOffset(date, weekStart));
       date.setHours(0, 0, 0, 0);
       const key = dateKey(date);
-      totals.set(key, (totals.get(key) || 0) + (entry.durationSeconds || 0));
+      const total = totals.get(key) || { seconds: 0, sessions: 0 };
+      total.seconds += Number(entry.durationSeconds) || 0;
+      total.sessions += 1;
+      totals.set(key, total);
     });
     const weeks = [];
     const cursor = new Date(dateWindow.start);
@@ -1198,10 +1281,12 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     while (cursor <= dateWindow.end) {
       const start = new Date(cursor);
       const key = dateKey(start);
-      const seconds = totals.get(key) || 0;
+      const total = totals.get(key) || { seconds: 0, sessions: 0 };
+      const seconds = total.seconds;
       weeks.push({
         key,
         seconds,
+        sessions: total.sessions,
         averageSeconds: seconds,
         startLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         axisLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -1654,7 +1739,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             </div>
             <div className="db-weekly-review-metrics">
               <div><strong>{fmtDur(weeklyReview.seconds)}</strong><span>this week</span></div>
-              <div><strong>{weeklyReview.activeDays} / {new Date().getDay() + 1}</strong><span>active days so far</span></div>
+              <div><strong>{weeklyReview.activeDays} / {weeklyReview.elapsedDays}</strong><span>active days so far</span></div>
               <div><strong>{weeklyReview.sessions}</strong><span>sessions</span></div>
               <div><strong>{weeklyReview.topProject ? weeklyReview.topProject[0] : '—'}</strong><span>most studied project</span></div>
               <div><strong>{currentStreak} {currentStreak === 1 ? 'day' : 'days'}</strong><span>current study streak</span></div>
@@ -1807,7 +1892,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
         <DashboardSection section={dashboardSection('rhythms')} order={dashboardSectionOrder('rhythms')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
           {/* ROW 3: CIRCADIAN FOCUS WINDOW (LEFT) + DAY-OF-WEEK POWER RHYTHM (RIGHT) */}
-          <div className="db-bento-grid-row db-two-col">
+          <div className="db-bento-grid-row db-two-col db-rhythm-row">
             {rangeEntries.length === 0 ? <div className="db-card"><QuietEmptyState message="Study timing patterns appear after your first session in this range." onStart={() => onNavigate?.('timer')} /></div> : <>
               {/* Circadian Focus Window */}
               <div className="db-card db-card-column">
@@ -2166,7 +2251,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                         <span>Wed</span>
                         <span>Sat</span>
                       </div>
-                      <div className="db-activity-cal-grid" style={{ gridTemplateColumns: `repeat(${activityCalStats.weeks.length}, 12px)` }}>
+                      <div className="db-activity-cal-grid" style={{ gridTemplateColumns: `repeat(${activityCalStats.weeks.length}, minmax(0, 1fr))` }}>
                         {activityCalStats.weeks.map((week, weekIdx) => (
                           <div key={weekIdx} className="db-activity-cal-week-col">
                             {week.map((day, dayIdx) => {

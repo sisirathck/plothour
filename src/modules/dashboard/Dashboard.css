@@ -268,9 +268,17 @@
   align-items: start;
 }
 
+.db-rhythm-row {
+  align-items: start;
+}
+
 @media (min-width: 1024px) {
   .db-two-col {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .db-rhythm-row {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   }
 }
 
@@ -1090,7 +1098,7 @@
 }
 
 .db-power-day-label {
-  width: 32px;
+  flex: 0 0 32px;
   font-weight: 600;
   color: var(--db-muted);
 }
@@ -1124,10 +1132,12 @@
 }
 
 .db-power-val-label {
-  width: 48px;
+  flex: 0 0 72px;
   text-align: right;
   font-weight: 700;
   color: var(--db-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .db-power-val-label.active {
@@ -1308,6 +1318,47 @@
 
 .db-chart-bar:hover {
   opacity: 1;
+}
+
+.db-chart-bar[tabindex="0"] {
+  cursor: crosshair;
+}
+
+.db-chart-bar[tabindex="0"]:focus-visible,
+.db-chart-line-hit-target:focus-visible {
+  outline: none;
+  stroke: var(--db-text);
+  stroke-width: 2;
+}
+
+.db-chart-line-hit-target {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: all;
+  cursor: crosshair;
+}
+
+.db-chart-tooltip {
+  position: fixed;
+  z-index: 10000;
+  display: flex;
+  min-width: 130px;
+  max-width: 230px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 11px;
+  border: 1px solid var(--db-card-border);
+  border-radius: 10px;
+  background: var(--db-card-bg);
+  color: var(--db-text);
+  box-shadow: 0 8px 24px rgba(20, 24, 38, 0.2);
+  pointer-events: none;
+  font-size: 11px;
+}
+
+.db-chart-tooltip span {
+  color: var(--db-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .db-chart-bar-muted {
@@ -1891,11 +1942,13 @@
 
 .db-activity-cal-min {
   min-width: 820px;
+  width: 100%;
   padding-right: 8px;
   /* Keep the final cell and its focus/hover outline inside the scroll area. */
 }
 
 .db-activity-cal-months {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   padding: 0 16px 0 40px;
@@ -1906,17 +1959,18 @@
 }
 
 .db-activity-cal-body {
+  width: 100%;
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
 .db-activity-cal-weekdays {
-  width: 32px;
+  flex: 0 0 32px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 112px;
+  height: 128px;
   padding: 4px 0;
   font-size: 11px;
   font-weight: 500;
@@ -1985,7 +2039,8 @@
 
 .db-activity-cal-cell {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 14px;
+  flex: 0 0 14px;
   border-radius: 4px;
   transition: transform 100ms ease;
   cursor: pointer;
