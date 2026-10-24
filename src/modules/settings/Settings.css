@@ -49,7 +49,7 @@
 }
 
 .demo-settings-page {
-  max-width: 980px;
+  max-width: 1480px;
   width: 100%;
   margin: 0 auto;
   padding: 24px clamp(16px, 2.5vw, 36px) 60px;
@@ -72,7 +72,9 @@
 
 /* Back button */
 .settings-back-btn {
-  display: inline-flex;
+  display: flex;
+  width: max-content;
+  margin: 0 0 0 auto;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
@@ -105,6 +107,43 @@
   gap: 20px;
   flex-wrap: wrap;
 }
+
+.settings-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-save-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-save-btn {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 1px solid var(--sd-settings-accent);
+  border-radius: 14px;
+  background: var(--sd-settings-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 5px 16px var(--sd-settings-accent-subtle);
+  transition: transform var(--sd-transition-fast), opacity var(--sd-transition-fast);
+}
+
+.settings-save-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.settings-save-btn:disabled { opacity: .7; cursor: wait; }
+.settings-save-error { color: #c2413a; font-size: 12px; max-width: 280px; }
 
 .demo-settings-heading h1 {
   display: flex;
@@ -275,6 +314,21 @@
 .settings-text-input:focus {
   border-color: var(--sd-settings-accent);
   box-shadow: 0 0 0 3px var(--sd-settings-accent-subtle);
+}
+
+.settings-select-input {
+  appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--sd-settings-text-muted) 50%), linear-gradient(135deg, var(--sd-settings-text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 16px, calc(100% - 12px) 16px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+.settings-select-input option {
+  background: var(--sd-settings-card-bg);
+  color: var(--sd-settings-text);
 }
 
 /* Range Slider Group */
@@ -931,6 +985,9 @@
     width: 100%;
     max-width: 100%;
   }
+  .settings-heading-actions { width: 100%; justify-content: space-between; }
+  .settings-save-wrap { margin-left: auto; }
+  .settings-save-error { display: none; }
   .settings-slider-group {
     width: 100%;
     justify-content: space-between;

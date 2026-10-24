@@ -240,6 +240,45 @@ authRouter.get('/me', async (req, res) => {
   }
 });
 
+/** Save profile-level settings for the authenticated account. */
+authRouter.patch('/profile', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = req.cookies?.studyduel_session || bearerToken;
+    const payload = token ? verifySessionToken(token) : null;
+    if (!payload?.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+    const displayName = typeof req.body?.displayName === 'string' ? req.body.displayName.trim() : '';
+    const timezone = typeof req.body?.timezone === 'string' ? req.body.timezone : '';
+    const weekStartsOn = Number(req.body?.weekStartsOn);
+    if (!displayName || displayName.length > 80) {
+      return res.status(400).json({ error: 'Display name must be between 1 and 80 characters.' });
+    }
+    if (!Number.isInteger(weekStartsOn) || weekStartsOn < 0 || weekStartsOn > 6) {
+      return res.status(400).json({ error: 'Choose a valid start day for the week.' });
+    }
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: timezone });
+    } catch {
+      return res.status(400).json({ error: 'Choose a valid time zone.' });
+    }
+
+    const result = await query(
+      `UPDATE users
+       SET display_name = $2, timezone = $3, week_starts_on = $4, updated_at = now()
+       WHERE id = $1
+       RETURNING id, email, display_name, timezone, week_starts_on`,
+      [payload.userId, displayName, timezone, weekStartsOn]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User account not found.' });
+    return res.json({ user: result.rows[0] });
+  } catch (err) {
+    console.error('[Auth Profile Update Error]:', err);
+    return res.status(500).json({ error: 'Could not save profile settings.' });
+  }
+});
+
 /**
  * Log out and clear session cookie
  */

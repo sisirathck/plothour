@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
-  CalendarDays,
   Check,
   Clock3,
   Copy,
@@ -11,6 +10,7 @@ import {
   Flame,
   Moon,
   Settings2,
+  Save,
   Sliders,
   Sparkles,
   Sun,
@@ -109,6 +109,14 @@ export const SettingsPage = ({ onBack, user }) => {
   const inviteCodeKey = getUserKey(user, 'invite_code');
 
   const { themeMode, setThemeMode } = useTheme();
+  const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const weekDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const timezones = useMemo(() => {
+    const supported = typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('timeZone')
+      : ['UTC', 'America/Los_Angeles', 'America/Chicago', 'America/New_York', 'Europe/London', 'Europe/Paris', 'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney'];
+    return [...new Set([systemTimezone, ...supported])].sort((a, b) => a.localeCompare(b));
+  }, [systemTimezone]);
 
   // 2-Tab Architecture state ('preferences' | 'connections')
   const [activeSettingsTab, setActiveSettingsTab] = useState(() => {
@@ -132,29 +140,48 @@ export const SettingsPage = ({ onBack, user }) => {
     return {
       displayName: user?.display_name || user?.email?.split('@')[0] || 'Alex Rivera',
       dailyGoalHours: 4,
-      weekStart: 'monday',
+      weekStart: weekDays[Number.isInteger(user?.week_starts_on) ? user.week_starts_on : 1] || 'monday',
+      timezone: systemTimezone,
       defaultTimerMode: '50m',
       soundEnabled: true,
       ...saved,
     };
   });
 
-  // Sync preferences to localStorage and broadcast storage events
-  useEffect(() => {
-    try {
-      localStorage.setItem(preferencesKey, JSON.stringify(preferences));
-      window.dispatchEvent(
-        new CustomEvent('studyduel:preferences-storage', {
-          detail: { preferencesKey, preferences },
-        })
-      );
-    } catch (err) {
-      console.warn('Could not persist preferences:', err);
-    }
-  }, [preferencesKey, preferences]);
-
+  const [saveStatus, setSaveStatus] = useState('');
   const updatePreference = (key, value) => {
     setPreferences((prev) => ({ ...prev, [key]: value }));
+    setSaveStatus('');
+  };
+
+  const saveSettings = async () => {
+    setSaveStatus('saving');
+    try {
+      if (user?.id) {
+        const response = await fetch('/api/auth/profile', {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            displayName: preferences.displayName,
+            timezone: preferences.timezone,
+            weekStartsOn: weekDays.indexOf(preferences.weekStart),
+          }),
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || 'Could not save profile settings.');
+        }
+      }
+      localStorage.setItem(preferencesKey, JSON.stringify(preferences));
+      window.dispatchEvent(new CustomEvent('studyduel:preferences-storage', {
+        detail: { preferencesKey, preferences },
+      }));
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Could not save settings:', error);
+      setSaveStatus(error.message || 'error');
+    }
   };
 
   // Export logs feedback state
@@ -244,7 +271,10 @@ export const SettingsPage = ({ onBack, user }) => {
   const [userInviteCode] = useState(() => {
     const stored = localStorage.getItem(inviteCodeKey);
     if (stored) return stored;
-    const generated = `DUEL-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const randomBytes = new Uint8Array(5);
+    if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(randomBytes);
+    else randomBytes.set(Array.from({ length: 5 }, () => Math.floor(Math.random() * 256)));
+    const generated = `DUEL-${Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
     try {
       localStorage.setItem(inviteCodeKey, generated);
     } catch {}
@@ -379,6 +409,7 @@ export const SettingsPage = ({ onBack, user }) => {
             <p>Customize your study workspace, session defaults, and duel connections.</p>
           </div>
 
+          <div className="settings-heading-actions">
           {/* Clean 2-Tab Architecture at top */}
           <div className="settings-tab-nav" role="tablist" aria-label="Settings sections">
             <button
@@ -406,6 +437,14 @@ export const SettingsPage = ({ onBack, user }) => {
               <span>Connections</span>
             </button>
           </div>
+          {activeSettingsTab === 'preferences' && <div className="settings-save-wrap">
+            <button type="button" className="settings-save-btn" onClick={saveSettings} disabled={saveStatus === 'saving'}>
+              {saveStatus === 'saved' ? <Check size={15} /> : <Save size={15} />}
+              <span>{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : 'Save changes'}</span>
+            </button>
+            {saveStatus && saveStatus !== 'saved' && saveStatus !== 'saving' && <span className="settings-save-error" role="alert">{saveStatus}</span>}
+          </div>}
+          </div>
         </div>
       </header>
 
@@ -424,6 +463,16 @@ export const SettingsPage = ({ onBack, user }) => {
                 <h2 id="card-workspace-title">Workspace, Profile & Theme Appearance</h2>
               </div>
               <span className="settings-badge-pill">Profile & Display</span>
+            </div>
+
+            <div className="settings-row">
+              <div className="settings-row-info">
+                <strong>Time zone</strong>
+                <span>Used for session dates, daily totals, and calendar views. Defaults to your computer’s time zone.</span>
+              </div>
+              <select className="settings-text-input settings-select-input" value={preferences.timezone} onChange={(e) => updatePreference('timezone', e.target.value)} aria-label="Time zone">
+                {timezones.map((timezone) => <option key={timezone} value={timezone}>{timezone.replaceAll('_', ' ')}</option>)}
+              </select>
             </div>
 
             {/* Display Name Input */}
@@ -481,7 +530,7 @@ export const SettingsPage = ({ onBack, user }) => {
                   role="radio"
                   aria-checked={themeMode === 'light'}
                   className={`settings-segmented-btn ${themeMode === 'light' ? 'active' : ''}`}
-                  onClick={() => setThemeMode('light')}
+                  onClick={() => { setThemeMode('light'); setSaveStatus(''); }}
                 >
                   <Sun size={14} />
                   <span>Light</span>
@@ -491,7 +540,7 @@ export const SettingsPage = ({ onBack, user }) => {
                   role="radio"
                   aria-checked={themeMode === 'dark'}
                   className={`settings-segmented-btn ${themeMode === 'dark' ? 'active' : ''}`}
-                  onClick={() => setThemeMode('dark')}
+                  onClick={() => { setThemeMode('dark'); setSaveStatus(''); }}
                 >
                   <Moon size={14} />
                   <span>Dark</span>
@@ -501,7 +550,7 @@ export const SettingsPage = ({ onBack, user }) => {
                   role="radio"
                   aria-checked={themeMode === 'auto-daylight'}
                   className={`settings-segmented-btn ${themeMode === 'auto-daylight' ? 'active accent-active' : ''}`}
-                  onClick={() => setThemeMode('auto-daylight')}
+                  onClick={() => { setThemeMode('auto-daylight'); setSaveStatus(''); }}
                 >
                   <Sparkles size={14} />
                   <span>Auto-Daylight</span>
@@ -509,38 +558,17 @@ export const SettingsPage = ({ onBack, user }) => {
               </div>
             </div>
 
-            {/* Start of the Week Toggle (Monday vs. Sunday) */}
+            {/* Start of the Week */}
             <div className="settings-row">
               <div className="settings-row-info">
                 <strong>Start of the Week</strong>
                 <span>
-                  {preferences.weekStart === 'sunday'
-                    ? 'Dashboard displays SUNDAY–SATURDAY · THIS WEEK with Sunday starting charts.'
-                    : 'Dashboard displays MONDAY–SUNDAY · THIS WEEK with Monday starting charts.'}
+                  Dashboard weekly summaries and charts begin on {preferences.weekStart}.
                 </span>
               </div>
-              <div className="settings-segmented-group" role="radiogroup" aria-label="Start of the week">
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={preferences.weekStart === 'monday'}
-                  className={`settings-segmented-btn ${preferences.weekStart === 'monday' ? 'active accent-active' : ''}`}
-                  onClick={() => updatePreference('weekStart', 'monday')}
-                >
-                  <CalendarDays size={14} />
-                  <span>Monday (Recommended)</span>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={preferences.weekStart === 'sunday'}
-                  className={`settings-segmented-btn ${preferences.weekStart === 'sunday' ? 'active' : ''}`}
-                  onClick={() => updatePreference('weekStart', 'sunday')}
-                >
-                  <CalendarDays size={14} />
-                  <span>Sunday</span>
-                </button>
-              </div>
+              <select className="settings-text-input settings-select-input" value={preferences.weekStart} onChange={(e) => updatePreference('weekStart', e.target.value)} aria-label="Start of the week">
+                {weekDays.map((day) => <option key={day} value={day}>{day[0].toUpperCase() + day.slice(1)}</option>)}
+              </select>
             </div>
           </section>
 
