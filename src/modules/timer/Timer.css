@@ -226,7 +226,7 @@
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: var(--sd-card-bg);
+  background: var(--sd-popover-bg);
   border: 1px solid var(--sd-border-strong);
   border-radius: var(--sd-radius-md);
   box-shadow: var(--sd-card-shadow);
@@ -234,8 +234,6 @@
   max-height: 220px;
   overflow-y: auto;
   padding: 4px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 .t-select-opt {
@@ -450,10 +448,8 @@
   padding: 5px;
   border: 1px solid var(--sd-border-strong);
   border-radius: var(--sd-radius-md);
-  background: var(--sd-card-bg);
+  background: var(--sd-popover-bg);
   box-shadow: var(--sd-card-shadow);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 .timer-search-result {

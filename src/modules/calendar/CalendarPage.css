@@ -102,7 +102,7 @@
 .calendar-filter-trigger > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .calendar-filter-trigger svg { flex:0 0 auto; color:var(--sd-text-muted); transition:transform .16s ease; }
 .calendar-filter-trigger[aria-expanded="true"] svg { transform:rotate(180deg); }
-.calendar-filter-menu { position:absolute; z-index:30; top:calc(100% + 7px); left:0; width:min(390px,calc(100vw - 48px)); max-height:min(370px,55vh); overflow:auto; padding:6px; border:1px solid var(--sd-border-glass); border-radius:15px; background:var(--sd-bg-surface); box-shadow:0 16px 42px rgba(24,28,55,.2),inset 0 1px 0 color-mix(in srgb,var(--sd-text-primary) 3%,transparent); backdrop-filter:blur(20px); }
+.calendar-filter-menu { position:absolute; z-index:30; top:calc(100% + 7px); left:0; width:min(390px,calc(100vw - 48px)); max-height:min(370px,55vh); overflow:auto; padding:6px; border:1px solid var(--sd-border-glass); border-radius:15px; background:var(--sd-popover-bg); box-shadow:0 16px 42px rgba(24,28,55,.2),inset 0 1px 0 color-mix(in srgb,var(--sd-text-primary) 3%,transparent); }
 .calendar-filter-menu button { display:flex; width:100%; min-height:35px; align-items:center; justify-content:space-between; gap:10px; padding:0 10px; border:0; border-radius:9px; background:transparent; color:var(--sd-text-secondary); font:inherit; font-size:12px; letter-spacing:0; text-align:left; cursor:pointer; transition:background .14s ease,color .14s ease; }
 .calendar-filter-menu button:hover,.calendar-filter-menu button[aria-selected="true"] { background:color-mix(in srgb,var(--sd-coral) 11%,var(--sd-bg-subtle)); color:var(--sd-text-primary); }
 .calendar-filter-menu button[aria-selected="true"] svg { color:var(--sd-coral); }

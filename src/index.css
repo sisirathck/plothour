@@ -27,6 +27,7 @@
   --sd-orange-active: var(--sd-coral-active);
   --sd-orange-glow: var(--sd-coral-glow);
   --sd-orange-subtle: rgba(243, 149, 127, 0.12);
+  --sd-popover-bg: #fbfaff;
 }
 
 /* --------------------------------------------------------------------------
@@ -45,6 +46,7 @@
   --sd-orange-subtle: rgba(128, 134, 212, 0.12);
 
   --sd-bg-base: #f0effa;
+  --sd-popover-bg: #fbfaff;
   --sd-card-bg: rgba(251, 250, 255, 0.76);
   --sd-card-border: rgba(91, 96, 164, 0.1);
   --sd-card-shadow: 0 2px 5px rgba(68, 69, 126, 0.035), 0 12px 30px -8px rgba(94, 94, 164, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.96);
@@ -88,6 +90,7 @@
 [data-theme='dark'] {
   color-scheme: dark;
   --sd-bg-base: #090d14;
+  --sd-popover-bg: #151c29;
   --sd-card-bg: linear-gradient(160deg, rgba(30, 39, 56, 0.78), rgba(18, 23, 34, 0.72));
   --sd-card-border: rgba(255, 255, 255, 0.06);
   --sd-card-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
