@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createHmac, randomInt, timingSafeEqual } from 'crypto';
+import nodemailer from 'nodemailer';
 import { query } from '../db.js';
 import {
   hashPassword,
@@ -29,28 +30,77 @@ function escapeHtml(value) {
   })[character]);
 }
 
-async function sendVerificationEmail(email, displayName, code) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  if (!apiKey || !from) throw new Error('Email verification is not configured on this server.');
-
-  const safeName = escapeHtml(displayName || 'there');
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(10_000),
-    body: JSON.stringify({
-      from,
-      to: [email],
-      subject: 'Your StudyDuel verification code',
-      text: `Hi ${displayName || 'there'},\n\nYour StudyDuel verification code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.`,
-      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#20243a"><h1 style="font-size:22px">Verify your email</h1><p>Hi ${safeName}, enter this code in StudyDuel to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#f3f2ff;border-radius:12px;display:inline-block">${code}</p><p>This code expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.</p></div>`,
-    }),
-  });
-  if (!response.ok) {
-    console.error('[Email Verification] Resend request failed with status:', response.status);
-    throw new Error('We could not send the verification email. Please try again shortly.');
+function getSmtpTransporter() {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return null;
   }
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+}
+
+function isEmailConfigured() {
+  const hasSmtp = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  const hasResend = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+  return hasSmtp || hasResend;
+}
+
+async function sendVerificationEmail(email, displayName, code) {
+  const from = process.env.EMAIL_FROM || `StudyDuel <${process.env.SMTP_USER || 'noreply'}@thoughtpolice.space>`;
+  const safeName = escapeHtml(displayName || 'there');
+  const subject = 'Your StudyDuel verification code';
+  const text = `Hi ${displayName || 'there'},\n\nYour StudyDuel verification code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#20243a"><h1 style="font-size:22px">Verify your email</h1><p>Hi ${safeName}, enter this code in StudyDuel to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#f3f2ff;border-radius:12px;display:inline-block">${code}</p><p>This code expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.</p></div>`;
+
+  // 1. Send via SMTP if configured
+  const smtpTransporter = getSmtpTransporter();
+  if (smtpTransporter) {
+    await smtpTransporter.sendMail({
+      from,
+      to: email,
+      subject,
+      text,
+      html,
+    });
+    return;
+  }
+
+  // 2. Send via Resend API if configured
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey && process.env.EMAIL_FROM) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ from, to: [email], subject, text, html }),
+    });
+    if (!response.ok) {
+      console.error('[Email Verification] Resend request failed with status:', response.status);
+      throw new Error('We could not send the verification email. Please try again shortly.');
+    }
+    return;
+  }
+
+  // 3. Fallback for local testing
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('\n================================================================');
+    console.log(` 🔑 [LOCAL DEV] EMAIL VERIFICATION CODE FOR: ${email}`);
+    console.log(` >>> CODE: ${code} <<<`);
+    console.log(' (Email credentials not configured; verification code printed here for local testing)');
+    console.log('================================================================\n');
+    return;
+  }
+
+  throw new Error('Email verification is not configured on this server.');
 }
 
 function newVerificationCode() {
@@ -67,7 +117,9 @@ authRouter.get('/status', async (req, res) => {
     const dbReady = dbRes.rows.length > 0;
     const authSecretReady = Boolean(process.env.AUTH_SECRET && process.env.AUTH_SECRET.length >= 32);
     const googleReady = Boolean(process.env.GOOGLE_CLIENT_ID);
-    const emailVerificationReady = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+    const emailConfigured = isEmailConfigured();
+    const isDev = process.env.NODE_ENV !== 'production';
+    const emailVerificationReady = emailConfigured || isDev;
 
     res.json({
       configured: dbReady && authSecretReady,
@@ -75,15 +127,19 @@ authRouter.get('/status', async (req, res) => {
       authSecret: authSecretReady,
       googleAuth: googleReady,
       emailVerification: emailVerificationReady,
+      emailVerificationDevMode: !emailConfigured && isDev,
       googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     });
   } catch (err) {
+    const emailConfigured = isEmailConfigured();
+    const isDev = process.env.NODE_ENV !== 'production';
     res.json({
       configured: false,
       database: false,
       authSecret: Boolean(process.env.AUTH_SECRET && process.env.AUTH_SECRET.length >= 32),
       googleAuth: Boolean(process.env.GOOGLE_CLIENT_ID),
-      emailVerification: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM),
+      emailVerification: emailConfigured || isDev,
+      emailVerificationDevMode: !emailConfigured && isDev,
       error: err.message,
     });
   }
@@ -109,8 +165,10 @@ authRouter.post('/register', async (req, res) => {
     if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
       return res.status(503).json({ error: 'Secure account authentication is not configured on this server yet.' });
     }
-    if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
-      return res.status(503).json({ error: 'Email verification is not configured on this server yet.' });
+    if (!isEmailConfigured()) {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(503).json({ error: 'Email verification is not configured on this server yet.' });
+      }
     }
 
     const existingUser = await query('SELECT 1 FROM users WHERE lower(email) = $1', [normalizedEmail]);
@@ -136,7 +194,7 @@ authRouter.post('/register', async (req, res) => {
     const code = newVerificationCode();
     const codeHash = hashVerificationCode(normalizedEmail, code);
     const finalName = name || normalizedEmail.split('@')[0];
-    await query(
+    const result = await query(
       `INSERT INTO email_verification_challenges (email, display_name, password_hash, code_hash, expires_at, sent_at, send_window_started_at, send_count, attempts, created_at)
        VALUES ($1, $2, $3, $4, now() + ($5 * interval '1 minute'), now(), now(), 1, 0, now())
        ON CONFLICT (email) DO UPDATE SET
@@ -245,8 +303,10 @@ authRouter.post('/verify-email', async (req, res) => {
 authRouter.post('/resend-verification', async (req, res) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
-    return res.status(503).json({ error: 'Email verification is not configured on this server yet.' });
+  if (!isEmailConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Email verification is not configured on this server yet.' });
+    }
   }
   try {
     const current = await query(

@@ -20,6 +20,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
     configured: false,
     googleAuth: false,
     emailVerification: false,
+    emailVerificationDevMode: false,
     googleClientId: null,
   });
 
@@ -55,6 +56,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
           configured: Boolean(data.configured),
           googleAuth: Boolean(data.googleAuth),
           emailVerification: Boolean(data.emailVerification),
+          emailVerificationDevMode: Boolean(data.emailVerificationDevMode),
           googleClientId: data.googleClientId,
         });
       })
@@ -64,6 +66,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
           configured: false,
           googleAuth: false,
           emailVerification: false,
+          emailVerificationDevMode: false,
           googleClientId: null,
         });
       });
@@ -217,12 +220,20 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
       {serverStatus.checked && isSignUp && serverStatus.configured && !serverStatus.emailVerification && (
         <NoticeBanner message="Email verification is not configured on this server. Add RESEND_API_KEY and EMAIL_FROM before enabling account creation." />
       )}
+      {serverStatus.checked && isSignUp && serverStatus.emailVerificationDevMode && !verificationEmail && (
+        <NoticeBanner message="Local Dev Mode: Resend credentials not set. 6-digit verification codes will be printed to your server terminal." />
+      )}
 
       {verificationEmail ? (
         <form className="login-form" onSubmit={handleVerifyEmail} noValidate>
           {error && <div className="login-general-error" role="alert">{error}</div>}
           {verificationMessage && <div className="login-verification-message" role="status">{verificationMessage}</div>}
           <p className="login-verification-intro">Enter the code we sent to <strong>{verificationEmail}</strong> to activate your account.</p>
+          {serverStatus.emailVerificationDevMode && (
+            <p style={{ fontSize: '0.82rem', color: '#a78bfa', marginTop: '-4px', marginBottom: '14px', lineHeight: 1.4 }}>
+              💡 <strong>Dev Mode:</strong> Check the terminal running <code>npm run dev</code> to copy the 6-digit verification code.
+            </p>
+          )}
           <FormInput
             id="signup-verification-code"
             label="Verification code"
