@@ -19,13 +19,18 @@ const resolveTheme = (mode) => {
   return getAutoDaylightTheme();
 };
 
-export const ThemeProvider = ({ children }) => {
+export const ThemeProvider = ({ children, userId = null, demoMode = false }) => {
+  const scopedKeys = userId
+    ? { mode: `studyduel_user_${userId}_theme_mode`, theme: `studyduel_user_${userId}_theme` }
+    : demoMode
+      ? { mode: 'studyduel_demo_theme_mode', theme: 'studyduel_demo_theme' }
+      : { mode: 'studyduel_theme_mode', theme: 'studyduel_theme' };
   const [themeMode, setThemeModeState] = useState(() => {
-    const savedMode = localStorage.getItem('studyduel_theme_mode');
+    const savedMode = localStorage.getItem(scopedKeys.mode) || (!userId && !demoMode ? localStorage.getItem('studyduel_theme_mode') : null);
     if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'auto-daylight') {
       return savedMode;
     }
-    const legacy = localStorage.getItem('studyduel_theme');
+    const legacy = localStorage.getItem(scopedKeys.theme) || (!userId && !demoMode ? localStorage.getItem('studyduel_theme') : null);
     if (legacy === 'light' || legacy === 'dark') {
       return legacy;
     }
@@ -38,8 +43,8 @@ export const ThemeProvider = ({ children }) => {
     const resolved = resolveTheme(themeMode);
     setThemeState(resolved);
     document.documentElement.setAttribute('data-theme', resolved);
-    localStorage.setItem('studyduel_theme', resolved);
-    localStorage.setItem('studyduel_theme_mode', themeMode);
+    localStorage.setItem(scopedKeys.theme, resolved);
+    localStorage.setItem(scopedKeys.mode, themeMode);
 
     if (themeMode === 'auto-daylight') {
       const interval = setInterval(() => {
@@ -47,7 +52,7 @@ export const ThemeProvider = ({ children }) => {
         setThemeState((prev) => {
           if (prev !== nextResolved) {
             document.documentElement.setAttribute('data-theme', nextResolved);
-            localStorage.setItem('studyduel_theme', nextResolved);
+            localStorage.setItem(scopedKeys.theme, nextResolved);
             return nextResolved;
           }
           return prev;
@@ -55,7 +60,7 @@ export const ThemeProvider = ({ children }) => {
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [themeMode]);
+  }, [themeMode, scopedKeys.mode, scopedKeys.theme]);
 
   const toggleTheme = () => {
     setThemeModeState((prev) => {

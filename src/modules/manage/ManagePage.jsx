@@ -4,6 +4,7 @@ import {
   ArchiveRestore,
   CalendarDays,
   Check,
+  ChevronDown,
   Clock3,
   FolderKanban,
   Pencil,
@@ -204,6 +205,8 @@ export const ManagePage = ({ user }) => {
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [openSubjectPlans, setOpenSubjectPlans] = useState({});
+  const [openProjectPlans, setOpenProjectPlans] = useState({});
+  const [editingProjectGoals, setEditingProjectGoals] = useState({});
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
 
   useEffect(() => {
@@ -484,14 +487,20 @@ export const ManagePage = ({ user }) => {
                         <strong>{formatGoalHours(totals.daily)} <small>/ day</small></strong>
                         <strong>{formatGoalHours(totals.weekly)} <small>/ week</small></strong>
                         <strong>{formatGoalHours(totals.monthly)} <small>/ month</small></strong>
+                        <button type="button" className="manage-inline-toggle" aria-expanded={!!editingProjectGoals[project.id]} onClick={() => setEditingProjectGoals((items) => ({ ...items, [project.id]: !items[project.id] }))}>
+                          <Pencil size={13} /> {editingProjectGoals[project.id] ? 'Done' : 'Edit goals'}
+                        </button>
+                        <button type="button" className="manage-inline-toggle" aria-expanded={!!openProjectPlans[project.id]} onClick={() => setOpenProjectPlans((items) => ({ ...items, [project.id]: !items[project.id] }))}>
+                          Plan <ChevronDown size={14} className={openProjectPlans[project.id] ? 'is-open' : ''} />
+                        </button>
                       </div>
-                      <PlanEditor
+                      {openProjectPlans[project.id] && <PlanEditor
                         value={project}
                         label={project.name}
                         onChange={(changes) => setProjects((items) => items.map((item) => item.id === project.id ? { ...item, ...changes } : item))}
-                      />
-                      <div className="manage-subprojects">
-                        <div className="manage-subproject-table-head"><span>Subproject</span><span>Daily</span><span>Weekly</span><span>Monthly</span><span aria-label="Actions" /></div>
+                      />}
+                      <div className={`manage-subprojects${editingProjectGoals[project.id] ? ' is-editing-goals' : ''}`}>
+                        <div className="manage-subproject-table-head"><span>Subproject</span>{editingProjectGoals[project.id] && <><span>Daily</span><span>Weekly</span><span>Monthly</span></>}<span aria-label="Actions" /></div>
                         {subjects.map((subject) => (
                           <div className="manage-subproject-row" key={subject.id}>
                             <span className="manage-subproject-name">
@@ -504,7 +513,7 @@ export const ManagePage = ({ user }) => {
                                 </form>
                               ) : <span>{subject.name}</span>}
                             </span>
-                            {['daily', 'weekly', 'monthly'].map((period) => (
+                            {editingProjectGoals[project.id] && ['daily', 'weekly', 'monthly'].map((period) => (
                               <label className="manage-goal-input-wrap" key={period}>
                                 <input type="number" min="0" max={period === 'daily' ? 24 : period === 'weekly' ? 168 : 744} step="0.25" value={subject.goals?.[period] ?? 0} onChange={(event) => setSubjectGoal(project.id, subject.id, period, event.target.value)} aria-label={`${period} goal hours for ${subject.name}`} />
                                 <span>h</span>

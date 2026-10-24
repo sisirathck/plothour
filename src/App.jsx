@@ -118,9 +118,12 @@ function App() {
 
   // If user is directly loading an app route (/timer, /dashboard) while checking auth, show a refined themed spinner
   const isDirectAppRoute = validAppRoutes.some((route) => window.location.pathname.startsWith(route));
+  const themeScopeKey = user?.id
+    ? `${user.id}:${workspaceReadyForUser === user.id ? 'ready' : 'loading'}`
+    : isDemoMode ? 'demo' : 'guest';
   if ((isCheckingAuth && (isDirectAppRoute || isDemoMode)) || (user && workspaceReadyForUser !== user.id)) {
     return (
-      <ThemeProvider>
+      <ThemeProvider key={themeScopeKey} userId={user?.id} demoMode={isDemoMode}>
         <div className="app-loading-screen" aria-label="Loading StudyDuel...">
           <div className="app-loading-spinner" />
         </div>
@@ -129,7 +132,7 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
+    <ThemeProvider key={themeScopeKey} userId={user?.id} demoMode={isDemoMode}>
       <div className="app-root">
         {user || isDemoMode ? (
           <Suspense
