@@ -52,7 +52,7 @@
   max-width: 1480px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px clamp(16px, 2.5vw, 36px) 60px;
+  padding: 24px clamp(16px, 2.5vw, 36px) 112px;
   background: transparent;
   color: var(--sd-settings-text);
   overflow-y: auto;
@@ -122,6 +122,27 @@
   gap: 10px;
 }
 
+.settings-save-dock {
+  position: fixed;
+  z-index: 80;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px clamp(16px, 2.5vw, 36px) calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--sd-settings-card-border);
+  background: color-mix(in srgb, var(--sd-settings-canvas) 82%, transparent);
+  box-shadow: 0 -10px 30px color-mix(in srgb, var(--sd-settings-text) 7%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.settings-save-dock .settings-save-wrap {
+  width: min(1480px, 100%);
+  justify-content: flex-end;
+}
+
 .settings-save-btn {
   min-height: 42px;
   display: inline-flex;
@@ -143,7 +164,7 @@
 
 .settings-save-btn:hover:not(:disabled) { transform: translateY(-1px); }
 .settings-save-btn:disabled { opacity: .7; cursor: wait; }
-.settings-save-error { color: #c2413a; font-size: 12px; max-width: 280px; }
+.settings-save-error { color: #c2413a; font-size: 12px; max-width: min(420px, 60vw); }
 
 .demo-settings-heading h1 {
   display: flex;
@@ -960,6 +981,75 @@
   border: 0;
 }
 
+/* Password Management Card */
+.settings-password-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 240px;
+}
+
+.settings-password-input-wrap .settings-text-input {
+  width: 100%;
+  padding-right: 36px;
+}
+
+.settings-eye-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--sd-settings-text-muted);
+  cursor: pointer;
+  transition: color var(--sd-transition-fast);
+}
+
+.settings-eye-btn:hover {
+  color: var(--sd-settings-text);
+}
+
+.settings-password-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--sd-settings-border-soft);
+}
+
+.settings-password-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-top: 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 550;
+  line-height: 1.4;
+}
+
+.settings-password-msg.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.settings-password-msg.success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #10b981;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .demo-settings-page {
@@ -984,6 +1074,9 @@
   .settings-text-input {
     width: 100%;
     max-width: 100%;
+  }
+  .settings-password-input-wrap {
+    width: 100%;
   }
   .settings-heading-actions { width: 100%; justify-content: space-between; }
   .settings-save-wrap { margin-left: auto; }

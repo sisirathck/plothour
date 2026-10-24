@@ -130,6 +130,10 @@
   font-weight: 450;
   color: var(--sd-text-secondary);
   letter-spacing: -0.01em;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
   transition: color var(--sd-transition);
 }
 

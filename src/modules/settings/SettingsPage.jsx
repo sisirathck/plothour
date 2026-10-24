@@ -1,13 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Check,
   Clock3,
   Copy,
   Download,
+  Eye,
+  EyeOff,
   FileJson,
   FileSpreadsheet,
   Flame,
+  Loader2,
+  Lock,
   Moon,
   Settings2,
   Save,
@@ -149,6 +153,8 @@ export const SettingsPage = ({ onBack, user }) => {
       displayName: user?.display_name || saved.displayName || user?.email?.split('@')[0] || 'Alex Rivera',
     };
   });
+  const savedPreferencesRef = useRef(preferences);
+  const hasUnsavedChanges = JSON.stringify(preferences) !== JSON.stringify(savedPreferencesRef.current);
 
   const [saveStatus, setSaveStatus] = useState('');
   const updatePreference = (key, value) => {
@@ -179,10 +185,64 @@ export const SettingsPage = ({ onBack, user }) => {
       window.dispatchEvent(new CustomEvent('studyduel:preferences-storage', {
         detail: { preferencesKey, preferences },
       }));
+      savedPreferencesRef.current = preferences;
       setSaveStatus('saved');
     } catch (error) {
       console.error('Could not save settings:', error);
       setSaveStatus(error.message || 'error');
+    }
+  };
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStatus, setPasswordStatus] = useState(''); // '' | 'saving' | 'saved'
+  const [passwordError, setPasswordError] = useState('');
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordStatus('');
+
+    if (user?.has_password && !currentPassword) {
+      setPasswordError('Please enter your current password.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match. Please verify both fields.');
+      return;
+    }
+
+    setPasswordStatus('saving');
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not change password.');
+      }
+      setPasswordStatus('saved');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPasswordStatus(''), 4000);
+    } catch (err) {
+      setPasswordError(err.message);
+      setPasswordStatus('');
     }
   };
 
@@ -461,10 +521,10 @@ export const SettingsPage = ({ onBack, user }) => {
 
   return (
     <div className="demo-settings-page" aria-label="StudyDuel Settings">
-      {/* Back to timer navigation */}
+      {/* Back navigation */}
       <button type="button" className="settings-back-btn" onClick={onBack}>
         <ArrowLeft size={15} />
-        <span>Back to timer</span>
+        <span>Back</span>
       </button>
 
       {/* Settings Header & 2-Tab Navigation */}
@@ -506,13 +566,6 @@ export const SettingsPage = ({ onBack, user }) => {
               <span>Connections</span>
             </button>
           </div>
-          {activeSettingsTab === 'preferences' && <div className="settings-save-wrap">
-            <button type="button" className="settings-save-btn" onClick={saveSettings} disabled={saveStatus === 'saving'}>
-              {saveStatus === 'saved' ? <Check size={15} /> : <Save size={15} />}
-              <span>{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : 'Save changes'}</span>
-            </button>
-            {saveStatus && saveStatus !== 'saved' && saveStatus !== 'saving' && <span className="settings-save-error" role="alert">{saveStatus}</span>}
-          </div>}
           </div>
         </div>
       </header>
@@ -639,6 +692,154 @@ export const SettingsPage = ({ onBack, user }) => {
                 {weekDays.map((day) => <option key={day} value={day}>{day[0].toUpperCase() + day.slice(1)}</option>)}
               </select>
             </div>
+          </section>
+
+          {/* CARD: Account Security & Password */}
+          <section className="settings-bento-card" aria-labelledby="card-security-title">
+            <div className="settings-card-header">
+              <div className="settings-card-title-group">
+                <span className="settings-card-icon">
+                  <Lock size={17} />
+                </span>
+                <h2 id="card-security-title">Account Security & Password</h2>
+              </div>
+              <span className="settings-badge-pill">Security</span>
+            </div>
+
+            {!user?.id ? (
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <strong>Sign-in account required</strong>
+                  <span>You are exploring StudyDuel in demo mode. Sign in or register an account to manage your password.</span>
+                </div>
+              </div>
+            ) : (
+              <form className="settings-password-form" onSubmit={handlePasswordChange}>
+                {user.has_password ? (
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <strong>Current Password</strong>
+                      <span>Enter your existing account password to confirm your identity.</span>
+                    </div>
+                    <div className="settings-password-input-wrap">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(''); }}
+                        placeholder="Current password"
+                        className="settings-text-input"
+                        autoComplete="current-password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="settings-eye-btn"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                        tabIndex={-1}
+                      >
+                        {showCurrentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="settings-row">
+                    <div className="settings-row-info">
+                      <strong>Google Account Linked</strong>
+                      <span>Your account currently uses Google sign-in. You can set a password below to enable direct email and password login.</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="settings-row">
+                  <div className="settings-row-info">
+                    <strong>New Password</strong>
+                    <span>Must be at least 8 characters long.</span>
+                  </div>
+                  <div className="settings-password-input-wrap">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => { setNewPassword(e.target.value); setPasswordError(''); }}
+                      placeholder="At least 8 characters"
+                      className="settings-text-input"
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      className="settings-eye-btn"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                      tabIndex={-1}
+                    >
+                      {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="settings-row">
+                  <div className="settings-row-info">
+                    <strong>Confirm New Password</strong>
+                    <span>Re-enter the new password to confirm.</span>
+                  </div>
+                  <div className="settings-password-input-wrap">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
+                      placeholder="Re-enter new password"
+                      className="settings-text-input"
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      className="settings-eye-btn"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                {passwordError && (
+                  <div className="settings-password-msg error" role="alert">
+                    {passwordError}
+                  </div>
+                )}
+
+                {passwordStatus === 'saved' && (
+                  <div className="settings-password-msg success" role="status">
+                    <Check size={14} /> Password updated successfully!
+                  </div>
+                )}
+
+                <div className="settings-password-actions">
+                  <button
+                    type="submit"
+                    className="settings-primary-btn"
+                    disabled={passwordStatus === 'saving' || !newPassword || !confirmPassword || (user.has_password && !currentPassword)}
+                  >
+                    {passwordStatus === 'saving' ? (
+                      <>
+                        <Loader2 className="animate-spin" size={15} />
+                        <span>Saving password…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={15} />
+                        <span>{user.has_password ? 'Update password' : 'Set password'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </section>
 
           {/* CARD 2: Default Timer Mode & Sound Effects Card */}
@@ -770,6 +971,15 @@ export const SettingsPage = ({ onBack, user }) => {
               </div>
             </div>
           </section>
+          {hasUnsavedChanges && <div className="settings-save-dock">
+            <div className="settings-save-wrap">
+              {saveStatus && saveStatus !== 'saving' && <span className="settings-save-error" role="alert">{saveStatus}</span>}
+              <button type="button" className="settings-save-btn" onClick={saveSettings} disabled={saveStatus === 'saving'}>
+                <Save size={15} />
+                <span>{saveStatus === 'saving' ? 'Saving…' : 'Save changes'}</span>
+              </button>
+            </div>
+          </div>}
         </div>
       )}
 

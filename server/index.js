@@ -134,6 +134,11 @@ app.listen(PORT, async () => {
     if (fs.existsSync(emailVerificationSchemaPath)) {
       await query(fs.readFileSync(emailVerificationSchemaPath, 'utf8'));
     }
+
+    const passwordResetSchemaPath = path.resolve(__dirname, '../database/005_password_reset.sql');
+    if (fs.existsSync(passwordResetSchemaPath)) {
+      await query(fs.readFileSync(passwordResetSchemaPath, 'utf8'));
+    }
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);
   }

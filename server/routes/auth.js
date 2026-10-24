@@ -55,7 +55,7 @@ function isEmailConfigured() {
 }
 
 async function sendVerificationEmail(email, displayName, code) {
-  const from = process.env.EMAIL_FROM || `StudyDuel <${process.env.SMTP_USER || 'noreply'}@thoughtpolice.space>`;
+  const from = process.env.EMAIL_FROM || `StudyDuel <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
   const safeName = escapeHtml(displayName || 'there');
   const subject = 'Your StudyDuel verification code';
   const text = `Hi ${displayName || 'there'},\n\nYour StudyDuel verification code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.`;
@@ -96,6 +96,55 @@ async function sendVerificationEmail(email, displayName, code) {
     console.log(` 🔑 [LOCAL DEV] EMAIL VERIFICATION CODE FOR: ${email}`);
     console.log(` >>> CODE: ${code} <<<`);
     console.log(' (Email credentials not configured; verification code printed here for local testing)');
+    console.log('================================================================\n');
+    return;
+  }
+
+  throw new Error('Email verification is not configured on this server.');
+}
+
+async function sendPasswordResetEmail(email, displayName, code) {
+  const from = process.env.EMAIL_FROM || `StudyDuel <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
+  const safeName = escapeHtml(displayName || 'there');
+  const subject = 'Your StudyDuel password reset code';
+  const text = `Hi ${displayName || 'there'},\n\nYour password reset code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes.\n\nIf you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#20243a"><h1 style="font-size:22px">Reset your password</h1><p>Hi ${safeName},</p><p>Enter this 6-digit code in StudyDuel to reset your account password:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#fff1f0;color:#e11d48;border-radius:12px;display:inline-block">${code}</p><p>This code expires in ${verificationCodeLifetimeMinutes} minutes.</p><p style="color:#64748b;font-size:13px">If you did not request a password reset, you can safely ignore this email. Your account password will remain unchanged.</p></div>`;
+
+  // 1. Send via SMTP if configured
+  const smtpTransporter = getSmtpTransporter();
+  if (smtpTransporter) {
+    await smtpTransporter.sendMail({
+      from,
+      to: email,
+      subject,
+      text,
+      html,
+    });
+    return;
+  }
+
+  // 2. Send via Resend API if configured
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey && process.env.EMAIL_FROM) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ from, to: [email], subject, text, html }),
+    });
+    if (!response.ok) {
+      console.error('[Password Reset] Resend request failed with status:', response.status);
+      throw new Error('We could not send the password reset email. Please try again shortly.');
+    }
+    return;
+  }
+
+  // 3. Fallback for local testing
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('\n================================================================');
+    console.log(` 🔑 [LOCAL DEV] PASSWORD RESET CODE FOR: ${email}`);
+    console.log(` >>> CODE: ${code} <<<`);
+    console.log(' (Email credentials not configured; reset code printed here for local testing)');
     console.log('================================================================\n');
     return;
   }
@@ -396,12 +445,302 @@ authRouter.post('/login', async (req, res) => {
       display_name: user.display_name,
       timezone: user.timezone,
       week_starts_on: user.week_starts_on,
+      has_password: Boolean(user.password_hash),
     };
 
     return res.json({ user: safeUser, token });
   } catch (err) {
     console.error('[Auth Login Error]:', err);
     return res.status(500).json({ error: 'Login failed due to a server error. Please try again.' });
+  }
+});
+
+/**
+ * Request a 6-digit password reset code sent to the user's email.
+ */
+authRouter.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+
+    if (!isEmailConfigured() && process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Email service is not configured on this server yet.' });
+    }
+
+    const userResult = await query(
+      'SELECT id, email, display_name FROM users WHERE lower(email) = $1',
+      [normalizedEmail]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No user with this email found.' });
+    }
+
+    const user = userResult.rows[0];
+
+    const currentChallenge = await query(
+      'SELECT sent_at, send_window_started_at, send_count FROM password_reset_challenges WHERE email = $1',
+      [normalizedEmail]
+    );
+
+    if (currentChallenge.rows[0]) {
+      const challenge = currentChallenge.rows[0];
+      const sentRecently = Date.now() - new Date(challenge.sent_at).getTime() < verificationResendDelaySeconds * 1000;
+      const windowExpired = Date.now() - new Date(challenge.send_window_started_at).getTime() >= 60 * 60 * 1000;
+      if (sentRecently) {
+        return res.status(429).json({ error: 'A reset code was sent recently. Please wait a minute before requesting another.' });
+      }
+      if (!windowExpired && challenge.send_count >= maximumVerificationEmailsPerHour) {
+        return res.status(429).json({ error: 'Too many password reset requests. Try again in an hour.' });
+      }
+    }
+
+    const code = newVerificationCode();
+    const codeHash = hashVerificationCode(normalizedEmail, code);
+
+    const result = await query(
+      `INSERT INTO password_reset_challenges (email, code_hash, expires_at, sent_at, send_window_started_at, send_count, attempts, created_at)
+       VALUES ($1, $2, now() + ($3 * interval '1 minute'), now(), now(), 1, 0, now())
+       ON CONFLICT (email) DO UPDATE SET
+         code_hash = EXCLUDED.code_hash,
+         expires_at = EXCLUDED.expires_at,
+         sent_at = EXCLUDED.sent_at,
+         send_window_started_at = CASE
+           WHEN password_reset_challenges.send_window_started_at <= now() - interval '1 hour' THEN now()
+           ELSE password_reset_challenges.send_window_started_at END,
+         send_count = CASE
+           WHEN password_reset_challenges.send_window_started_at <= now() - interval '1 hour' THEN 1
+           ELSE password_reset_challenges.send_count + 1 END,
+         attempts = 0,
+         created_at = now()
+       WHERE password_reset_challenges.sent_at <= now() - ($4 * interval '1 second')
+         AND (password_reset_challenges.send_window_started_at <= now() - interval '1 hour'
+           OR password_reset_challenges.send_count < $5)
+       RETURNING email`,
+      [normalizedEmail, codeHash, verificationCodeLifetimeMinutes, verificationResendDelaySeconds, maximumVerificationEmailsPerHour]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(429).json({ error: 'Too many reset requests. Please wait before trying again.' });
+    }
+
+    try {
+      await sendPasswordResetEmail(normalizedEmail, user.display_name, code);
+    } catch (error) {
+      await query('DELETE FROM password_reset_challenges WHERE email = $1 AND code_hash = $2', [normalizedEmail, codeHash]);
+      console.error('[Forgot Password Email Error]:', error.message);
+      return res.status(503).json({ error: error.message || 'Could not send the password reset code.' });
+    }
+
+    return res.status(200).json({ success: true, email: normalizedEmail, message: 'Reset code sent to your email.' });
+  } catch (err) {
+    console.error('[Forgot Password Error]:', err);
+    return res.status(500).json({ error: 'An error occurred while requesting password reset. Please try again.' });
+  }
+});
+
+/**
+ * Resend the 6-digit code for an active password reset request.
+ */
+authRouter.post('/resend-reset-code', async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+  if (!isEmailConfigured() && process.env.NODE_ENV === 'production') {
+    return res.status(503).json({ error: 'Email service is not configured on this server yet.' });
+  }
+
+  try {
+    const userResult = await query('SELECT display_name FROM users WHERE lower(email) = $1', [email]);
+    if (!userResult.rows[0]) {
+      return res.status(404).json({ error: 'No user with this email found.' });
+    }
+
+    const current = await query(
+      'SELECT sent_at, send_window_started_at, send_count FROM password_reset_challenges WHERE email = $1',
+      [email]
+    );
+    if (!current.rows[0]) {
+      return res.status(404).json({ error: 'No active password reset request found. Request a new reset code.' });
+    }
+    if (Date.now() - new Date(current.rows[0].sent_at).getTime() < verificationResendDelaySeconds * 1000) {
+      return res.status(429).json({ error: 'Please wait a minute before requesting another code.' });
+    }
+    const windowExpired = Date.now() - new Date(current.rows[0].send_window_started_at).getTime() >= 60 * 60 * 1000;
+    if (!windowExpired && current.rows[0].send_count >= maximumVerificationEmailsPerHour) {
+      return res.status(429).json({ error: 'Too many verification emails were requested. Try again in an hour.' });
+    }
+
+    const code = newVerificationCode();
+    const codeHash = hashVerificationCode(email, code);
+    const updated = await query(
+      `UPDATE password_reset_challenges
+       SET code_hash = $2, expires_at = now() + ($3 * interval '1 minute'), sent_at = now(), attempts = 0, created_at = now(),
+           send_window_started_at = CASE WHEN send_window_started_at <= now() - interval '1 hour' THEN now() ELSE send_window_started_at END,
+           send_count = CASE WHEN send_window_started_at <= now() - interval '1 hour' THEN 1 ELSE send_count + 1 END
+       WHERE email = $1 AND sent_at <= now() - ($4 * interval '1 second')
+         AND (send_window_started_at <= now() - interval '1 hour' OR send_count < $5)
+       RETURNING email`,
+      [email, codeHash, verificationCodeLifetimeMinutes, verificationResendDelaySeconds, maximumVerificationEmailsPerHour]
+    );
+    if (!updated.rows[0]) {
+      return res.status(429).json({ error: 'Too many reset requests. Please wait before trying again.' });
+    }
+
+    try {
+      await sendPasswordResetEmail(email, userResult.rows[0].display_name, code);
+    } catch (error) {
+      await query('DELETE FROM password_reset_challenges WHERE email = $1 AND code_hash = $2', [email, codeHash]);
+      console.error('[Resend Reset Email Error]:', error.message);
+      return res.status(503).json({ error: error.message || 'Could not send the reset code.' });
+    }
+
+    return res.json({ sent: true, message: 'A new reset code has been sent.' });
+  } catch (err) {
+    console.error('[Resend Reset Code Error]:', err);
+    return res.status(500).json({ error: 'Could not resend the reset code.' });
+  }
+});
+
+/**
+ * Verify reset code and update password.
+ */
+authRouter.post('/reset-password', async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+  const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address.' });
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ error: 'Enter the 6-digit verification code sent to your email.' });
+  }
+  if (newPassword.length < 8 || newPassword.length > 200) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+  }
+
+  try {
+    const result = await query(
+      `SELECT code_hash, expires_at, attempts
+       FROM password_reset_challenges WHERE email = $1`,
+      [email]
+    );
+    const challenge = result.rows[0];
+    if (!challenge || new Date(challenge.expires_at).getTime() <= Date.now()) {
+      if (challenge) await query('DELETE FROM password_reset_challenges WHERE email = $1', [email]);
+      return res.status(400).json({ error: 'That reset code has expired. Request a new code.' });
+    }
+    if (challenge.attempts >= maximumVerificationAttempts) {
+      return res.status(429).json({ error: 'Too many incorrect attempts. Request a new reset code.' });
+    }
+
+    const submittedHash = Buffer.from(hashVerificationCode(email, code), 'hex');
+    const expectedHash = Buffer.from(challenge.code_hash, 'hex');
+    if (submittedHash.length !== expectedHash.length || !timingSafeEqual(submittedHash, expectedHash)) {
+      const failed = await query(
+        `UPDATE password_reset_challenges SET attempts = attempts + 1
+         WHERE email = $1 AND attempts < $2 RETURNING attempts`,
+        [email, maximumVerificationAttempts]
+      );
+      return res.status(failed.rows[0]?.attempts >= maximumVerificationAttempts ? 429 : 400).json({
+        error: failed.rows[0]?.attempts >= maximumVerificationAttempts
+          ? 'Too many incorrect attempts. Request a new reset code.'
+          : 'That verification code is incorrect.',
+      });
+    }
+
+    // Code is valid! Consume challenge
+    await query('DELETE FROM password_reset_challenges WHERE email = $1', [email]);
+
+    // Update user password and ensure email_verified is true
+    const passwordHash = await hashPassword(newPassword);
+    const updated = await query(
+      `UPDATE users
+       SET password_hash = $1, email_verified = true, updated_at = now()
+       WHERE lower(email) = $2
+       RETURNING id, email, display_name, timezone, week_starts_on, created_at`,
+      [passwordHash, email]
+    );
+
+    if (updated.rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found.' });
+    }
+
+    const user = {
+      ...updated.rows[0],
+      has_password: true,
+    };
+    const token = createSessionToken(user);
+    setSessionCookie(res, token);
+
+    return res.json({ success: true, user, token, message: 'Password reset successfully!' });
+  } catch (err) {
+    console.error('[Reset Password Error]:', err);
+    return res.status(500).json({ error: 'Could not reset your password. Please try again.' });
+  }
+});
+
+/**
+ * Change password for authenticated users (e.g. from Settings).
+ */
+authRouter.post('/change-password', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = req.cookies?.studyduel_session || bearerToken;
+    if (!token) return res.status(401).json({ error: 'Not authenticated' });
+
+    const payload = verifySessionToken(token);
+    if (!payload?.userId) return res.status(401).json({ error: 'Invalid or expired session' });
+
+    const currentPassword = typeof req.body?.currentPassword === 'string' ? req.body.currentPassword : '';
+    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+
+    if (!newPassword || newPassword.length < 8 || newPassword.length > 200) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters long.' });
+    }
+
+    const userRes = await query(
+      'SELECT id, password_hash FROM users WHERE id = $1',
+      [payload.userId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const user = userRes.rows[0];
+
+    // If account has an existing password, verify the current password
+    if (user.password_hash) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Please enter your current password.' });
+      }
+      const isValid = await verifyPassword(user.password_hash, currentPassword);
+      if (!isValid) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+      }
+      if (currentPassword === newPassword) {
+        return res.status(400).json({ error: 'New password must be different from current password.' });
+      }
+    }
+
+    const newHash = await hashPassword(newPassword);
+    await query(
+      'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
+      [newHash, payload.userId]
+    );
+
+    return res.json({ success: true, message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('[Change Password Error]:', err);
+    return res.status(500).json({ error: 'Could not change password. Please try again.' });
   }
 });
 
@@ -498,7 +837,8 @@ authRouter.get('/me', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, email, display_name, timezone, week_starts_on, created_at
+      `SELECT id, email, display_name, timezone, week_starts_on, created_at,
+              (password_hash IS NOT NULL) AS has_password
        FROM users
        WHERE id = $1`,
       [payload.userId]
@@ -509,7 +849,13 @@ authRouter.get('/me', async (req, res) => {
       return res.status(401).json({ error: 'User account not found' });
     }
 
-    return res.json({ user: result.rows[0] });
+    const row = result.rows[0];
+    return res.json({
+      user: {
+        ...row,
+        has_password: Boolean(row.has_password),
+      },
+    });
   } catch (err) {
     console.error('[Auth /me Error]:', err);
     return res.status(500).json({ error: 'Could not verify session' });

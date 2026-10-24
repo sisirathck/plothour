@@ -15,6 +15,18 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationMessage, setVerificationMessage] = useState('');
+
+  // Forgot Password flow state
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotStep, setForgotStep] = useState('request'); // 'request' | 'verify'
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+
   const [serverStatus, setServerStatus] = useState({
     checked: false,
     configured: false,
@@ -212,6 +224,111 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
     }
   };
 
+  const exitForgotPassword = () => {
+    setIsForgotPassword(false);
+    setForgotStep('request');
+    setResetCode('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setError('');
+    setForgotMessage('');
+  };
+
+  const handleRequestResetCode = async (e) => {
+    e.preventDefault();
+    setError('');
+    setForgotMessage('');
+
+    const targetEmail = resetEmail.trim().toLowerCase();
+    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not send reset code.');
+      }
+      setForgotStep('verify');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setForgotMessage(data.message || `A 6-digit reset code has been sent to ${targetEmail}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendResetCode = async () => {
+    setError('');
+    setForgotMessage('');
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/resend-reset-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not resend the reset code.');
+      setResetCode('');
+      setForgotMessage('A fresh verification code is on its way to your email.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setForgotMessage('');
+
+    if (resetCode.length !== 6) {
+      setError('Please enter the 6-digit verification code.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match. Please verify both fields.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail.trim().toLowerCase(),
+          code: resetCode.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not reset password.');
+
+      onLoginSuccess?.(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGoogleLogin = () => {
     if (serverStatus.googleAuth && window.google?.accounts?.id) {
       window.google.accounts.id.prompt();
@@ -226,9 +343,23 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
     <div className="login-card-container">
       {/* Main Headings */}
       <header className="login-card-header">
-        <h1 className="login-main-title">{isSignUp ? 'Create your account' : 'Welcome back'}</h1>
+        <h1 className="login-main-title">
+          {isForgotPassword
+            ? forgotStep === 'request'
+              ? 'Reset your password'
+              : 'Create new password'
+            : isSignUp
+            ? 'Create your account'
+            : 'Welcome back'}
+        </h1>
         <p className="login-subtitle">
-          {isSignUp ? 'Join StudyDuel and keep your progress moving.' : 'Sign in to your dashboard and keep your progress moving.'}
+          {isForgotPassword
+            ? forgotStep === 'request'
+              ? 'Enter your registered email address and we’ll send you a 6-digit code to reset your password.'
+              : `Enter the code sent to ${resetEmail || 'your email'} and choose your new password.`
+            : isSignUp
+            ? 'Join StudyDuel and keep your progress moving.'
+            : 'Sign in to your dashboard and keep your progress moving.'}
         </p>
       </header>
 
@@ -241,10 +372,10 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         />
       )}
       {serverStatus.checked && isSignUp && serverStatus.configured && !serverStatus.emailVerification && (
-        <NoticeBanner message="Email verification is not configured on this server. Add RESEND_API_KEY and EMAIL_FROM before enabling account creation." />
+        <NoticeBanner message="Email verification is not configured on this server. Configure SMTP or Resend credentials before enabling account creation." />
       )}
       {serverStatus.checked && isSignUp && serverStatus.emailVerificationDevMode && !verificationEmail && (
-        <NoticeBanner message="Local Dev Mode: Resend credentials not set. 6-digit verification codes will be printed to your server terminal." />
+        <NoticeBanner message="Local Dev Mode: Email credentials not set. 6-digit verification codes will be printed to your server terminal." />
       )}
 
       {verificationEmail ? (
@@ -284,6 +415,167 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
             Back to log in
           </button>
         </form>
+      ) : isForgotPassword ? (
+        /* Forgot Password Request & Verification Steps */
+        forgotStep === 'request' ? (
+          <form className="login-form" onSubmit={handleRequestResetCode} noValidate>
+            {error && <div className="login-general-error" role="alert">{error}</div>}
+            {forgotMessage && <div className="login-verification-message" role="status">{forgotMessage}</div>}
+
+            <FormInput
+              id="forgot-email"
+              label="Email address"
+              type="email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              placeholder="Enter your registered email"
+              icon={Mail}
+              autoComplete="email"
+              required
+            />
+
+            <button
+              type="submit"
+              className="login-submit-btn"
+              disabled={isLoading || !resetEmail.trim()}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="btn-spinner" size={16} />
+                  <span>Sending reset code...</span>
+                </>
+              ) : (
+                <span>Send reset code</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="login-secondary-action"
+              onClick={exitForgotPassword}
+            >
+              Back to log in
+            </button>
+          </form>
+        ) : (
+          <form className="login-form" onSubmit={handleResetPassword} noValidate>
+            {error && <div className="login-general-error" role="alert">{error}</div>}
+            {forgotMessage && <div className="login-verification-message" role="status">{forgotMessage}</div>}
+
+            <p className="login-verification-intro">
+              Enter the 6-digit code sent to <strong>{resetEmail}</strong> and your new password.
+            </p>
+
+            {serverStatus.emailVerificationDevMode && (
+              <p style={{ fontSize: '0.82rem', color: '#a78bfa', marginTop: '-4px', marginBottom: '14px', lineHeight: 1.4 }}>
+                💡 <strong>Dev Mode:</strong> Check the terminal running <code>npm run dev</code> to copy the 6-digit reset code.
+              </p>
+            )}
+
+            <FormInput
+              id="reset-code"
+              label="Verification code"
+              type="text"
+              value={resetCode}
+              onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="6-digit code"
+              icon={Mail}
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              required
+            />
+
+            <FormInput
+              id="reset-new-password"
+              label="New password"
+              type={showNewPassword ? 'text' : 'password'}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              icon={Lock}
+              autoComplete="new-password"
+              required
+              rightSlot={
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showNewPassword ? <EyeOff size={16} strokeWidth={1.8} /> : <Eye size={16} strokeWidth={1.8} />}
+                </button>
+              }
+            />
+
+            <FormInput
+              id="reset-confirm-password"
+              label="Confirm new password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your new password"
+              icon={Lock}
+              autoComplete="new-password"
+              required
+              rightSlot={
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} strokeWidth={1.8} /> : <Eye size={16} strokeWidth={1.8} />}
+                </button>
+              }
+            />
+
+            <button
+              type="submit"
+              className="login-submit-btn"
+              disabled={isLoading || resetCode.length !== 6 || newPassword.length < 8 || !confirmPassword}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="btn-spinner" size={16} />
+                  <span>Resetting password...</span>
+                </>
+              ) : (
+                <span>Reset password & sign in</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="login-secondary-action"
+              onClick={handleResendResetCode}
+              disabled={isLoading}
+            >
+              Resend reset code
+            </button>
+            <button
+              type="button"
+              className="login-secondary-action"
+              onClick={() => {
+                setForgotStep('request');
+                setError('');
+                setForgotMessage('');
+              }}
+            >
+              Use a different email
+            </button>
+            <button
+              type="button"
+              className="login-secondary-action"
+              onClick={exitForgotPassword}
+            >
+              Back to log in
+            </button>
+          </form>
+        )
       ) : (
       /* Login or registration form */
       <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -342,18 +634,23 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
             }
           />
 
-          {!isSignUp && <div className="forgot-password-row">
-            <a
-              href="#forgot-password"
-              className="forgot-password-link"
-              onClick={(e) => {
-                e.preventDefault();
-                alert('Password reset instructions will be sent to ' + (email || 'your registered email'));
-              }}
-            >
-              Forgot password?
-            </a>
-          </div>}
+          {!isSignUp && (
+            <div className="forgot-password-row">
+              <button
+                type="button"
+                className="forgot-password-link"
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  setForgotStep('request');
+                  setResetEmail(email.trim());
+                  setError('');
+                  setForgotMessage('');
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Primary Log In Button (exact peach-coral tone) */}
@@ -376,19 +673,28 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
       )}
 
       {/* Social Auth Option */}
-      {!verificationEmail && <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />}
+      {!verificationEmail && !isForgotPassword && <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />}
 
       {/* Footer Link */}
-      {!verificationEmail && <footer className="login-card-footer">
-        <span className="footer-text">{isSignUp ? 'Already have an account? ' : 'Don’t have an account? '}</span>
-        <button
-          type="button"
-          className="signup-link-btn"
-          onClick={isSignUp ? onLogInClick : onSignUpClick}
-        >
-          {isSignUp ? 'Log in' : 'Sign up'}
-        </button>
-      </footer>}
+      {!verificationEmail && !isForgotPassword && (
+        <footer className="login-card-footer">
+          <span className="footer-text">{isSignUp ? 'Already have an account? ' : 'Don’t have an account? '}</span>
+          <button
+            type="button"
+            className="signup-link-btn"
+            onClick={() => {
+              exitForgotPassword();
+              if (isSignUp) {
+                onLogInClick?.();
+              } else {
+                onSignUpClick?.();
+              }
+            }}
+          >
+            {isSignUp ? 'Log in' : 'Sign up'}
+          </button>
+        </footer>
+      )}
     </div>
   );
 };
