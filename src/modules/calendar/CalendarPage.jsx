@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, X } from 'lucide-react';
 import { TimerEntriesList } from '../timer/TimerEntriesList';
 import './CalendarPage.css';
 
@@ -23,11 +23,14 @@ const formatDuration = (seconds) => {
   return minutes ? `${minutes}m` : '—';
 };
 
-export const CalendarPage = ({ user }) => {
+export const CalendarPage = ({ user, entries: providedEntries, setEntries: setProvidedEntries, projects: providedProjects, onClose }) => {
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
-  const [entries, setEntries] = useState(() => readLocalValue(entriesKey, []));
-  const [projects, setProjects] = useState(() => readLocalValue(projectsKey, []));
+  const [localEntries, setLocalEntries] = useState(() => readLocalValue(entriesKey, []));
+  const [localProjects, setLocalProjects] = useState(() => readLocalValue(projectsKey, []));
+  const entries = providedEntries ?? localEntries;
+  const setEntries = setProvidedEntries ?? setLocalEntries;
+  const projects = providedProjects ?? localProjects;
   const [viewMonth, setViewMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -35,16 +38,29 @@ export const CalendarPage = ({ user }) => {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
   useEffect(() => {
+    if (!onClose) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => { if (event.key === 'Escape') onClose(); };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
     const sync = (event) => {
       if (event?.key && event.key !== entriesKey && event.key !== projectsKey) return;
-      setEntries(readLocalValue(entriesKey, []));
-      setProjects(readLocalValue(projectsKey, []));
+      if (!providedEntries) setLocalEntries(readLocalValue(entriesKey, []));
+      if (!providedProjects) setLocalProjects(readLocalValue(projectsKey, []));
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
-  }, [entriesKey, projectsKey]);
+  }, [entriesKey, projectsKey, providedEntries, providedProjects]);
 
   useEffect(() => {
+    if (providedEntries) return;
     localStorage.setItem(entriesKey, JSON.stringify(entries));
     const detail = {
       entriesKey,
@@ -56,7 +72,7 @@ export const CalendarPage = ({ user }) => {
         openerWindow.dispatchEvent(new openerWindow.CustomEvent('studyduel:timer-storage', { detail }));
       }
     } catch { /* The popup may have been opened without an accessible opener. */ }
-  }, [entries, entriesKey, user?.id]);
+  }, [entries, entriesKey, providedEntries, user?.id]);
 
   const totalsByDay = useMemo(() => entries.reduce((totals, entry) => {
     const key = entryDateKey(entry.startedAt);
@@ -88,7 +104,7 @@ export const CalendarPage = ({ user }) => {
     setSelectedDate(new Date(next.getFullYear(), next.getMonth(), 1));
   };
 
-  return (
+  const calendarContent = (
     <div className="calendar-page">
       <header className="calendar-page-heading">
         <div>
@@ -154,6 +170,19 @@ export const CalendarPage = ({ user }) => {
           <span className="calendar-selected-total">{formatDuration(totalsByDay[selectedKey] || 0)} studied</span>
         </div>
         <TimerEntriesList entries={entries} setEntries={setEntries} projects={projects} selectedDate={selectedDate} hideRangeControls />
+      </section>
+    </div>
+  );
+
+  if (!onClose) return calendarContent;
+  return (
+    <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="calendar-modal-dialog" role="dialog" aria-modal="true" aria-label="Study calendar">
+        <div className="calendar-modal-topbar">
+          <span><CalendarDays size={15} /> Study calendar</span>
+          <button type="button" className="calendar-modal-close" onClick={onClose} aria-label="Close calendar"><X size={18} /></button>
+        </div>
+        <div className="calendar-modal-scroll">{calendarContent}</div>
       </section>
     </div>
   );

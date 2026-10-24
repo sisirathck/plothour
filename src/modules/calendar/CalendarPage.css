@@ -54,7 +54,21 @@
 .calendar-selected-total { padding: 7px 11px; border: 1px solid var(--sd-border-glass); border-radius: var(--sd-radius-pill); background: var(--sd-bg-subtle); color: var(--sd-text-secondary); font-size: 11px; font-weight: 650; }
 .calendar-entries-section .entries-panel-heading { padding: 14px 18px; }
 
+.calendar-modal-backdrop { position: fixed; inset: 0; z-index: 1400; display: grid; place-items: center; padding: 24px; background: rgba(8, 10, 18, .66); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); animation: calendar-modal-in .18s ease-out; }
+.calendar-modal-dialog { width: min(1120px, 100%); max-height: min(92vh, 980px); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--sd-border-glass); border-radius: 24px; background: var(--sd-bg-primary); box-shadow: 0 28px 90px rgba(0, 0, 0, .38); }
+.calendar-modal-topbar { flex: 0 0 auto; min-height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px 0 24px; border-bottom: 1px solid var(--sd-border-glass); background: var(--sd-bg-surface); color: var(--sd-text-secondary); }
+.calendar-modal-topbar > span { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+.calendar-modal-topbar > span svg { color: var(--sd-coral); }
+.calendar-modal-close { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--sd-border-glass); border-radius: 50%; background: var(--sd-bg-subtle); color: var(--sd-text-secondary); cursor: pointer; transition: .16s ease; }
+.calendar-modal-close:hover { color: var(--sd-text-primary); border-color: var(--sd-coral); background: color-mix(in srgb, var(--sd-coral) 14%, var(--sd-bg-subtle)); }
+.calendar-modal-scroll { overflow: auto; overscroll-behavior: contain; }
+.calendar-modal-scroll .calendar-page { width: 100%; margin: 0; padding: 22px 24px 28px; }
+@keyframes calendar-modal-in { from { opacity: 0; } to { opacity: 1; } }
+
 @media (max-width: 700px) {
+  .calendar-modal-backdrop { padding: 10px; }
+  .calendar-modal-dialog { max-height: 96vh; border-radius: 18px; }
+  .calendar-modal-scroll .calendar-page { padding: 16px 12px 20px; }
   .calendar-page { width: min(100% - 24px, 540px); padding-top: 22px; }
   .calendar-month-card { padding: 15px 11px; }
   .calendar-month-toolbar { align-items: flex-start; }

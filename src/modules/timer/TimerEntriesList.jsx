@@ -49,7 +49,7 @@ const durationLabel = (seconds) => {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
-export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate = null, hideRangeControls = false }) => {
+export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate = null, hideRangeControls = false, onOpenCalendar }) => {
   const [expanded, setExpanded] = useState(true);
   const [range, setRange] = useState('today');
   const [pageSize, setPageSize] = useState('20');
@@ -145,11 +145,9 @@ export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate =
 
         {expanded && (
           <div className="entries-controls">
-            {!hideRangeControls && (
+            {!hideRangeControls && onOpenCalendar && (
               <button type="button" className="entries-calendar-btn" onClick={() => {
-                const popup = window.open('/calendar', 'studyduel-calendar', 'popup=yes,width=1180,height=900,resizable=yes,scrollbars=yes');
-                if (popup) popup.focus();
-                else window.location.assign('/calendar');
+                onOpenCalendar();
               }}>
                 <CalendarDays size={15} /> Calendar view
               </button>

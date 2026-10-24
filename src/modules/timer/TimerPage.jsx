@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play,
   Square,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
+import { CalendarPage } from '../calendar/CalendarPage';
 import './Timer.css';
 
 /* ── Storage Keys ───────────────────────────── */
@@ -140,7 +141,9 @@ export const TimerPage = ({ user }) => {
   const [pausedElapsed, setPausedElapsed] = useState(0);
   const [laps, setLaps] = useState([]);
   const [notice, setNotice] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const closeCalendar = useCallback(() => setCalendarOpen(false), []);
 
   // Live clock tick
   useEffect(() => {
@@ -810,7 +813,16 @@ export const TimerPage = ({ user }) => {
       </section>
 
       {/* ── SESSION HISTORY LIST ─────────────────────────── */}
-      <TimerEntriesList entries={entries} setEntries={setEntries} projects={projects} />
+      <TimerEntriesList entries={entries} setEntries={setEntries} projects={projects} onOpenCalendar={() => setCalendarOpen(true)} />
+      {calendarOpen && (
+        <CalendarPage
+          user={user}
+          entries={entries}
+          setEntries={setEntries}
+          projects={projects}
+          onClose={closeCalendar}
+        />
+      )}
     </div>
   );
 };
