@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X, Calendar, CalendarDays, Undo2 } from 'lucide-react';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 const localDateKey = (value) => {
   const date = new Date(value);
@@ -26,7 +27,7 @@ const formatShortDate = (val) => {
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatDisplayDate(d, { month: 'short', day: 'numeric' });
 };
 
 const getDateRange = (range, now = new Date()) => {

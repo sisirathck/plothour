@@ -4,6 +4,7 @@ import {
   Check,
   Clock3,
   Copy,
+  ChevronDown,
   Download,
   Eye,
   EyeOff,
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Sun,
   User,
+  UserMinus,
   UserPlus,
   Users,
   Volume2,
@@ -27,6 +29,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { formatDisplayDate } from '../../utils/dateFormat';
 import './Settings.css';
 
 const getUserKey = (user, suffix) =>
@@ -54,6 +57,267 @@ const downloadFile = (content, type, filename) => {
 const csvCell = (value) => {
   const text = String(value ?? '');
   return `"${text.replaceAll('"', '""')}"`;
+};
+
+const DATE_FORMAT_GROUPS = [
+  {
+    label: 'System',
+    options: [{ value: 'system', label: 'System default', sample: '24 October 2026' }],
+  },
+  {
+    label: 'Day first',
+    options: [
+      { value: 'dmy-slash', label: 'DD/MM/YYYY', sample: '24/10/2026' },
+      { value: 'dmy-slash-short', label: 'DD/MM/YY', sample: '24/10/26' },
+      { value: 'dmy-dash', label: 'DD-MM-YYYY', sample: '24-10-2026' },
+      { value: 'dmy-dash-short', label: 'DD-MM-YY', sample: '24-10-26' },
+      { value: 'dmy-dot', label: 'DD.MM.YYYY', sample: '24.10.2026' },
+      { value: 'dmy-dot-short', label: 'DD.MM.YY', sample: '24.10.26' },
+    ],
+  },
+  {
+    label: 'Month first',
+    options: [
+      { value: 'mdy-slash', label: 'MM/DD/YYYY', sample: '10/24/2026' },
+      { value: 'mdy-slash-short', label: 'MM/DD/YY', sample: '10/24/26' },
+      { value: 'mdy-dash', label: 'MM-DD-YYYY', sample: '10-24-2026' },
+      { value: 'mdy-dot', label: 'MM.DD.YYYY', sample: '10.24.2026' },
+    ],
+  },
+  {
+    label: 'Year first',
+    options: [{ value: 'year-month-day', label: 'YYYY-MM-DD', sample: '2026-10-24' }],
+  },
+  {
+    label: 'Written',
+    options: [
+      { value: 'day-month-year', label: 'Day before month', sample: '24 October 2026' },
+      { value: 'month-day-year', label: 'Month before day', sample: 'October 24, 2026' },
+    ],
+  },
+];
+
+const setSettingsCardMenuOpen = (pickerRef, isOpen) => {
+  pickerRef.current?.closest('.settings-bento-card')?.classList.toggle('settings-card-menu-open', isOpen);
+};
+
+const DateFormatPicker = ({ value, onChange }) => {
+  const pickerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const optionRefs = useRef([]);
+  const options = useMemo(() => DATE_FORMAT_GROUPS.flatMap((group) => group.options), []);
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(selectedIndex);
+  const selected = options[selectedIndex];
+
+  useEffect(() => {
+    if (!open) {
+      setSettingsCardMenuOpen(pickerRef, false);
+      return undefined;
+    }
+    setSettingsCardMenuOpen(pickerRef, true);
+    const handlePointerDown = (event) => {
+      if (!pickerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    optionRefs.current[activeIndex]?.focus();
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      setSettingsCardMenuOpen(pickerRef, false);
+    };
+  }, [open, activeIndex]);
+
+  const moveActive = (index) => {
+    const next = (index + options.length) % options.length;
+    setActiveIndex(next);
+    optionRefs.current[next]?.focus();
+  };
+
+  return <div className="settings-date-format-picker" ref={pickerRef}>
+    <button
+      ref={triggerRef}
+      type="button"
+      className={`settings-date-format-trigger${open ? ' is-open' : ''}`}
+      aria-label={`Date format: ${selected.label}, ${selected.sample}`}
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      aria-controls="settings-date-format-options"
+      onClick={() => { setActiveIndex(selectedIndex); setOpen((current) => !current); }}
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          setActiveIndex(selectedIndex);
+          setOpen(true);
+        }
+      }}
+    >
+      <span className="settings-date-format-trigger-copy"><strong>{selected.label}</strong><small>{selected.sample}</small></span>
+      <ChevronDown size={16} aria-hidden="true" />
+    </button>
+    {open && <div className="settings-date-format-menu" id="settings-date-format-options" role="listbox" aria-label="Date format options">
+      {DATE_FORMAT_GROUPS.map((group) => <div className="settings-date-format-group" role="group" aria-label={group.label} key={group.label}>
+        <span className="settings-date-format-group-label">{group.label}</span>
+        {group.options.map((option) => {
+          const index = options.findIndex((item) => item.value === option.value);
+          const isSelected = value === option.value;
+          return <button
+            key={option.value}
+            ref={(element) => { optionRefs.current[index] = element; }}
+            type="button"
+            role="option"
+            aria-selected={isSelected}
+            className={`settings-date-format-option${isSelected ? ' is-selected' : ''}`}
+            onClick={() => { onChange(option.value); setOpen(false); triggerRef.current?.focus(); }}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown') { event.preventDefault(); moveActive(index + 1); }
+              if (event.key === 'ArrowUp') { event.preventDefault(); moveActive(index - 1); }
+              if (event.key === 'Home') { event.preventDefault(); moveActive(0); }
+              if (event.key === 'End') { event.preventDefault(); moveActive(options.length - 1); }
+            }}
+          >
+            <span className="settings-date-format-option-copy"><strong>{option.label}</strong><small>{option.sample}</small></span>
+            {isSelected && <Check size={17} aria-hidden="true" />}
+          </button>;
+        })}
+      </div>)}
+    </div>}
+  </div>;
+};
+
+const formatTimezoneOffset = (timezone) => {
+  try {
+    return new Intl.DateTimeFormat('en', { timeZone: timezone, timeZoneName: 'shortOffset' })
+      .formatToParts(new Date()).find((part) => part.type === 'timeZoneName')?.value || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+};
+
+const TimezonePicker = ({ value, timezones, onChange }) => {
+  const pickerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const searchRef = useRef(null);
+  const optionRefs = useRef([]);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filteredTimezones = useMemo(() => timezones.filter((timezone) => (
+    timezone.replaceAll('_', ' ').replaceAll('/', ' ').toLocaleLowerCase().includes(normalizedQuery)
+  )), [timezones, normalizedQuery]);
+  const groups = useMemo(() => {
+    const grouped = new Map();
+    filteredTimezones.forEach((timezone) => {
+      const region = timezone.includes('/') ? timezone.split('/')[0] : 'Other';
+      if (!grouped.has(region)) grouped.set(region, []);
+      grouped.get(region).push(timezone);
+    });
+    return [...grouped.entries()];
+  }, [filteredTimezones]);
+  const selectedLabel = value?.replaceAll('_', ' ').replaceAll('/', ' · ') || 'UTC';
+
+  useEffect(() => {
+    if (!open) {
+      setSettingsCardMenuOpen(pickerRef, false);
+      return undefined;
+    }
+    setSettingsCardMenuOpen(pickerRef, true);
+    const handlePointerDown = (event) => {
+      if (!pickerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    searchRef.current?.focus();
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      setSettingsCardMenuOpen(pickerRef, false);
+    };
+  }, [open]);
+
+  const focusOption = (index) => {
+    const next = (index + filteredTimezones.length) % filteredTimezones.length;
+    optionRefs.current[next]?.focus();
+  };
+  const chooseTimezone = (timezone) => {
+    onChange(timezone);
+    setQuery('');
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  return <div className="settings-timezone-picker" ref={pickerRef}>
+    <button
+      ref={triggerRef}
+      type="button"
+      className={`settings-date-format-trigger settings-timezone-trigger${open ? ' is-open' : ''}`}
+      aria-label={`Time zone: ${selectedLabel}, ${formatTimezoneOffset(value)}`}
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      aria-controls="settings-timezone-options"
+      onClick={() => setOpen((current) => !current)}
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          setOpen(true);
+        }
+      }}
+    >
+              <span className="settings-date-format-trigger-copy"><strong>{selectedLabel}</strong><small>{formatTimezoneOffset(value)} · current offset</small></span>
+      <ChevronDown size={16} aria-hidden="true" />
+    </button>
+    {open && <div className="settings-date-format-menu settings-timezone-menu">
+      <label className="settings-timezone-search-wrap">
+        <Search size={15} aria-hidden="true" />
+        <input ref={searchRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search city, region, or zone" aria-label="Search time zones" />
+        {query && <button type="button" aria-label="Clear time zone search" onClick={() => { setQuery(''); searchRef.current?.focus(); }}><X size={14} /></button>}
+      </label>
+      <div className="settings-timezone-options" id="settings-timezone-options" role="listbox" aria-label="Time zone options" aria-activedescendant={undefined}>
+        {groups.map(([region, zones]) => <div className="settings-date-format-group" key={region}>
+          <span className="settings-date-format-group-label">{region}</span>
+          {zones.map((timezone) => {
+            const index = filteredTimezones.indexOf(timezone);
+            const isSelected = value === timezone;
+            const label = timezone.replaceAll('_', ' ').replaceAll('/', ' · ');
+            return <button
+              key={timezone}
+              id={`settings-timezone-option-${index}`}
+              ref={(element) => { optionRefs.current[index] = element; }}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              className={`settings-date-format-option${isSelected ? ' is-selected' : ''}`}
+              onClick={() => chooseTimezone(timezone)}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowDown') { event.preventDefault(); focusOption(index + 1); }
+                if (event.key === 'ArrowUp') { event.preventDefault(); index === 0 ? searchRef.current?.focus() : focusOption(index - 1); }
+                if (event.key === 'Home') { event.preventDefault(); focusOption(0); }
+                if (event.key === 'End') { event.preventDefault(); focusOption(filteredTimezones.length - 1); }
+              }}
+            >
+              <span className="settings-date-format-option-copy"><strong>{label}</strong></span>
+              {isSelected && <Check size={17} aria-hidden="true" />}
+            </button>;
+          })}
+        </div>)}
+        {!filteredTimezones.length && <p className="settings-timezone-empty">No time zones match “{query}”.</p>}
+      </div>
+    </div>}
+  </div>;
 };
 
 // 528Hz Harmonic Sine Bell Synthesizer (Zen Bell) with smooth 1.3s exponential decay
@@ -161,6 +425,7 @@ export const SettingsPage = ({ onBack, user }) => {
       dailyGoalHours: 4,
       weekStart: weekDays[Number.isInteger(user?.week_starts_on) ? user.week_starts_on : 1] || 'monday',
       timezone: systemTimezone,
+      dateFormat: 'system',
       defaultTimerMode: '50m',
       soundEnabled: true,
       ...saved,
@@ -400,6 +665,36 @@ export const SettingsPage = ({ onBack, user }) => {
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [peerCodeInput, setPeerCodeInput] = useState('');
   const [friendNotice, setFriendNotice] = useState(null);
+  const [friendPendingRemoval, setFriendPendingRemoval] = useState(null);
+  const friendRemoveCancelRef = useRef(null);
+
+  useEffect(() => {
+    if (!friendPendingRemoval) return undefined;
+    const previousFocus = document.activeElement;
+    friendRemoveCancelRef.current?.focus();
+    const handleDialogKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setFriendPendingRemoval(null);
+      } else if (event.key === 'Tab') {
+        const buttons = Array.from(document.querySelectorAll('.settings-confirm-dialog button:not(:disabled)'));
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [friendPendingRemoval]);
 
   const [friends, setFriends] = useState(() => {
     const saved = readJson(friendsKey, []);
@@ -550,6 +845,12 @@ export const SettingsPage = ({ onBack, user }) => {
     } catch {}
   };
 
+  const confirmRemoveFriend = () => {
+    if (!friendPendingRemoval) return;
+    handleRemoveFriend(friendPendingRemoval.id);
+    setFriendPendingRemoval(null);
+  };
+
   // Timer mode definitions
   const timerModes = [
     {
@@ -646,9 +947,15 @@ export const SettingsPage = ({ onBack, user }) => {
                 <strong>Time zone</strong>
                 <span>Used for session dates, daily totals, and calendar views. Defaults to your computer’s time zone.</span>
               </div>
-              <select className="settings-text-input settings-select-input" value={preferences.timezone} onChange={(e) => updatePreference('timezone', e.target.value)} aria-label="Time zone">
-                {timezones.map((timezone) => <option key={timezone} value={timezone}>{timezone.replaceAll('_', ' ')}</option>)}
-              </select>
+              <TimezonePicker value={preferences.timezone} timezones={timezones} onChange={(value) => updatePreference('timezone', value)} />
+            </div>
+
+            <div className="settings-row">
+              <div className="settings-row-info">
+                <strong>Date format</strong>
+                <span>Choose how dates appear across your study workspace.</span>
+              </div>
+              <DateFormatPicker value={preferences.dateFormat} onChange={(value) => updatePreference('dateFormat', value)} />
             </div>
 
             {/* Display Name Input */}
@@ -1193,7 +1500,7 @@ export const SettingsPage = ({ onBack, user }) => {
                         <button
                           type="button"
                           className="settings-partner-remove-btn"
-                          onClick={() => handleRemoveFriend(friend.id)}
+                          onClick={() => setFriendPendingRemoval(friend)}
                           title={`Disconnect ${friend.name}`}
                           aria-label={`Disconnect ${friend.name}`}
                         >
@@ -1208,12 +1515,25 @@ export const SettingsPage = ({ onBack, user }) => {
           </section>
         </div>
       )}
+      {friendPendingRemoval && <div className="settings-confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setFriendPendingRemoval(null); }}>
+        <section className="settings-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="settings-disconnect-title" aria-describedby="settings-disconnect-description">
+          <div className="settings-confirm-icon"><UserMinus size={20} /></div>
+          <button type="button" className="settings-confirm-close" aria-label="Cancel disconnect" onClick={() => setFriendPendingRemoval(null)}><X size={17} /></button>
+          <span className="settings-confirm-eyebrow">STUDY PARTNER</span>
+          <h2 id="settings-disconnect-title">Disconnect {friendPendingRemoval.name}?</h2>
+          <p id="settings-disconnect-description">This will remove {friendPendingRemoval.name} from your connected study partners. You can connect again later with an invite code.</p>
+          <div className="settings-confirm-actions">
+            <button type="button" className="settings-secondary-btn" ref={friendRemoveCancelRef} onClick={() => setFriendPendingRemoval(null)}>Keep connected</button>
+            <button type="button" className="settings-danger-btn" onClick={confirmRemoveFriend}><UserMinus size={15} /> Disconnect</button>
+          </div>
+        </section>
+      </div>}
       {exportPreview && <div className="settings-export-preview-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setExportPreview(''); }}>
         <section className="settings-export-preview" role="dialog" aria-modal="true" aria-labelledby="settings-export-preview-title">
           <div className="settings-export-preview-heading"><div><span>YOUR DATA</span><h2 id="settings-export-preview-title">Review export</h2></div><button type="button" aria-label="Close export preview" onClick={() => setExportPreview('')}><X size={18} /></button></div>
           <p>This file contains {readJson(entriesKey, []).length} study sessions. Session notes and account connection details are not included.</p>
           <div className="settings-export-columns"><strong>{exportPreview === 'csv' ? 'CSV columns' : 'JSON fields'}</strong><span>Session ID · Date · Day · Project · Duration · Timer mode · Completed</span></div>
-          <div className="settings-export-sample"><strong>Preview</strong><code>{readJson(entriesKey, []).slice(0, 3).map((entry) => `${new Date(entry.startedAt).toLocaleDateString()} · ${entry.projectName || entry.project || 'General Study'} · ${Math.round((Number(entry.durationSeconds) || 0) / 60)} min`).join('\n') || 'No sessions to export yet'}</code></div>
+          <div className="settings-export-sample"><strong>Preview</strong><code>{readJson(entriesKey, []).slice(0, 3).map((entry) => `${formatDisplayDate(new Date(entry.startedAt), { month: 'short', day: 'numeric', year: 'numeric' })} · ${entry.projectName || entry.project || 'General Study'} · ${Math.round((Number(entry.durationSeconds) || 0) / 60)} min`).join('\n') || 'No sessions to export yet'}</code></div>
           <div className="settings-export-preview-actions"><button type="button" className="settings-secondary-btn" onClick={() => setExportPreview('')}>Cancel</button><button type="button" className="settings-primary-btn" onClick={() => { const type = exportPreview; setExportPreview(''); if (type === 'csv') exportCSV(); else exportJSON(); }}>{exportPreview === 'csv' ? <FileSpreadsheet size={15} /> : <FileJson size={15} />} Download {exportPreview.toUpperCase()}</button></div>
         </section>
       </div>}
@@ -1221,7 +1541,7 @@ export const SettingsPage = ({ onBack, user }) => {
         <section className="settings-export-preview" role="dialog" aria-modal="true" aria-labelledby="settings-import-preview-title">
           <div className="settings-export-preview-heading"><div><span>MERGE STUDY LOGS</span><h2 id="settings-import-preview-title">Review import</h2></div><button type="button" aria-label="Close import preview" onClick={() => setImportPreview(null)}><X size={18} /></button></div>
           <p>{importPreview.length} valid sessions are ready to merge into your history. Existing logs are kept; duplicate session IDs are skipped.</p>
-          <div className="settings-export-sample"><strong>Preview · dates without times are placed at noon</strong><code>{importPreview.slice(0, 5).map((entry) => `${new Date(entry.startedAt).toLocaleDateString()} · ${entry.projectName} · ${Math.round(entry.durationSeconds / 60)} min`).join('\n')}</code></div>
+          <div className="settings-export-sample"><strong>Preview · dates without times are placed at noon</strong><code>{importPreview.slice(0, 5).map((entry) => `${formatDisplayDate(new Date(entry.startedAt), { month: 'short', day: 'numeric', year: 'numeric' })} · ${entry.projectName} · ${Math.round(entry.durationSeconds / 60)} min`).join('\n')}</code></div>
           <div className="settings-export-preview-actions"><button type="button" className="settings-secondary-btn" onClick={() => setImportPreview(null)}>Cancel</button><button type="button" className="settings-primary-btn" onClick={confirmImport}><Check size={15} /> Merge sessions</button></div>
         </section>
       </div>}

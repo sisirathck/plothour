@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users, Share2, ChevronUp, Info } from 'lucide-react';
 import './Compare.css';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 const RANGE_OPTIONS = [
   { id: 'today', label: 'Today' }, { id: '7days', label: 'Last 7 days' }, { id: 'week', label: 'This week' },
@@ -34,7 +35,8 @@ const duration = (seconds, empty = '0m') => {
   const mins = Math.floor(seconds / 60); const hours = Math.floor(mins / 60); const rest = mins % 60;
   return hours ? `${hours}h ${rest}m` : `${mins}m`;
 };
-const prettyDate = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const prettyDate = (value) => value ? formatDisplayDate(new Date(`${value}T12:00:00`), { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const compactDate = (value) => value ? formatDisplayDate(new Date(`${value}T12:00:00`), { month: '2-digit', day: '2-digit' }) : '—';
 const readJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } };
 
 function getPeriod(range, from, to, weekStart) {
@@ -152,11 +154,11 @@ function DailyCharts({ profiles, dates, byProfile }) {
           const markers = [...new Set([...tickIndices, dates.length - 1])];
           return <g key={p.id} className="compare-cumulative-series"><path d={area} fill={`url(#compare-area-${safeId(p.id)})`} /><path d={line} fill="none" stroke={profileColor(p.id)} strokeWidth="2.75" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />{markers.map((i) => <circle key={i} className="compare-line-point" cx={pts[i][0]} cy={pts[i][1]} r="3" fill="var(--compare-card)" stroke={profileColor(p.id)} strokeWidth="2" />)}</g>;
         })}
-        {tickIndices.map((i) => <text className="compare-axis-label" key={i} x={point(i, 0, cumulativeMax)[0]} y={height - 8} textAnchor="middle">{dates[i]?.slice(5)}</text>)}
+        {tickIndices.map((i) => <text className="compare-axis-label" key={i} x={point(i, 0, cumulativeMax)[0]} y={height - 8} textAnchor="middle">{compactDate(dates[i])}</text>)}
       </svg>
     </article>
     <article className="compare-section-card compare-chart-card"><div className="compare-section-heading"><div><span className="compare-eyebrow">STUDY TIME BY PERIOD</span><h2>Daily study time</h2><p>Daily totals in the selected period{dates.length === 90 ? ' · latest 90 days' : ''}</p></div><Legend profiles={profiles} /></div>
-      <div className="compare-grouped-chart" style={{ '--chart-count': dates.length, '--profile-count': profiles.length }}>{dates.map((day, i) => <div className="compare-group-column" key={day} title={prettyDate(day)}><div className="compare-group-bars">{profiles.map((p) => { const v = byProfile[p.id]?.[day] || 0; return <i key={p.id} title={`${p.name} · ${prettyDate(day)}: ${duration(v, '0m')}`} aria-label={`${p.name}, ${prettyDate(day)}: ${duration(v, '0m')}`} tabIndex={v ? 0 : -1} style={{ height: `${v / max * 100}%`, '--profile-color': profileColor(p.id) }} />; })}</div><span>{tickIndices.includes(i) ? day.slice(5) : ''}</span></div>)}</div>
+      <div className="compare-grouped-chart" style={{ '--chart-count': dates.length, '--profile-count': profiles.length }}>{dates.map((day, i) => <div className="compare-group-column" key={day} title={prettyDate(day)}><div className="compare-group-bars">{profiles.map((p) => { const v = byProfile[p.id]?.[day] || 0; return <i key={p.id} title={`${p.name} · ${prettyDate(day)}: ${duration(v, '0m')}`} aria-label={`${p.name}, ${prettyDate(day)}: ${duration(v, '0m')}`} tabIndex={v ? 0 : -1} style={{ height: `${v / max * 100}%`, '--profile-color': profileColor(p.id) }} />; })}</div><span>{tickIndices.includes(i) ? compactDate(day) : ''}</span></div>)}</div>
     </article>
   </div>;
 }
@@ -232,7 +234,7 @@ export const ComparePage = ({ user, onNavigate }) => {
     return () => { cancelled = true; };
   }, [profileId, demoMode, selectedIds, period.start.getTime(), period.end.getTime(), previous.start.getTime(), previous.end.getTime(), range, weekStartsOn, recentHeadToHeadStart.getTime(), recentHeadToHeadEnd.getTime()]);
   const ordered = useMemo(() => [...profiles].sort((a, b) => b.current.seconds - a.current.seconds || a.name.localeCompare(b.name)), [profiles]);
-  const periodLabel = RANGE_OPTIONS.find((item) => item.id === range)?.label || 'This week'; const periodDescription = range === 'all' ? `All time through ${dateKey(period.end)}` : `${dateKey(period.start)} → ${dateKey(period.end)}`;
+  const periodLabel = RANGE_OPTIONS.find((item) => item.id === range)?.label || 'This week'; const periodDescription = range === 'all' ? `All time through ${formatDisplayDate(period.end, { day: 'numeric', month: 'short', year: 'numeric' })}` : `${formatDisplayDate(period.start, { day: 'numeric', month: 'short', year: 'numeric' })} → ${formatDisplayDate(period.end, { day: 'numeric', month: 'short', year: 'numeric' })}`;
   const series = useMemo(() => daySeries(profiles, period.start, period.end), [profiles, period.start.getTime(), period.end.getTime()]);
   const weeks = useMemo(() => weeklySeries(profiles, series.dates, weekStartsOn), [profiles, series.dates.join(','), weekStartsOn]);
   const maxWeek = Math.max(1, ...weeks.map((w) => Object.values(w.totals).reduce((a, b) => a + b, 0)));

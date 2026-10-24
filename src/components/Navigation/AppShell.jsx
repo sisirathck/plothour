@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { Bell, LogOut, Settings, Square, Timer, X } from 'lucide-react';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
 import { ThemeToggle } from '../Header/ThemeToggle';
@@ -8,6 +8,7 @@ import { ComparePage } from '../../modules/compare/ComparePage';
 import { ManagePage } from '../../modules/manage/ManagePage';
 import { SettingsPage } from '../../modules/settings/SettingsPage';
 import { CalendarPage } from '../../modules/calendar/CalendarPage';
+import { formatDisplayDate } from '../../utils/dateFormat';
 import './AppShell.css';
 
 const navItems = [
@@ -51,15 +52,23 @@ export const AppShell = ({ user, onLogout }) => {
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const remindersKey = user?.id ? `studyduel_user_${user.id}_reminders` : 'studyduel_demo_reminders';
   const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
-  const [preferences, setPreferences] = useState(() => readLocalValue(preferencesKey, {}));
+  const [preferences, setPreferences] = useState(() => {
+    const initialPreferences = readLocalValue(preferencesKey, {});
+    if (typeof document !== 'undefined') document.documentElement.dataset.dateFormat = initialPreferences.dateFormat || 'system';
+    return initialPreferences;
+  });
   const [reminderNotice, setReminderNotice] = useState(null);
   const [activeTimer, setActiveTimer] = useState(() => readLocalValue(activeTimerKey));
   const [timerNow, setTimerNow] = useState(Date.now());
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const initialPreferences = readLocalValue(preferencesKey, {});
+    document.documentElement.dataset.dateFormat = initialPreferences.dateFormat || 'system';
     const syncPreferences = (event) => {
       if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
-      setPreferences(readLocalValue(preferencesKey, {}));
+      const nextPreferences = readLocalValue(preferencesKey, {});
+      document.documentElement.dataset.dateFormat = nextPreferences.dateFormat || 'system';
+      setPreferences(nextPreferences);
     };
     window.addEventListener('studyduel:preferences-storage', syncPreferences);
     window.addEventListener('storage', syncPreferences);
@@ -188,11 +197,7 @@ export const AppShell = ({ user, onLogout }) => {
       minute: '2-digit',
       hour12: true,
     }).format(now);
-    const date = new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(now);
+    const date = formatDisplayDate(now, { day: 'numeric', month: 'long', year: 'numeric' });
     return { label: `${time}, ${date}`, iso: now.toISOString() };
   })();
 

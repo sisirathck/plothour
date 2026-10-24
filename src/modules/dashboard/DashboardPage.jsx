@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { CalendarPage } from '../calendar/CalendarPage';
+import { formatDisplayDate } from '../../utils/dateFormat';
 import './Dashboard.css';
 
 // Dedicated dashboard artwork assets (8 pictures each for light and dark modes)
@@ -882,7 +883,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     sessionsPerDay: compareMetric(averageSessionsPerDay, previousAverageSessionsPerDay, (value) => `${value.toFixed(1)} / day`),
   };
   const rangeLabel = dateRange === 'custom'
-    ? `${dateWindow.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} – ${dateWindow.end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+    ? `${formatDisplayDate(dateWindow.start, { month: 'short', day: 'numeric', year: 'numeric' })} – ${formatDisplayDate(dateWindow.end, { month: 'short', day: 'numeric', year: 'numeric' })}`
     : dashboardRangeOptions.find((item) => item.id === dateRange)?.label || 'This week';
   const rangeGoalHours = useMemo(() => projects.reduce((total, project) => {
     if (project.archived) return total;
@@ -1156,7 +1157,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         date.setDate(date.getDate() + offset);
         const key = dateKey(date);
         const val = map.get(key) || 0;
-        days.push({ day: date.toLocaleDateString(undefined, { weekday: 'short' }), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), val, label: val > 0 ? fmtDur(val) : '', active: date.toDateString() === new Date().toDateString(), key });
+        days.push({ day: date.toLocaleDateString(undefined, { weekday: 'short' }), dateLabel: formatDisplayDate(date, { month: 'short', day: 'numeric' }), val, label: val > 0 ? fmtDur(val) : '', active: date.toDateString() === new Date().toDateString(), key });
       }
     } else if (useQuarters || useYears) {
       const cursor = new Date(dateWindow.start.getFullYear(), useYears ? 0 : Math.floor(dateWindow.start.getMonth() / 3) * 3, 1);
@@ -1195,7 +1196,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           date.setDate(date.getDate() + offset);
           val += map.get(dateKey(date)) || 0;
         }
-        days.push({ day: weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), dateLabel: `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}–${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`, val, label: val > 0 ? fmtDur(val) : '', active: weekStart <= new Date() && weekEnd >= new Date(), key: dateKey(weekStart) });
+        days.push({ day: formatDisplayDate(weekStart, { month: 'short', day: 'numeric' }), dateLabel: `${formatDisplayDate(weekStart, { month: 'short', day: 'numeric' })}–${formatDisplayDate(weekEnd, { month: 'short', day: 'numeric' })}`, val, label: val > 0 ? fmtDur(val) : '', active: weekStart <= new Date() && weekEnd >= new Date(), key: dateKey(weekStart) });
         cursor.setDate(cursor.getDate() + 7);
       }
     }
@@ -1266,7 +1267,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         date.setDate(date.getDate() + index);
         const key = dateKey(date);
         const total = totals.get(key) || { seconds: 0, sessions: 0 };
-        days.push({ key, dayOfMonth: date.getDate(), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), seconds: total.seconds, sessions: total.sessions });
+        days.push({ key, dayOfMonth: date.getDate(), dateLabel: formatDisplayDate(date, { month: 'short', day: 'numeric', year: 'numeric' }), seconds: total.seconds, sessions: total.sessions });
       }
       }
     } else {
@@ -1283,7 +1284,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           seconds += total.seconds;
           sessions += total.sessions;
         }
-        days.push({ key: dateKey(weekStart), dayOfMonth: weekStart.getDate(), dateLabel: `Week of ${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`, seconds, sessions });
+        days.push({ key: dateKey(weekStart), dayOfMonth: weekStart.getDate(), dateLabel: `Week of ${formatDisplayDate(weekStart, { month: 'short', day: 'numeric', year: 'numeric' })}`, seconds, sessions });
         cursor.setDate(cursor.getDate() + 7);
       }
     }
@@ -1339,7 +1340,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     daysList.forEach((d) => {
       if (d.seconds > peakDayOutput) {
         peakDayOutput = d.seconds;
-        peakDayLabel = d.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        peakDayLabel = formatDisplayDate(d.date, { month: 'short', day: 'numeric' });
         peakDaySessions = d.sessions;
       }
     });
@@ -1353,7 +1354,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       key: dateKey(d.date),
       dayLabel: d.date.toLocaleDateString(undefined, { weekday: 'narrow' }),
       dateNum: d.date.getDate(),
-      fullDate: d.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      fullDate: formatDisplayDate(d.date, { month: 'short', day: 'numeric' }),
       seconds: d.seconds,
       isGoalMet: d.seconds >= targetSeconds,
       isActive: d.seconds > 0,
@@ -1414,14 +1415,14 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       const total = totals.get(key) || { seconds: 0, sessions: 0 };
       const seconds = total.seconds;
       const quarter = Math.floor(start.getMonth() / 3) + 1;
-      const periodLabel = useYears ? `${start.getFullYear()}` : useQuarters ? `Q${quarter} ${start.getFullYear()}` : start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const periodLabel = useYears ? `${start.getFullYear()}` : useQuarters ? `Q${quarter} ${start.getFullYear()}` : formatDisplayDate(start, { month: 'short', day: 'numeric' });
       weeks.push({
         key,
         seconds,
         sessions: total.sessions,
         averageSeconds: seconds,
         startLabel: periodLabel,
-        axisLabel: useYears ? `${start.getFullYear()}` : useQuarters ? `Q${quarter} '${String(start.getFullYear()).slice(-2)}` : start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        axisLabel: useYears ? `${start.getFullYear()}` : useQuarters ? `Q${quarter} '${String(start.getFullYear()).slice(-2)}` : formatDisplayDate(start, { month: 'short', day: 'numeric' }),
         weekStartLabel: `${weekDayKeys[getWeekStartDayIndex(weekStart)][0].toUpperCase()}${weekDayKeys[getWeekStartDayIndex(weekStart)].slice(1)}`,
       });
       if (useYears) cursor.setFullYear(cursor.getFullYear() + 1);
@@ -1637,7 +1638,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         if (val > 0) activeDaysCount++;
         const monthLabel = day.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
         if (!monthNames.includes(monthLabel)) monthNames.push(monthLabel);
-        week.push({ key, dateStr: day.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), val, isToday: day.toDateString() === new Date().toDateString(), isFuture: day > new Date() });
+        week.push({ key, dateStr: formatDisplayDate(day, { month: 'short', day: 'numeric', year: 'numeric' }), val, isToday: day.toDateString() === new Date().toDateString(), isFuture: day > new Date() });
       }
       weeks.push(week);
       cursor.setDate(cursor.getDate() + 7);
@@ -2320,7 +2321,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                         <div className="db-project-plan-meta">
                           <span>{plan.estimateHours > 0 ? `${plan.progress}% complete · ${fmtDur(plan.remainingSeconds)} left` : 'No total estimate set'}</span>
                           <span>{plan.milestones.length ? `${plan.completedMilestones}/${plan.milestones.length} milestones` : 'No milestones yet'}</span>
-                          <span>{plan.deadline ? `Due ${plan.deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${plan.forecastDate ? ` · pace ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}` : plan.estimateHours > 0 && plan.remainingSeconds === 0 ? 'Time estimate reached' : plan.forecastDate ? `At recent pace: ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Log sessions to estimate finish'}</span>
+                          <span>{plan.deadline ? `Due ${formatDisplayDate(plan.deadline, { month: 'short', day: 'numeric' })}${plan.forecastDate ? ` · pace ${formatDisplayDate(plan.forecastDate, { month: 'short', day: 'numeric' })}` : ''}` : plan.estimateHours > 0 && plan.remainingSeconds === 0 ? 'Time estimate reached' : plan.forecastDate ? `At recent pace: ${formatDisplayDate(plan.forecastDate, { month: 'short', day: 'numeric' })}` : 'Log sessions to estimate finish'}</span>
                         </div>
                       </div>
                     </article>

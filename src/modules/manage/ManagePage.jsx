@@ -18,6 +18,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import './Manage.css';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 const initialProjects = [
   {
@@ -518,7 +519,7 @@ export const ManagePage = ({ user }) => {
                         <div><Clock3 size={15} /><span>Total studied</span><strong>{formatDuration(stats.seconds)}</strong></div>
                         <div><FolderKanban size={15} /><span>Sessions</span><strong>{stats.sessions}</strong></div>
                         <div><CalendarDays size={15} /><span>Active days</span><strong>{stats.activeDays}</strong></div>
-                        <div><Target size={15} /><span>Last studied</span><strong>{stats.lastStudied ? stats.lastStudied.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No sessions'}</strong></div>
+                        <div><Target size={15} /><span>Last studied</span><strong>{stats.lastStudied ? formatDisplayDate(stats.lastStudied, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No sessions'}</strong></div>
                       </div>
                       <div className="manage-archive-breakdown">
                         <div className="manage-breakdown-heading"><span>Subproject</span><span>Sessions</span><span>Total time</span></div>

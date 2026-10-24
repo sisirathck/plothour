@@ -9,6 +9,7 @@ import {
 import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
 import { CalendarPage } from '../calendar/CalendarPage';
+import { formatDisplayDate } from '../../utils/dateFormat';
 import './Timer.css';
 
 /* ── Storage Keys ───────────────────────────── */
@@ -746,7 +747,7 @@ export const TimerPage = ({ user }) => {
                   })}
                 </time>
                 <span className="horology-wall-date">
-                  {now.toLocaleDateString(undefined, {
+                  {formatDisplayDate(now, {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',

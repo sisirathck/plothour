@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X } from 'lucide-react';
 import { TimerEntriesList } from '../timer/TimerEntriesList';
+import { formatDisplayDate } from '../../utils/dateFormat';
 import './CalendarPage.css';
 
 const readLocalValue = (key, fallback) => {
@@ -182,8 +183,8 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
                 className={`calendar-day-cell heat-${intensity}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}`}
                 onClick={() => { setSelectedDate(day); setJumpDate(key); }}
                 aria-pressed={selectedKey === key}
-                aria-label={`${day.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}: ${formatDuration(seconds)} study`}
-                title={`${day.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)}`}
+                aria-label={`${formatDisplayDate(day, { month: 'long', day: 'numeric', year: 'numeric' })}: ${formatDuration(seconds)} study`}
+                title={`${formatDisplayDate(day, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)}`}
               >
                 <span className="calendar-day-number">{day.getDate()}</span>
                 <span className="calendar-day-total">{formatDuration(seconds)}</span>
@@ -199,7 +200,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
         <div className="calendar-entries-heading">
           <div>
             <span className="calendar-eyebrow">DAY ENTRIES</span>
-            <h2>{selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+            <h2>{formatDisplayDate(selectedDate, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
           </div>
           <span className="calendar-selected-total">{formatDuration(totalsByDay[selectedKey] || 0)} studied</span>
         </div>
