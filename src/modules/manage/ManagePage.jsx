@@ -183,7 +183,9 @@ export const ManagePage = ({ user }) => {
 
   const [projects, setProjects] = useState(() => {
     const saved = readJson(projectsKey, null);
-    return Array.isArray(saved) ? saved : initialProjects;
+    // Authenticated accounts start with an empty library. Keep sample projects
+    // only for the unauthenticated demo experience.
+    return Array.isArray(saved) ? saved : (user ? [] : initialProjects);
   });
   const [entries, setEntries] = useState(() => readJson(entriesKey, []));
   const [newProject, setNewProject] = useState('');
@@ -397,8 +399,8 @@ export const ManagePage = ({ user }) => {
         {!visibleProjects.length ? (
           <div className="manage-empty-state">
             <div className="manage-empty-icon">{view === 'active' ? <Target size={20} /> : <Archive size={20} />}</div>
-            <strong>{search ? 'No matching projects' : view === 'active' ? 'A clear space to begin' : 'Nothing archived yet'}</strong>
-            <p>{search ? 'Try another project name.' : view === 'active' ? 'Create a project above, then add subprojects and set goals.' : 'When a project is complete, archive it to keep its study history.'}</p>
+            <strong>{search ? 'No matching projects' : view === 'active' ? 'Create your first study project' : 'Nothing archived yet'}</strong>
+            <p>{search ? 'Try another project name.' : view === 'active' ? 'Add a project or study subject to start tracking your focus time.' : 'When a project is complete, archive it to keep its study history.'}</p>
           </div>
         ) : (
           <div className="manage-project-list">

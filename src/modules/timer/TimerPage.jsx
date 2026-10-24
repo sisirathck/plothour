@@ -121,17 +121,17 @@ export const TimerPage = ({ user }) => {
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : K_ENTRIES;
   const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
 
-  const [projects, setProjects] = useState(() => rj(projectsKey, DEFAULT_PROJECTS));
+  const [projects, setProjects] = useState(() => rj(projectsKey, user ? [] : DEFAULT_PROJECTS));
   const activeProjects = useMemo(() => projects.filter((project) => !project.archived), [projects]);
   const [activeTimer, setActiveTimer] = useState(() => rj(activeKey, null));
   const [entries, setEntries] = useState(() => rj(entriesKey, []));
   const [timerPreferences, setTimerPreferences] = useState(() => rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true }));
 
   const [selProj, setSelProj] = useState(
-    () => rj(activeKey, null)?.projectId || rj(projectsKey, DEFAULT_PROJECTS).find((project) => !project.archived)?.id || ''
+    () => rj(activeKey, null)?.projectId || rj(projectsKey, user ? [] : DEFAULT_PROJECTS).find((project) => !project.archived)?.id || ''
   );
   const [selSub, setSelSub] = useState(
-    () => rj(activeKey, null)?.subjectId || rj(projectsKey, DEFAULT_PROJECTS).find((project) => !project.archived)?.subjects?.[0]?.id || ''
+    () => rj(activeKey, null)?.subjectId || rj(projectsKey, user ? [] : DEFAULT_PROJECTS).find((project) => !project.archived)?.subjects?.[0]?.id || ''
   );
 
   const [comboSearch, setComboSearch] = useState('');
@@ -145,7 +145,7 @@ export const TimerPage = ({ user }) => {
   // Live clock tick
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 1000);
-    const sync = () => setProjects(rj(projectsKey, DEFAULT_PROJECTS));
+    const sync = () => setProjects(rj(projectsKey, user ? [] : DEFAULT_PROJECTS));
     window.addEventListener('storage', sync);
     return () => {
       clearInterval(tick);
