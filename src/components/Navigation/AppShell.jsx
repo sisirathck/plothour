@@ -8,6 +8,7 @@ import { ComparePage } from '../../modules/compare/ComparePage';
 import { ManagePage } from '../../modules/manage/ManagePage';
 import { SettingsPage } from '../../modules/settings/SettingsPage';
 import { CalendarPage } from '../../modules/calendar/CalendarPage';
+import { AdminPage } from '../../modules/admin/AdminPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import './AppShell.css';
 
@@ -20,7 +21,7 @@ const navItems = [
 
 const getRouteFromPath = () => {
   const clean = window.location.pathname.toLowerCase().replace(/^\/+/, '').split('/')[0];
-  if (['timer', 'dashboard', 'compare', 'manage', 'settings', 'calendar'].includes(clean)) {
+  if (['timer', 'dashboard', 'compare', 'manage', 'settings', 'calendar', 'admin'].includes(clean)) {
     return clean;
   }
   return 'timer';
@@ -43,6 +44,9 @@ const formatRunningTime = (seconds) => {
 
 export const AppShell = ({ user, onLogout }) => {
   const [currentRoute, setCurrentRoute] = useState(getRouteFromPath);
+  const visibleNavItems = user?.is_admin
+    ? [...navItems, { route: 'admin', path: '/admin', label: 'Admin' }]
+    : navItems;
   const activeTimerKey = user?.id
     ? `studyduel_user_${user.id}_active_timer`
     : 'studyduel_demo_active_timer';
@@ -230,7 +234,7 @@ export const AppShell = ({ user, onLogout }) => {
         {/* 4 Primary Navigation Tabs: /timer, /dashboard, /compare, /manage */}
         {!isSettings && (
           <div className="dashboard-tabs" role="tablist" aria-label="Application sections">
-            {navItems.map(({ route, label }) => {
+            {visibleNavItems.map(({ route, label }) => {
               const isActive = currentRoute === route;
               return (
                 <button
@@ -311,6 +315,7 @@ export const AppShell = ({ user, onLogout }) => {
           <SettingsPage user={user} onBack={() => navigateTo('timer')} />
         )}
         {currentRoute === 'calendar' && <CalendarPage user={user} />}
+        {currentRoute === 'admin' && <AdminPage user={user} />}
       </main>
     </div>
   );

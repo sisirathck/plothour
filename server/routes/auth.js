@@ -10,6 +10,7 @@ import {
   setSessionCookie,
   clearSessionCookie,
   verifyGoogleIdToken,
+  isAdminEmail,
 } from '../auth.js';
 
 export const authRouter = Router();
@@ -19,7 +20,7 @@ const verificationResendDelaySeconds = 60;
 const maximumVerificationEmailsPerHour = 3;
 const maximumVerificationAttempts = 5;
 
-function hashVerificationCode(email, code) {
+export function hashVerificationCode(email, code) {
   const secret = process.env.AUTH_SECRET || 'studyduel-development-fallback-secret-key-32b';
   return createHmac('sha256', secret).update(`${email}:${code}`).digest('hex');
 }
@@ -103,7 +104,7 @@ async function sendVerificationEmail(email, displayName, code) {
   throw new Error('Email verification is not configured on this server.');
 }
 
-async function sendPasswordResetEmail(email, displayName, code) {
+export async function sendPasswordResetEmail(email, displayName, code) {
   const from = process.env.EMAIL_FROM || `StudyDuel <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
   const safeName = escapeHtml(displayName || 'there');
   const subject = 'Your StudyDuel password reset code';
@@ -152,7 +153,7 @@ async function sendPasswordResetEmail(email, displayName, code) {
   throw new Error('Email verification is not configured on this server.');
 }
 
-function newVerificationCode() {
+export function newVerificationCode() {
   return randomInt(0, 1_000_000).toString().padStart(6, '0');
 }
 
@@ -211,6 +212,10 @@ authRouter.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
     }
     if (name.length > 80) return res.status(400).json({ error: 'Name must be 80 characters or fewer.' });
+    const signupSetting = await query('SELECT signups_enabled FROM app_admin_settings WHERE id = 1');
+    if (signupSetting.rows[0]?.signups_enabled === false) {
+      return res.status(403).json({ error: 'New account signups are temporarily paused. Please try again later.' });
+    }
     if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
       return res.status(503).json({ error: 'Secure account authentication is not configured on this server yet.' });
     }
@@ -340,7 +345,7 @@ authRouter.post('/verify-email', async (req, res) => {
     const user = created.rows[0];
     const token = createSessionToken(user);
     setSessionCookie(res, token);
-    return res.status(201).json({ user, token });
+    return res.status(201).json({ user: { ...user, is_admin: Boolean(isAdminEmail(user.email)) }, token });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'An account with this email address already exists. Please log in.' });
     console.error('[Auth Verify Email Error]:', err);
@@ -446,6 +451,7 @@ authRouter.post('/login', async (req, res) => {
       timezone: user.timezone,
       week_starts_on: user.week_starts_on,
       has_password: Boolean(user.password_hash),
+      is_admin: Boolean(user.email_verified && isAdminEmail(user.email)),
     };
 
     return res.json({ user: safeUser, token });
@@ -675,6 +681,7 @@ authRouter.post('/reset-password', async (req, res) => {
     const user = {
       ...updated.rows[0],
       has_password: true,
+      is_admin: Boolean(isAdminEmail(updated.rows[0].email)),
     };
     const token = createSessionToken(user);
     setSessionCookie(res, token);
@@ -812,7 +819,7 @@ authRouter.post('/google', async (req, res) => {
     const token = createSessionToken(user);
     setSessionCookie(res, token);
 
-    return res.json({ user });
+    return res.json({ user: { ...user, is_admin: Boolean(user.email_verified !== false && isAdminEmail(user.email)) } });
   } catch (err) {
     console.error('[Google Auth Error]:', err);
     return res.status(400).json({ error: err.message || 'Google authentication failed.' });
@@ -837,7 +844,7 @@ authRouter.get('/me', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, email, display_name, timezone, week_starts_on, created_at,
+      `SELECT id, email, display_name, timezone, week_starts_on, created_at, email_verified,
               (password_hash IS NOT NULL) AS has_password
        FROM users
        WHERE id = $1`,
@@ -854,6 +861,7 @@ authRouter.get('/me', async (req, res) => {
       user: {
         ...row,
         has_password: Boolean(row.has_password),
+        is_admin: Boolean(row.email_verified && isAdminEmail(row.email)),
       },
     });
   } catch (err) {
