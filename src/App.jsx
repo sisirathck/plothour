@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/Auth/LoginPage';
+import { connectWorkspaceSync } from './data/workspaceSync';
 import './App.css';
 
 // Lazy-load the heavy AppShell module (dashboard, timer, charts) so login loads instantly
@@ -19,6 +20,36 @@ function App() {
     );
   });
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [workspaceReadyForUser, setWorkspaceReadyForUser] = useState(null);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setWorkspaceReadyForUser(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let disconnect = null;
+    setWorkspaceReadyForUser(null);
+    connectWorkspaceSync(user.id)
+      .then((stopSync) => {
+        if (cancelled) {
+          stopSync();
+          return;
+        }
+        disconnect = stopSync;
+        setWorkspaceReadyForUser(user.id);
+      })
+      .catch((error) => {
+        console.error('[Workspace sync] Could not load saved account data:', error.message);
+        if (!cancelled) setWorkspaceReadyForUser(user.id);
+      });
+
+    return () => {
+      cancelled = true;
+      disconnect?.();
+    };
+  }, [user?.id]);
 
   // Sync demo mode in localStorage
   useEffect(() => {
@@ -75,6 +106,7 @@ function App() {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
     setUser(null);
+    setWorkspaceReadyForUser(null);
     setIsDemoMode(false);
     localStorage.removeItem('studyduel_demo_mode');
     window.history.pushState({}, '', '/');
@@ -82,7 +114,7 @@ function App() {
 
   // If user is directly loading an app route (/timer, /dashboard) while checking auth, show a refined themed spinner
   const isDirectAppRoute = validAppRoutes.some((route) => window.location.pathname.startsWith(route));
-  if (isCheckingAuth && (isDirectAppRoute || isDemoMode)) {
+  if ((isCheckingAuth && (isDirectAppRoute || isDemoMode)) || (user && workspaceReadyForUser !== user.id)) {
     return (
       <ThemeProvider>
         <div className="app-loading-screen" aria-label="Loading StudyDuel...">
@@ -115,6 +147,7 @@ function App() {
               window.history.pushState({}, '', '/timer');
             }}
             onLoginSuccess={(authedUser) => {
+              setWorkspaceReadyForUser(null);
               setUser(authedUser);
               window.history.pushState({}, '', '/timer');
             }}

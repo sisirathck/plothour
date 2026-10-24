@@ -1,0 +1,111 @@
+import { Router } from 'express';
+import { query } from '../db.js';
+import { authenticate } from '../middleware.js';
+
+export const workspaceRouter = Router();
+workspaceRouter.use(authenticate);
+
+const workspacePrefix = (userId) => `studyduel_user_${userId}_`;
+
+function validWorkspaceItems(items, userId) {
+  if (!items || typeof items !== 'object' || Array.isArray(items)) return false;
+  const entries = Object.entries(items);
+  if (entries.length > 1000) return false;
+  let totalBytes = 0;
+  return entries.every(([key, value]) => (
+    key.startsWith(workspacePrefix(userId)) &&
+    key.length <= 240 &&
+    typeof value === 'string' &&
+    Buffer.byteLength(value, 'utf8') <= 1_000_000 &&
+    ((totalBytes += Buffer.byteLength(value, 'utf8')) <= 8_000_000)
+  ));
+}
+
+workspaceRouter.get('/', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT data FROM user_workspace_state WHERE user_id = $1`,
+      [req.userId]
+    );
+    return res.json({ initialized: result.rows.length > 0, items: result.rows[0]?.data || {} });
+  } catch (err) {
+    console.error('[Workspace GET Error]:', err);
+    return res.status(500).json({ error: 'Failed to load workspace data' });
+  }
+});
+
+// Import browser data once for accounts created before server persistence was
+// added. If another browser initialized the account first, return its version.
+workspaceRouter.put('/import', async (req, res) => {
+  const { items = {} } = req.body || {};
+  if (!validWorkspaceItems(items, req.userId)) {
+    return res.status(400).json({ error: 'Invalid workspace data' });
+  }
+
+  // An empty browser must not claim initialization before another device has
+  // had a chance to import its existing local workspace.
+  if (Object.keys(items).length === 0) {
+    return res.json({ initialized: false, imported: false, items: {} });
+  }
+
+  try {
+    const inserted = await query(
+      `INSERT INTO user_workspace_state (user_id, data)
+       VALUES ($1, $2::jsonb)
+       ON CONFLICT (user_id) DO NOTHING
+       RETURNING data`,
+      [req.userId, JSON.stringify(items)]
+    );
+    const data = inserted.rows[0]?.data ?? (await query(
+      `SELECT data FROM user_workspace_state WHERE user_id = $1`,
+      [req.userId]
+    )).rows[0]?.data ?? {};
+    return res.json({ initialized: true, imported: inserted.rows.length > 0, items: data });
+  } catch (err) {
+    console.error('[Workspace Import Error]:', err);
+    return res.status(500).json({ error: 'Failed to import workspace data' });
+  }
+});
+
+workspaceRouter.put('/item', async (req, res) => {
+  const { key, value } = req.body || {};
+  const items = { [key]: value };
+  if (!validWorkspaceItems(items, req.userId)) {
+    return res.status(400).json({ error: 'Invalid workspace item' });
+  }
+
+  try {
+    await query(
+      `INSERT INTO user_workspace_state (user_id, data)
+       VALUES ($1, jsonb_build_object($2::text, $3::text))
+       ON CONFLICT (user_id) DO UPDATE
+       SET data = user_workspace_state.data || EXCLUDED.data,
+           updated_at = now()`,
+      [req.userId, key, value]
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[Workspace Item PUT Error]:', err);
+    return res.status(500).json({ error: 'Failed to save workspace data' });
+  }
+});
+
+workspaceRouter.delete('/item', async (req, res) => {
+  const { key } = req.body || {};
+  if (typeof key !== 'string' || !key.startsWith(workspacePrefix(req.userId)) || key.length > 240) {
+    return res.status(400).json({ error: 'Invalid workspace item' });
+  }
+
+  try {
+    await query(
+      `UPDATE user_workspace_state
+       SET data = data - $2::text, updated_at = now()
+       WHERE user_id = $1`,
+      [req.userId, key]
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[Workspace Item DELETE Error]:', err);
+    return res.status(500).json({ error: 'Failed to remove workspace data' });
+  }
+});

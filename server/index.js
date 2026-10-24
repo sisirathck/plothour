@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { authRouter } from './routes/auth.js';
 import { projectsRouter } from './routes/projects.js';
 import { timerRouter } from './routes/timer.js';
+import { workspaceRouter } from './routes/workspace.js';
 import { query } from './db.js';
 
 dotenv.config();
@@ -30,7 +31,7 @@ app.use(cors({
 }));
 
 // Body & Cookie parsers
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // Healthcheck
@@ -48,6 +49,7 @@ app.use('/api/auth', authRouter);
 // Projects and Timer routes
 app.use('/api/projects', projectsRouter);
 app.use('/api/timer', timerRouter);
+app.use('/api/workspace', workspaceRouter);
 
 // Serve frontend static build if dist/ exists (Production mode)
 if (fs.existsSync(distPath)) {
@@ -113,6 +115,12 @@ app.listen(PORT, async () => {
         await query(sql);
         console.log(' [Database] Initial schema successfully applied!');
       }
+    }
+
+    // Additive, idempotent migration for per-user workspace persistence.
+    const workspaceSchemaPath = path.resolve(__dirname, '../database/002_user_workspace_state.sql');
+    if (fs.existsSync(workspaceSchemaPath)) {
+      await query(fs.readFileSync(workspaceSchemaPath, 'utf8'));
     }
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);

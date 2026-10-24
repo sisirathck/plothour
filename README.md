@@ -1,6 +1,6 @@
 # StudyDuel
 
-StudyDuel is a React and Express study timer with a PostgreSQL-backed authentication service. The repository also contains a browser extension. This README describes the current implementation; some planned social and persistence features are not yet connected to the main app.
+StudyDuel is a React and Express study timer with PostgreSQL-backed authentication and account workspace persistence. The repository also contains a browser extension. Some social features are still local-only.
 
 ## Current functionality
 
@@ -8,13 +8,13 @@ StudyDuel is a React and Express study timer with a PostgreSQL-backed authentica
 - Optional Google sign-in when `GOOGLE_CLIENT_ID` is configured.
 - Timer, dashboard, project management, settings, and compare screens.
 - Light and dark themes, timer/session views, dashboard summaries, and browser extension UI.
-- An Express API with health, authentication, project-list/create, and timer endpoints.
+- An Express API with health, authentication, project, timer, and account-workspace endpoints.
 
-### Current data-storage limitation
+### Data storage
 
-Authentication records are stored in PostgreSQL. The main React app currently stores most signed-in workspace data in browser `localStorage`, including projects and subjects, completed sessions, the active timer, goals/plans, dashboard layout, preferences, reminders, and the local friend list. That data is browser- and device-specific; it is not reliably backed up or available on another device.
+Authentication records and signed-in workspace data are stored in PostgreSQL. The React app keeps a `localStorage` copy for responsive UI, then syncs account-scoped workspace keys to the `user_workspace_state` JSONB table. This includes projects and subjects, completed sessions, the active timer, goals/plans, dashboard layout, preferences, reminders, and the local friend list. Signing into the same account in another browser loads the shared workspace. Existing browser data is imported once when no server workspace exists; server state takes precedence on later logins. The timer stores its start time and elapsed state, so it continues to advance while the app is open.
 
-The database schema includes tables for projects, sessions, active timers, goals, and social connections, and the server has project and timer endpoints. However, the main React screens do not currently use those endpoints as their source of truth. As a result, the active timer and most information shown in the UI are **not currently derived from PostgreSQL**. The Compare screen's friend list is local-only; it does not send real invitations or compare data from other accounts. The browser extension has API calls of its own, but that does not make the web app's local data database-backed.
+The database schema also includes normalized tables for projects, sessions, active timers, goals, and social connections, with project and timer API endpoints. The current React screens use the account workspace JSONB record for persistence rather than those normalized endpoints. The Compare screen's friend list is account-scoped but local to that account; it does not send real invitations or compare data from other accounts. The browser extension has API calls of its own.
 
 The demo mode intentionally uses local sample data. A new signed-in account should start without sample projects; sample projects are for demo mode only.
 
@@ -88,7 +88,7 @@ Do not use the development fallback JWT secret in production. Keep `.env` and al
 
 ## Database
 
-The initial schema is in [`database/001_initial_schema.sql`](database/001_initial_schema.sql). It defines users, OAuth accounts, projects, subprojects, time entries, active timers, goals, and social/challenge tables. The presence of a schema table does not mean the corresponding UI feature is already connected to it; see [Current data-storage limitation](#current-data-storage-limitation).
+The initial schema is in [`database/001_initial_schema.sql`](database/001_initial_schema.sql). The additive workspace migration is in [`database/002_user_workspace_state.sql`](database/002_user_workspace_state.sql). The server applies the workspace migration idempotently at startup.
 
 Stop the local database while preserving its data:
 
@@ -102,7 +102,7 @@ Remove the local database volume and its data (destructive):
 docker compose down -v
 ```
 
-There is currently one SQL schema file and no numbered follow-up migration. Add future migrations as new files and document their application procedure here.
+Add future migrations as new numbered SQL files and apply them idempotently during server startup or through a documented deployment procedure.
 
 ## Production deployment (manual VPS example)
 
@@ -112,7 +112,7 @@ The repository does not include a CI/CD workflow that deploys on `git push`. A p
 git pull origin main
 npm install
 npm run build
-pm2 restart studyduel --update-env
+pm2 restart studyduel2 --update-env
 ```
 
 For a first-time PM2 launch, use `pm2 start npm --name studyduel -- start`, then `pm2 save`. Configure the reverse proxy (for example, Nginx) to pass requests to the Express port, which defaults to `3001`. Adjust the PM2 process name and deployment commands to match the server's actual setup.
