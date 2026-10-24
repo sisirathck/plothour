@@ -15,6 +15,7 @@ import {
   Moon,
   Settings2,
   Save,
+  Search,
   Sliders,
   Sparkles,
   Sun,
@@ -131,12 +132,27 @@ export const SettingsPage = ({ onBack, user }) => {
       return 'preferences';
     }
   });
+  const [settingsSearch, setSettingsSearch] = useState('');
 
   useEffect(() => {
     try {
       localStorage.setItem('studyduel_settings_tab', activeSettingsTab);
     } catch {}
   }, [activeSettingsTab]);
+
+  useEffect(() => {
+    const panel = document.getElementById(`panel-${activeSettingsTab}`);
+    if (!panel) return;
+    const query = settingsSearch.trim().toLocaleLowerCase();
+    panel.querySelectorAll('.settings-bento-card').forEach((card) => {
+      const cardMatches = !query || card.innerText.toLocaleLowerCase().includes(query);
+      card.hidden = !cardMatches;
+      if (!query || !cardMatches) return;
+      const rows = card.querySelectorAll('.settings-row');
+      rows.forEach((row) => { row.hidden = !row.innerText.toLocaleLowerCase().includes(query); });
+    });
+    return () => panel.querySelectorAll('.settings-bento-card,.settings-row').forEach((item) => { item.hidden = false; });
+  }, [settingsSearch, activeSettingsTab]);
 
   // Tab 1: Preferences State
   const [preferences, setPreferences] = useState(() => {
@@ -248,6 +264,10 @@ export const SettingsPage = ({ onBack, user }) => {
 
   // Export logs feedback state
   const [exportStatus, setExportStatus] = useState('');
+  const [exportPreview, setExportPreview] = useState('');
+  const [importPreview, setImportPreview] = useState(null);
+  const [importError, setImportError] = useState('');
+  const importFileRef = useRef(null);
 
   useEffect(() => {
     if (!exportStatus) return undefined;
@@ -327,6 +347,39 @@ export const SettingsPage = ({ onBack, user }) => {
       `studyduel_logs_${dateStamp}.json`
     );
     setExportStatus('json');
+  };
+
+  const previewImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      if (!Array.isArray(parsed)) throw new Error('Choose a StudyDuel JSON export containing a list of sessions.');
+      const converted = parsed.map((row) => {
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(String(row.date || '')) ? new Date(`${row.date}T12:00:00`) : new Date(row.startedAt);
+        const durationSeconds = Math.round(Number(row.duration_minutes ?? (Number(row.durationSeconds) / 60)) * 60);
+        if (!Number.isFinite(date.getTime()) || durationSeconds <= 0) return null;
+        const startedAt = row.startedAt != null && Number.isFinite(Number(row.startedAt)) ? Number(row.startedAt) : date.getTime();
+        const projectName = row.project || row.projectName || 'General Study';
+        const id = row.session_id || row.id || `import-${date.toISOString().slice(0, 10)}-${durationSeconds}-${projectName.toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+        return { id, startedAt, endedAt: startedAt + durationSeconds * 1000, durationSeconds, projectName, projectId: row.projectId || '', subjectName: row.subject || row.subjectName || '', subjectId: row.subjectId || '', mode: row.timer_mode || row.mode || '50m', note: row.note || '' };
+      }).filter(Boolean);
+      if (!converted.length) throw new Error('No valid sessions were found. Each record needs a date and a duration greater than zero.');
+      setImportError('');
+      setImportPreview(converted);
+    } catch (error) { setImportError(error.message || 'Could not read that file.'); }
+  };
+  const confirmImport = () => {
+    if (!importPreview) return;
+    const existing = readJson(entriesKey, []);
+    const keys = new Set(existing.map((entry) => `${entry.id}|${entry.startedAt}|${entry.durationSeconds}`));
+    const added = [];
+    importPreview.forEach((entry) => { const key = `${entry.id}|${entry.startedAt}|${entry.durationSeconds}`; if (!keys.has(key)) { keys.add(key); added.push(entry); } });
+    localStorage.setItem(entriesKey, JSON.stringify([...added, ...existing]));
+    window.dispatchEvent(new CustomEvent('studyduel:timer-storage', { detail: { entriesKey, activeTimerKey: getUserKey(user, 'active_timer') } }));
+    setImportPreview(null);
+    setImportError(added.length ? `${added.length} sessions imported.` : 'Those sessions are already in your history.');
   };
 
   // Tab 2: Connections State
@@ -566,6 +619,7 @@ export const SettingsPage = ({ onBack, user }) => {
               <span>Connections</span>
             </button>
           </div>
+          <label className="settings-quick-search"><Search size={15} /><input type="search" value={settingsSearch} onChange={(event) => setSettingsSearch(event.target.value)} placeholder="Search settings" aria-label="Search settings" /></label>
           </div>
         </div>
       </header>
@@ -932,10 +986,12 @@ export const SettingsPage = ({ onBack, user }) => {
                 <p>Download your raw study logs formatted for Pandas, Excel spreadsheets, or local JSON backup.</p>
               </div>
               <div className="settings-export-actions">
+                <input ref={importFileRef} type="file" accept="application/json,.json" onChange={previewImport} className="settings-import-file" aria-label="Import StudyDuel JSON study logs" />
+                <button type="button" className="settings-secondary-btn" onClick={() => { setImportError(''); importFileRef.current?.click(); }}><Download size={15} /> Import JSON</button>
                 <button
                   type="button"
                   className="settings-primary-btn"
-                  onClick={exportCSV}
+                  onClick={() => setExportPreview('csv')}
                   title="Download flat tabular CSV logs for Excel/Pandas"
                 >
                   {exportStatus === 'csv' ? (
@@ -953,7 +1009,7 @@ export const SettingsPage = ({ onBack, user }) => {
                 <button
                   type="button"
                   className="settings-secondary-btn"
-                  onClick={exportJSON}
+                  onClick={() => setExportPreview('json')}
                   title="Download JSON array of session logs"
                 >
                   {exportStatus === 'json' ? (
@@ -970,6 +1026,7 @@ export const SettingsPage = ({ onBack, user }) => {
                 </button>
               </div>
             </div>
+            {importError && <p className="settings-import-feedback" role="status">{importError}</p>}
           </section>
           {hasUnsavedChanges && <div className="settings-save-dock">
             <div className="settings-save-wrap">
@@ -1151,6 +1208,23 @@ export const SettingsPage = ({ onBack, user }) => {
           </section>
         </div>
       )}
+      {exportPreview && <div className="settings-export-preview-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setExportPreview(''); }}>
+        <section className="settings-export-preview" role="dialog" aria-modal="true" aria-labelledby="settings-export-preview-title">
+          <div className="settings-export-preview-heading"><div><span>YOUR DATA</span><h2 id="settings-export-preview-title">Review export</h2></div><button type="button" aria-label="Close export preview" onClick={() => setExportPreview('')}><X size={18} /></button></div>
+          <p>This file contains {readJson(entriesKey, []).length} study sessions. Session notes and account connection details are not included.</p>
+          <div className="settings-export-columns"><strong>{exportPreview === 'csv' ? 'CSV columns' : 'JSON fields'}</strong><span>Session ID · Date · Day · Project · Duration · Timer mode · Completed</span></div>
+          <div className="settings-export-sample"><strong>Preview</strong><code>{readJson(entriesKey, []).slice(0, 3).map((entry) => `${new Date(entry.startedAt).toLocaleDateString()} · ${entry.projectName || entry.project || 'General Study'} · ${Math.round((Number(entry.durationSeconds) || 0) / 60)} min`).join('\n') || 'No sessions to export yet'}</code></div>
+          <div className="settings-export-preview-actions"><button type="button" className="settings-secondary-btn" onClick={() => setExportPreview('')}>Cancel</button><button type="button" className="settings-primary-btn" onClick={() => { const type = exportPreview; setExportPreview(''); if (type === 'csv') exportCSV(); else exportJSON(); }}>{exportPreview === 'csv' ? <FileSpreadsheet size={15} /> : <FileJson size={15} />} Download {exportPreview.toUpperCase()}</button></div>
+        </section>
+      </div>}
+      {importPreview && <div className="settings-export-preview-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setImportPreview(null); }}>
+        <section className="settings-export-preview" role="dialog" aria-modal="true" aria-labelledby="settings-import-preview-title">
+          <div className="settings-export-preview-heading"><div><span>MERGE STUDY LOGS</span><h2 id="settings-import-preview-title">Review import</h2></div><button type="button" aria-label="Close import preview" onClick={() => setImportPreview(null)}><X size={18} /></button></div>
+          <p>{importPreview.length} valid sessions are ready to merge into your history. Existing logs are kept; duplicate session IDs are skipped.</p>
+          <div className="settings-export-sample"><strong>Preview · dates without times are placed at noon</strong><code>{importPreview.slice(0, 5).map((entry) => `${new Date(entry.startedAt).toLocaleDateString()} · ${entry.projectName} · ${Math.round(entry.durationSeconds / 60)} min`).join('\n')}</code></div>
+          <div className="settings-export-preview-actions"><button type="button" className="settings-secondary-btn" onClick={() => setImportPreview(null)}>Cancel</button><button type="button" className="settings-primary-btn" onClick={confirmImport}><Check size={15} /> Merge sessions</button></div>
+        </section>
+      </div>}
     </div>
   );
 };

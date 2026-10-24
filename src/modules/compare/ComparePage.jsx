@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users, Share2, ChevronUp, Info } from 'lucide-react';
 import './Compare.css';
 
 const RANGE_OPTIONS = [
@@ -8,6 +8,25 @@ const RANGE_OPTIONS = [
   { id: 'all', label: 'All time' }, { id: 'custom', label: 'Custom' },
 ];
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const metricHelp = {
+  'Streak at period end': 'Consecutive days studied through the last day in this period.',
+  'Longest streak': 'The longest consecutive run of study days in this period.',
+  'Average per active day': 'Study time divided by days with at least one session.',
+  'Average session': 'Total study time divided by completed sessions.',
+  'Longest session': 'The longest single session recorded in this period.',
+  'Peak study hour': 'The clock hour containing the most logged study time.',
+};
+const patternHelp = {
+  'Average session': 'Total study time divided by the number of sessions.',
+  'Sessions / calendar day': 'Sessions divided by all days in the selected period, including rest days.',
+  'Median active day': 'The middle daily total after sorting days with study time.',
+  'Average / active day': 'Total study time divided by days with at least one session.',
+  '45+ min session share': 'The percentage of sessions lasting at least 45 minutes.',
+  'Sessions under 15 min': 'A count of sessions shorter than 15 minutes.',
+  '30+ min days': 'Days with at least 30 minutes of recorded study.',
+  'Days at daily goal': 'Days that reached the combined daily goals set for the study areas.',
+  'Weekday / weekend time': 'The share of study time logged Monday through Friday versus weekends.',
+};
 const profileColor = (id) => `var(--compare-profile-${String(id).replace(/[^a-zA-Z0-9_-]/g, '')})`;
 const dateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const duration = (seconds, empty = '0m') => {
@@ -103,7 +122,7 @@ function PatternMetrics({ profile }) {
     ['45+ min session share', `${Math.round((c.longSessionShare || 0) * 100)}%`], ['Sessions under 15 min', String(c.shortSessions || 0)],
     ['30+ min days', String(c.thirtyMinuteDays || 0)], ['Days at daily goal', String(c.goalDays || 0)], ['Weekday / weekend time', split],
   ];
-  return <dl>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
+  return <dl>{rows.map(([label, value]) => <div key={label}><dt title={patternHelp[label] || label}>{label}<Info size={11} aria-hidden="true" /></dt><dd>{value}</dd></div>)}</dl>;
 }
 
 function DailyCharts({ profiles, dates, byProfile }) {
@@ -163,6 +182,10 @@ export const ComparePage = ({ user, onNavigate }) => {
     } catch { return [profileId]; }
   });
   const [manageViewOpen, setManageViewOpen] = useState(false); const [range, setRange] = useState(() => { const saved = rangeKey ? localStorage.getItem(rangeKey) : null; return RANGE_OPTIONS.some((item) => item.id === saved) ? saved : 'week'; });
+  const [showDetails, setShowDetails] = useState(false);
+  const [shareStatus, setShareStatus] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareFields, setShareFields] = useState(['time', 'activeDays', 'sessions']);
   const [colorSelections, setColorSelections] = useState(() => readJson(colorStorageKey, {}));
   const [rangeOpen, setRangeOpen] = useState(false);
   const [customStart, setCustomStart] = useState(() => dateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1))); const [customEnd, setCustomEnd] = useState(() => dateKey(new Date()));
@@ -243,9 +266,34 @@ export const ComparePage = ({ user, onNavigate }) => {
     const assignedTo = profileIdsForPalette.find((otherId) => otherId !== id && colorSlot(otherId) === slot);
     return { ...current, [id]: slot, ...(assignedTo ? { [assignedTo]: priorSlot } : {}) };
   });
+  const shareRecap = async () => {
+    const you = profiles.find((profile) => profile.id === profileId);
+    if (!you) return;
+    const values = { time: `Study time: ${duration(you.current.seconds)}`, activeDays: `Active days: ${you.current.activeDays}`, sessions: `Sessions: ${you.current.sessions}`, goal: you.current.goalProgressPct == null ? '' : `Goal progress: ${you.current.goalProgressPct}%`, bestDay: you.current.bestDay ? `Best day: ${duration(you.current.bestDay.seconds)}` : '' };
+    const details = shareFields.map((field) => values[field]).filter(Boolean);
+    const text = `${you.name}'s ${periodLabel.toLowerCase()} study recap\n${details.join('\n')}`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'StudyDuel study recap', text });
+      else { await navigator.clipboard.writeText(text); setShareStatus('Recap copied'); }
+      setShareOpen(false);
+    } catch (error) {
+      if (error?.name !== 'AbortError') setShareStatus('Could not share recap');
+    }
+  };
 
   return <main className="compare-page" aria-label="Study comparison" style={comparePaletteStyle}>
-    <div className="compare-topbar"><div className="compare-range-select" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setRangeOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setRangeOpen(false); }}><div className="compare-control-label"><CalendarDays size={14} /> STUDY PERIOD</div><button className="compare-range-trigger" type="button" aria-haspopup="listbox" aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}><span>{RANGE_OPTIONS.find((option) => option.id === range)?.label || 'This week'}</span><ChevronDown size={15} /></button>{rangeOpen && <div className="compare-range-menu" role="listbox" aria-label="Study period">{RANGE_OPTIONS.map((option) => <button type="button" role="option" aria-selected={range === option.id} className={range === option.id ? 'is-selected' : ''} key={option.id} onClick={() => { setRange(option.id); setRangeOpen(false); }}>{option.label}</button>)}</div>}</div><button className="compare-manage-button" type="button" onClick={() => setManageViewOpen(true)}><Settings2 size={15} /> Manage view <span>{selectedConnections.length}</span></button></div>
+    <div className="compare-topbar"><div className="compare-range-select" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setRangeOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setRangeOpen(false); }}><div className="compare-control-label"><CalendarDays size={14} /> STUDY PERIOD</div><button className="compare-range-trigger" type="button" aria-haspopup="listbox" aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}><span>{RANGE_OPTIONS.find((option) => option.id === range)?.label || 'This week'}</span><ChevronDown size={15} /></button>{rangeOpen && <div className="compare-range-menu" role="listbox" aria-label="Study period">{RANGE_OPTIONS.map((option) => <button type="button" role="option" aria-selected={range === option.id} className={range === option.id ? 'is-selected' : ''} key={option.id} onClick={() => { setRange(option.id); setRangeOpen(false); }}>{option.label}</button>)}</div>}</div><div className="compare-topbar-actions"><button className="compare-manage-button" type="button" onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails}>{showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />} {showDetails ? 'Hide details' : 'More insights'}</button><button className="compare-manage-button" type="button" onClick={() => setShareOpen(true)} disabled={!profiles.some((profile) => profile.id === profileId)}><Share2 size={15} /> Share recap</button><button className="compare-manage-button" type="button" onClick={() => setManageViewOpen(true)}><Settings2 size={15} /> Manage view <span>{selectedConnections.length}</span></button></div></div>
+    {shareStatus && <p className="compare-share-status" role="status">{shareStatus}</p>}
+    {shareOpen && (() => { const you = profiles.find((profile) => profile.id === profileId); if (!you) return null; const options = [['time', 'Study time', duration(you.current.seconds)], ['activeDays', 'Active days', String(you.current.activeDays)], ['sessions', 'Sessions', String(you.current.sessions)], ['goal', 'Goal progress', you.current.goalProgressPct == null ? 'No goal set' : `${you.current.goalProgressPct}%`], ['bestDay', 'Best day', you.current.bestDay ? duration(you.current.bestDay.seconds) : 'No study days']]; return <div className="compare-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}><section className="compare-share-panel" role="dialog" aria-modal="true" aria-labelledby="compare-share-title"><div className="compare-share-heading"><div><span className="compare-eyebrow">STUDY RECAP</span><h2 id="compare-share-title">Choose what to share</h2><p>Only your own summary is included. Preview it before sharing.</p></div><button type="button" aria-label="Close share preview" onClick={() => setShareOpen(false)}>×</button></div><div className="compare-share-options">{options.map(([id, label, value]) => <label key={id}><input type="checkbox" checked={shareFields.includes(id)} onChange={(event) => setShareFields((current) => event.target.checked ? [...current, id] : current.filter((field) => field !== id))} /><span>{label}</span><strong>{value}</strong></label>)}</div><article className="compare-share-preview"><span>{you.name} · {periodLabel}</span>{options.filter(([id]) => shareFields.includes(id)).map(([id, label, value]) => <div key={id}><span>{label}</span><strong>{value}</strong></div>)}</article><div className="compare-share-actions"><button className="compare-manage-button" type="button" onClick={() => setShareOpen(false)}>Cancel</button><button className="compare-manage-button" type="button" disabled={!shareFields.length} onClick={shareRecap}><Share2 size={15} /> Share recap</button></div></section></div>; })()}
+    {(() => {
+      const you = profiles.find((profile) => profile.id === profileId);
+      if (!you) return null;
+      const delta = you.current.seconds - you.previous.seconds;
+      return <section className="compare-section-card compare-personal-pulse" aria-label="Your progress this period">
+        <div><span className="compare-eyebrow">YOUR PROGRESS</span><h2>{periodLabel}</h2><p>{range === 'all' ? 'Your cumulative study summary.' : `${delta > 0 ? `${duration(delta)} more` : delta < 0 ? `${duration(Math.abs(delta))} less` : 'About the same'} study time than the previous comparable period.`}</p></div>
+        <div className="compare-pulse-metrics"><span><strong>{duration(you.current.seconds)}</strong>total time</span><span><strong>{you.current.activeDays}</strong>active days</span><span><strong>{you.current.sessions}</strong>sessions</span><span><strong>{you.current.bestDay ? duration(you.current.bestDay.seconds) : '—'}</strong>best day</span></div>
+      </section>;
+    })()}
     {range === 'custom' && <div className="compare-custom-range"><label>From<input type="date" value={customStart} max={customEnd} onChange={(e) => setCustomStart(e.target.value)} /></label><label>To<input type="date" value={customEnd} min={customStart} max={dateKey(new Date())} onChange={(e) => setCustomEnd(e.target.value)} /></label></div>}
 
     {manageViewOpen && <div className="compare-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setManageViewOpen(false); }}><section className="compare-manage-panel" role="dialog" aria-modal="true" aria-labelledby="compare-manage-heading"><div className="compare-manage-panel-heading"><div><span className="compare-eyebrow">COMPARE VIEW</span><h2 id="compare-manage-heading">Choose profiles</h2><p>Select the connected people to include in your comparison.</p></div><button type="button" aria-label="Close manage view" onClick={() => setManageViewOpen(false)}>×</button></div>
@@ -266,6 +314,8 @@ export const ComparePage = ({ user, onNavigate }) => {
     <section className="compare-section-card"><div className="compare-section-heading"><div><span className="compare-eyebrow">STUDY PATTERNS</span><h2>Study patterns</h2><p>{periodDescription} · compare patterns across selected profiles</p></div></div>{!profiles.length ? <div className="compare-empty compact">No account data to display.</div> : <div className="compare-pattern-grid">{ordered.map((p) => <article className="compare-pattern-card" key={p.id} style={{ '--profile-color': profileColor(p.id) }}><div className="compare-pattern-heading"><span><i />{p.name}{p.id === profileId && <small>You</small>}</span><strong>{duration(p.current.seconds)}</strong></div><PatternMetrics profile={p} /></article>)}</div>}</section>
 
     {profiles.length > 0 && <>
+      {showDetails && <section className="compare-section-card compare-fairness-note"><Info size={16} /><p>Study time is easiest to compare alongside active days and average time per active day. Different goals and schedules can make totals tell only part of the story.</p></section>}
+      {showDetails && <>
       <DailyCharts profiles={profiles} dates={series.dates} byProfile={series.byProfile} />
       <div className="compare-chart-pair">
         <section className="compare-section-card"><div className="compare-section-heading"><div><span className="compare-eyebrow">GOAL PACE RACE</span><h2>Goal pace race</h2><p>Study time against the combined project goals</p></div></div>{!raceProfiles.length ? <div className="compare-empty compact">No study goals are set for this period.</div> : <div className="compare-goal-list">{raceProfiles.map((p) => <div className="compare-goal-row" key={p.id} style={{ '--profile-color': profileColor(p.id) }}><div><strong>{p.name}</strong><span>{duration(p.current.seconds)} / {duration(p.current.goalSeconds)} goal</span></div><div className="compare-goal-track"><i style={{ width: `${Math.min(100, p.current.goalProgressPct || 0)}%` }} /></div><small>{p.current.goalProgressPct}% of goal</small></div>)}</div>}</section>
@@ -281,7 +331,8 @@ export const ComparePage = ({ user, onNavigate }) => {
       </div>
       <section className="compare-section-card"><div className="compare-section-heading"><div><span className="compare-eyebrow">STREAK & CONSISTENCY</span><h2>Consistency comparison</h2><p>Session and streak metrics from the selected period</p></div></div><div className="compare-table-scroll"><table className="compare-standings-table compare-consistency-table"><thead><tr><th>Metric</th>{profiles.map((p, i) => <th key={p.id} style={{ color: profileColor(p.id) }}>{p.name}</th>)}</tr></thead><tbody>{[
         ['Streak at period end', (p) => `${p.current.streakAtEnd} days`], ['Longest streak', (p) => `${p.current.longestStreak} days`], ['Average per active day', (p) => duration(p.current.averageActiveDaySeconds, '—')], ['Average session', (p) => duration(p.current.averageSessionSeconds, '—')], ['Longest session', (p) => duration(p.current.longestSession?.seconds, '—')], ['Peak study hour', (p) => p.current.peakHour == null ? '—' : new Date(2000, 0, 1, p.current.peakHour).toLocaleTimeString(undefined, { hour: 'numeric' })],
-      ].map(([label, value]) => <tr key={label}><th scope="row">{label}</th>{profiles.map((p) => <td key={p.id}>{value(p)}</td>)}</tr>)}</tbody></table></div></section>
+      ].map(([label, value]) => <tr key={label}><th scope="row" title={metricHelp[label] || label}>{label}<Info size={12} aria-hidden="true" /></th>{profiles.map((p) => <td key={p.id}>{value(p)}</td>)}</tr>)}</tbody></table></div></section>
+      </>}
     </>}
   </main>;
 };

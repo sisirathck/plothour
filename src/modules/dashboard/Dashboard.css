@@ -2395,7 +2395,7 @@
 
 .db-customize-wrap {
   position: relative;
-  margin-left: 0;
+  margin-left: auto;
 }
 
 .db-customize-trigger {
@@ -2872,6 +2872,7 @@
   .db-customize-wrap {
     grid-column: 2;
     grid-row: 1;
+    margin-left: 0;
     justify-self: end;
   }
 
@@ -2911,3 +2912,9 @@
     padding: 9px;
   }
 }
+.db-goal-tune-suggestion { display:flex; align-items:center; gap:9px; margin-top:11px; padding:10px 12px; border:1px solid var(--sd-border-soft); border-radius:12px; background:var(--sd-bg-subtle); color:var(--sd-text-muted); font-size:11px; line-height:1.45; }
+.db-goal-tune-suggestion > svg { flex:0 0 auto; color:var(--db-accent,var(--sd-coral)); }
+.db-goal-tune-suggestion > span { flex:1; }
+.db-goal-tune-suggestion button { flex:0 0 auto; display:inline-flex; align-items:center; gap:5px; padding:6px 8px; border:0; border-radius:8px; background:color-mix(in srgb,var(--sd-coral) 12%,transparent); color:var(--sd-coral); font:inherit; font-weight:750; cursor:pointer; }
+@media (max-width:650px) { .db-goal-tune-suggestion { align-items:flex-start; flex-wrap:wrap; } .db-goal-tune-suggestion button { margin-left:22px; } }
+.db-weekly-trend-explainer { margin:6px 0 0; color:var(--sd-text-muted); font-size:10px; line-height:1.45; }

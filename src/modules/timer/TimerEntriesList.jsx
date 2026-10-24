@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X, Calendar, CalendarDays } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X, Calendar, CalendarDays, Undo2 } from 'lucide-react';
 
 const localDateKey = (value) => {
   const date = new Date(value);
@@ -49,12 +49,26 @@ const durationLabel = (seconds) => {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
-export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate = null, hideRangeControls = false, onOpenCalendar }) => {
+export const TimerEntriesList = ({ entries, setEntries, projects, user, selectedDate = null, hideRangeControls = false, onOpenCalendar }) => {
   const [expanded, setExpanded] = useState(false);
   const isExpanded = hideRangeControls || expanded;
   const [range, setRange] = useState('today');
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
+  const [undoAction, setUndoAction] = useState(null);
+  const activityKey = user?.id ? `studyduel_user_${user.id}_session_activity` : 'studyduel_demo_session_activity';
+  const [recentChanges, setRecentChanges] = useState(() => { try { const value = JSON.parse(localStorage.getItem(activityKey) || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } });
+  const undoTimerRef = useRef(null);
+  useEffect(() => () => window.clearTimeout(undoTimerRef.current), []);
+  const offerUndo = (message, undo) => {
+    window.clearTimeout(undoTimerRef.current);
+    setUndoAction({ message, undo });
+    undoTimerRef.current = window.setTimeout(() => setUndoAction(null), 6000);
+  };
+  const recordChange = (action, entry) => {
+    const item = { id: `${Date.now()}-${entry.id}`, action, project: entry.projectName || 'General study', at: Date.now() };
+    setRecentChanges((current) => { const next = [item, ...current].slice(0, 5); try { localStorage.setItem(activityKey, JSON.stringify(next)); } catch {} return next; });
+  };
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState('');
@@ -99,6 +113,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate =
     }
 
     const durationSeconds = Math.max(1, Math.floor((endedAt - startedAt) / 1000));
+    const previousEntry = entries.find((entry) => entry.id === draft.id);
     setEntries((items) => items.map((entry) => {
       if (entry.id !== draft.id) return entry;
       return {
@@ -118,11 +133,14 @@ export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate =
     setEditingId(null);
     setDraft(null);
     setError('');
+    if (previousEntry) { recordChange('Edited', previousEntry); offerUndo('Session updated', () => { setEntries((items) => items.map((entry) => entry.id === previousEntry.id ? previousEntry : entry)); recordChange('Restored', previousEntry); }); }
   };
 
   const removeEntry = (id) => {
     if (!window.confirm('Delete this tracked session?')) return;
+    const previousEntry = entries.find((entry) => entry.id === id);
     setEntries((items) => items.filter((entry) => entry.id !== id));
+    if (previousEntry) { recordChange('Deleted', previousEntry); offerUndo('Session deleted', () => { setEntries((items) => items.some((entry) => entry.id === id) ? items : [...items, previousEntry].sort((a, b) => Number(b.startedAt) - Number(a.startedAt))); recordChange('Restored', previousEntry); }); }
   };
 
   return (
@@ -197,6 +215,8 @@ export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate =
           </div>
         )}
       </div>
+      {undoAction && <div className="entries-undo-toast" role="status"><span>{undoAction.message}</span><button type="button" onClick={() => { undoAction.undo(); setUndoAction(null); window.clearTimeout(undoTimerRef.current); }}><Undo2 size={14} /> Undo</button></div>}
+      {recentChanges.length > 0 && <details className="entries-recent-changes"><summary>Recent changes <span>{recentChanges.length}</span></summary><ul>{recentChanges.map((item) => <li key={item.id}><strong>{item.action}</strong><span>{item.project}</span><time>{new Date(item.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</time></li>)}</ul></details>}
 
       {/* Expanded Content */}
       {isExpanded && (

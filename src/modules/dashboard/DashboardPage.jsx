@@ -923,6 +923,17 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const weeklyGoal = projects.filter((project) => !project.archived).reduce(
       (sum, project) => sum + (project.subjects || []).reduce((part, subject) => part + (Number(subject.goals?.weekly) || 0), 0), 0
     ) * 3600;
+    const weekOffset = getWeekStartOffset(now, weekStart);
+    const currentWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - weekOffset);
+    const recentWeeks = Array.from({ length: 4 }, (_, index) => {
+      const weekEnd = new Date(currentWeekStart); weekEnd.setDate(weekEnd.getDate() - index * 7 - 1); weekEnd.setHours(23, 59, 59, 999);
+      const weekBeginning = new Date(weekEnd); weekBeginning.setDate(weekBeginning.getDate() - 6); weekBeginning.setHours(0, 0, 0, 0);
+      return entries.filter((entry) => { const time = new Date(entry.startedAt).getTime(); return time >= weekBeginning.getTime() && time <= weekEnd.getTime(); }).reduce((total, entry) => total + (Number(entry.durationSeconds) || 0), 0);
+    });
+    const recentWeeklyAverage = Math.round(recentWeeks.reduce((sum, value) => sum + value, 0) / recentWeeks.length);
+    const goalTuneSuggestion = weeklyGoal > 0 && recentWeeklyAverage > 0 && Math.abs(weeklyGoal - recentWeeklyAverage) >= 7200
+      ? `Your recent four-week average is ${fmtDur(recentWeeklyAverage)} per week. Review whether your ${fmtDur(weeklyGoal)} weekly target still fits your schedule.`
+      : '';
     const elapsedDays = Math.min(7, getWeekStartOffset(now, weekStart) + 1);
     const expectedByNow = weeklyGoal * elapsedDays / 7;
     const remainingThisWeek = Math.max(0, weeklyGoal - seconds);
@@ -943,6 +954,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       remainingThisWeek,
       goalPct: weeklyGoal ? Math.min(100, Math.round((seconds / weeklyGoal) * 100)) : null,
       suggestion,
+      goalTuneSuggestion,
     };
   }, [entries, projects, now, weekStart]);
 
@@ -1933,6 +1945,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               </div>
             )}
             <p className="db-weekly-review-suggestion">{weeklyReview.suggestion}</p>
+            {weeklyReview.sessions > 0 && <p className="db-weekly-trend-explainer">{weeklyReview.delta > 0 ? `You have logged ${fmtDur(weeklyReview.delta)} more than the same point last week.` : weeklyReview.delta < 0 ? `You have logged ${fmtDur(Math.abs(weeklyReview.delta))} less than the same point last week; use this as context when planning the rest of your week.` : 'Your study time is level with the same point last week.'}</p>}
+            {weeklyReview.goalTuneSuggestion && <div className="db-goal-tune-suggestion"><Sparkles size={14} /><span>{weeklyReview.goalTuneSuggestion}</span><button type="button" onClick={() => onNavigate?.('manage')}>Review goals <span aria-hidden="true">→</span></button></div>}
           </div>
         </DashboardSection>
 

@@ -584,3 +584,17 @@
   .manage-plan-editor { grid-template-columns: 1fr; }
   .manage-plan-editor .manage-milestone-editor { grid-column: auto; }
 }
+.manage-bulk-toolbar { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; padding:9px 14px; border-bottom:1px solid var(--manage-line); background:var(--sd-bg-subtle); color:var(--manage-muted); font-size:11px; }
+.manage-bulk-toolbar > span { margin-right:auto; font-weight:700; }
+.manage-bulk-toolbar button { display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:0 10px; border:1px solid var(--manage-line); border-radius:9px; background:var(--sd-bg-subtle); color:var(--manage-text); font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
+.manage-bulk-toolbar button:hover { border-color:var(--manage-accent); color:var(--manage-accent); }
+.manage-project-card-top { gap:9px; }
+.manage-project-check { position:relative; display:inline-flex; width:21px; height:21px; flex:0 0 21px; margin:0 2px 0 0; cursor:pointer; }
+.manage-project-select { position:absolute; z-index:1; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+.manage-project-check > span { display:grid; width:20px; height:20px; place-items:center; border:1px solid color-mix(in srgb,var(--manage-muted) 50%,var(--manage-line)); border-radius:7px; background:var(--sd-bg-surface); color:transparent; box-shadow:0 1px 2px rgba(25,30,60,.08); transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
+.manage-project-check:hover > span { border-color:var(--manage-accent); transform:translateY(-1px); }
+.manage-project-select:checked + span { border-color:var(--manage-accent); background:linear-gradient(145deg,color-mix(in srgb,var(--manage-accent) 92%,white),var(--manage-accent)); color:#fff; box-shadow:0 3px 10px var(--manage-accent-ring); }
+.manage-project-select:focus-visible + span { outline:3px solid var(--manage-accent-ring); outline-offset:2px; }
+.manage-card-actions button[aria-pressed="true"] { color:var(--manage-accent); background:var(--manage-accent-soft); }
+.manage-card-actions button:focus-visible,.manage-bulk-toolbar button:focus-visible { outline:2px solid var(--manage-accent); outline-offset:2px; }
+@media (max-width:600px) { .manage-bulk-toolbar { flex-wrap:wrap; padding:10px 12px; } .manage-project-card-top { flex-wrap:wrap; } }

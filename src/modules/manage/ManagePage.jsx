@@ -13,6 +13,9 @@ import {
   Target,
   Trash2,
   X,
+  Star,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import './Manage.css';
 
@@ -208,6 +211,8 @@ export const ManagePage = ({ user }) => {
   const [openProjectPlans, setOpenProjectPlans] = useState({});
   const [editingProjectGoals, setEditingProjectGoals] = useState({});
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [collapsedProjectIds, setCollapsedProjectIds] = useState([]);
 
   useEffect(() => {
     if (!projectPendingDelete) return undefined;
@@ -236,7 +241,44 @@ export const ManagePage = ({ user }) => {
   const archivedProjects = useMemo(() => projects.filter((project) => project.archived), [projects]);
   const visibleProjects = (view === 'active' ? activeProjects : archivedProjects).filter((project) => (
     project.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
-  ));
+  )).sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)) || projects.indexOf(a) - projects.indexOf(b));
+
+  const reorderProject = (projectId, direction) => setProjects((items) => {
+    const sorted = [...items];
+    const index = sorted.findIndex((item) => item.id === projectId);
+    let nextIndex = index + direction;
+    while (nextIndex >= 0 && nextIndex < sorted.length && Boolean(sorted[nextIndex].archived) !== (view === 'archived')) nextIndex += direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= sorted.length) return items;
+    [sorted[index], sorted[nextIndex]] = [sorted[nextIndex], sorted[index]];
+    return sorted;
+  });
+  const moveSelectedProjects = (direction) => setProjects((items) => {
+    const selected = new Set(selectedProjectIds);
+    const indexes = items.map((project, index) => project.archived === (view === 'archived') ? index : -1).filter((index) => index >= 0);
+    const next = [...items];
+    const positions = direction < 0 ? indexes : [...indexes].reverse();
+    positions.forEach((index, order) => {
+      const adjacent = direction < 0 ? indexes[indexes.indexOf(index) - 1] : indexes[indexes.indexOf(index) + 1];
+      if (adjacent == null) return;
+      if (selected.has(next[index].id) && !selected.has(next[adjacent].id)) [next[index], next[adjacent]] = [next[adjacent], next[index]];
+    });
+    return next;
+  });
+  const bulkFavorite = () => {
+    const selected = new Set(selectedProjectIds);
+    const shouldFavorite = projects.some((project) => selected.has(project.id) && !project.favorite);
+    setProjects((items) => items.map((project) => selected.has(project.id) ? { ...project, favorite: shouldFavorite } : project));
+  };
+  const toggleFavorite = (projectId) => setProjects((items) => items.map((item) => item.id === projectId ? { ...item, favorite: !item.favorite } : item));
+  const bulkArchive = () => {
+    const selected = new Set(selectedProjectIds);
+    const runningTimer = readJson(activeTimerKey, null);
+    const blocked = view === 'active' && projects.some((project) => selected.has(project.id) && runningTimer?.projectId === project.id);
+    if (blocked) { setNotice('Stop the selected project’s running timer before archiving it.'); return; }
+    setProjects((items) => items.map((item) => selected.has(item.id) ? { ...item, archived: view === 'active', archivedAt: view === 'active' ? Date.now() : null } : item));
+    setSelectedProjectIds([]);
+    setNotice(view === 'active' ? 'Selected projects archived. Restore them from Archived any time.' : 'Selected projects restored.');
+  };
 
   const addProject = (event) => {
     event.preventDefault();
@@ -385,10 +427,10 @@ export const ManagePage = ({ user }) => {
       <section className="manage-library-card" aria-label="Project management">
         <div className="manage-library-toolbar">
           <div className="manage-view-tabs" role="tablist" aria-label="Project status">
-            <button type="button" role="tab" aria-selected={view === 'active'} className={view === 'active' ? 'selected' : ''} onClick={() => { setView('active'); setNotice(''); }}>
+            <button type="button" role="tab" aria-selected={view === 'active'} className={view === 'active' ? 'selected' : ''} onClick={() => { setView('active'); setSelectedProjectIds([]); setNotice(''); }}>
               Active <span>{activeProjects.length}</span>
             </button>
-            <button type="button" role="tab" aria-selected={view === 'archived'} className={view === 'archived' ? 'selected' : ''} onClick={() => { setView('archived'); setNotice(''); }}>
+            <button type="button" role="tab" aria-selected={view === 'archived'} className={view === 'archived' ? 'selected' : ''} onClick={() => { setView('archived'); setSelectedProjectIds([]); setNotice(''); }}>
               <Archive size={14} /> Archived <span>{archivedProjects.length}</span>
             </button>
           </div>
@@ -397,6 +439,10 @@ export const ManagePage = ({ user }) => {
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a project" aria-label="Find a project" />
           </label>
         </div>
+
+        {selectedProjectIds.length > 0 && <div className="manage-bulk-toolbar" role="region" aria-label="Selected project actions">
+          <span>{selectedProjectIds.length} selected</span><button type="button" onClick={() => moveSelectedProjects(-1)}><ArrowUp size={14} /> Move up</button><button type="button" onClick={() => moveSelectedProjects(1)}><ArrowDown size={14} /> Move down</button><button type="button" onClick={bulkFavorite}><Star size={14} /> Favorite</button><button type="button" onClick={bulkArchive}><Archive size={14} /> {view === 'active' ? 'Archive' : 'Restore'} selected</button><button type="button" onClick={() => setSelectedProjectIds([])}>Clear</button>
+        </div>}
 
         {view === 'active' && (
           <form className="manage-create-project" onSubmit={addProject}>
@@ -436,6 +482,7 @@ export const ManagePage = ({ user }) => {
               return (
                 <article className={`manage-project-card${project.archived ? ' is-archived' : ''}`} key={project.id}>
                   <div className="manage-project-card-top">
+                    <label className="manage-project-check" aria-label={`Select ${project.name}`}><input className="manage-project-select" type="checkbox" checked={selectedProjectIds.includes(project.id)} aria-label={`Select ${project.name}`} onChange={(event) => setSelectedProjectIds((current) => event.target.checked ? [...current, project.id] : current.filter((id) => id !== project.id))} /><span aria-hidden="true"><Check size={12} strokeWidth={3} /></span></label>
                     <span className="manage-project-color" style={{ '--project-color': project.color || '#8086d4' }} />
                     <div className="manage-project-name-block">
                       {editing?.id === project.id && editing.type === 'project' ? (
@@ -453,6 +500,10 @@ export const ManagePage = ({ user }) => {
                     </div>
                     {!project.archived && <ColorPicker value={project.color} label={project.name} onChange={(color) => setColor(project.id, null, color)} />}
                     <div className="manage-card-actions">
+                      <button type="button" title={project.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-label={`${project.favorite ? 'Remove' : 'Add'} ${project.name} ${project.favorite ? 'from' : 'to'} favorites`} aria-pressed={Boolean(project.favorite)} onClick={() => toggleFavorite(project.id)}><Star size={15} fill={project.favorite ? 'currentColor' : 'none'} /></button>
+                      <button type="button" title="Move up" aria-label={`Move ${project.name} up`} onClick={() => reorderProject(project.id, -1)}><ArrowUp size={14} /></button>
+                      <button type="button" title="Move down" aria-label={`Move ${project.name} down`} onClick={() => reorderProject(project.id, 1)}><ArrowDown size={14} /></button>
+                      <button type="button" title={collapsedProjectIds.includes(project.id) ? 'Show details' : 'Hide details'} aria-label={`${collapsedProjectIds.includes(project.id) ? 'Show' : 'Hide'} details for ${project.name}`} aria-expanded={!collapsedProjectIds.includes(project.id)} onClick={() => setCollapsedProjectIds((current) => current.includes(project.id) ? current.filter((id) => id !== project.id) : [...current, project.id])}><ChevronDown size={15} className={collapsedProjectIds.includes(project.id) ? '' : 'is-open'} /></button>
                       {!project.archived && <button type="button" title="Rename project" aria-label={`Rename ${project.name}`} onClick={() => beginRename('project', project.id, project.name)}><Pencil size={15} /></button>}
                       <button type="button" title={project.archived ? 'Restore project' : 'Archive project'} aria-label={`${project.archived ? 'Restore' : 'Archive'} ${project.name}`} onClick={() => toggleArchive(project)}>
                         {project.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
@@ -461,7 +512,7 @@ export const ManagePage = ({ user }) => {
                     </div>
                   </div>
 
-                  {project.archived ? (
+                  {collapsedProjectIds.includes(project.id) ? null : project.archived ? (
                     <div className="manage-archive-content">
                       <div className="manage-archive-metrics">
                         <div><Clock3 size={15} /><span>Total studied</span><strong>{formatDuration(stats.seconds)}</strong></div>

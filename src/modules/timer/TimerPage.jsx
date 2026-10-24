@@ -834,7 +834,7 @@ export const TimerPage = ({ user }) => {
       </section>
 
       {/* ── SESSION HISTORY LIST ─────────────────────────── */}
-      <TimerEntriesList entries={entries} setEntries={setEntries} projects={projects} onOpenCalendar={() => setCalendarOpen(true)} />
+      <TimerEntriesList entries={entries} setEntries={setEntries} projects={projects} user={user} onOpenCalendar={() => setCalendarOpen(true)} />
       {calendarOpen && (
         <CalendarPage
           user={user}
