@@ -33,6 +33,11 @@ const initialProjects = [
   },
 ];
 
+const hasUnmodifiedStarterProjects = (projects) => (
+  Array.isArray(projects) &&
+  JSON.stringify(projects) === JSON.stringify(initialProjects)
+);
+
 const projectColorPresets = [
   { name: 'Indigo', value: '#6D73C8' },
   { name: 'Violet', value: '#8E7CD4' },
@@ -183,6 +188,9 @@ export const ManagePage = ({ user }) => {
 
   const [projects, setProjects] = useState(() => {
     const saved = readJson(projectsKey, null);
+    // Clear the exact starter template previously written to authenticated
+    // accounts, while preserving any projects the user has edited or created.
+    if (user && hasUnmodifiedStarterProjects(saved)) return [];
     // Authenticated accounts start with an empty library. Keep sample projects
     // only for the unauthenticated demo experience.
     return Array.isArray(saved) ? saved : (user ? [] : initialProjects);
