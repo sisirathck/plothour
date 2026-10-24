@@ -1326,6 +1326,9 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       const proj = e.projectName || 'General Study';
       const sub = e.subjectName || '';
       const project = projects.find((item) => item.id === e.projectId) || projects.find((item) => item.name === proj);
+      // Archived projects stay in session history, but should not appear in
+      // the active dashboard portfolio.
+      if (project?.archived) return;
       const subject = project?.subjects?.find((item) => item.id === e.subjectId) || project?.subjects?.find((item) => item.name === sub);
       const selectedColor = subject?.color || project?.color || e.color || '#f3957f';
       const key = `${proj}:::${sub}`;
@@ -1361,6 +1364,33 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       topPct,
     };
   }, [portfolioEntries, projects]);
+
+  const hoursByProject = useMemo(() => {
+    const totals = new Map();
+    portfolioStats.list.forEach((item) => {
+      const project = projects.find((candidate) => candidate.name === item.projectName);
+      const current = totals.get(item.projectName) || {
+        name: item.projectName,
+        color: project?.color || item.color || 'var(--db-portfolio-accent)',
+        seconds: 0,
+      };
+      current.seconds += item.secs;
+      totals.set(item.projectName, current);
+    });
+    const rows = [...totals.values()].sort((a, b) => b.seconds - a.seconds);
+    const totalSeconds = rows.reduce((sum, item) => sum + item.seconds, 0);
+    let offset = 0;
+    const stops = rows.map((item) => {
+      const start = offset;
+      offset += totalSeconds ? item.seconds / totalSeconds * 360 : 0;
+      return `${item.color} ${start}deg ${offset}deg`;
+    });
+    return {
+      rows: rows.map((item) => ({ ...item, pct: totalSeconds ? Math.round(item.seconds / totalSeconds * 100) : 0 })),
+      totalSeconds,
+      gradient: stops.length ? `conic-gradient(${stops.join(', ')})` : 'var(--db-track-bg)',
+    };
+  }, [portfolioStats.list, projects]);
 
   const projectPlans = useMemo(() => projects.filter((project) => !project.archived).map((project) => {
     const matching = entries.filter((entry) => entry.projectId === project.id || (!entry.projectId && entry.projectName === project.name));
@@ -2105,31 +2135,47 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               </div>
             </div>
           </div>
-          <div className="db-card db-project-plans-card">
-            <div className="db-card-header-flex">
-              <div><h2 className="db-section-title">Project plans</h2><span className="db-section-meta">Estimate, progress, and a pace-based finish forecast</span></div>
-              <button type="button" className="db-manage-link" onClick={() => onNavigate?.('manage')}>Edit plans <span aria-hidden="true">→</span></button>
-            </div>
-            {projectPlans.length === 0 ? (
-              <div className="db-range-empty"><span>Add a project to plan its estimate, deadline, and milestones.</span><button type="button" onClick={() => onNavigate?.('manage')}>Open project library <span aria-hidden="true">→</span></button></div>
-            ) : (
-              <div className="db-project-plans-list">
-                {projectPlans.map((plan) => (
-                  <article className="db-project-plan-row" key={plan.id}>
-                    <span className="db-project-plan-dot" style={{ backgroundColor: plan.color || 'var(--db-portfolio-accent)' }} />
-                    <div className="db-project-plan-main">
-                      <div className="db-project-plan-title"><strong>{plan.name}</strong>{plan.estimateHours > 0 && <span>{fmtDur(plan.seconds)} / {fmtDur(plan.estimateHours * 3600)}</span>}</div>
-                      {plan.estimateHours > 0 ? <div className="db-project-plan-track"><span style={{ width: `${plan.progress}%` }} /></div> : <p>Set a total estimate in Manage to track progress.</p>}
-                      <div className="db-project-plan-meta">
-                        <span>{plan.estimateHours > 0 ? `${plan.progress}% complete · ${fmtDur(plan.remainingSeconds)} left` : 'No total estimate set'}</span>
-                        <span>{plan.milestones.length ? `${plan.completedMilestones}/${plan.milestones.length} milestones` : 'No milestones yet'}</span>
-                        <span>{plan.deadline ? `Due ${plan.deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${plan.forecastDate ? ` · pace ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}` : plan.estimateHours > 0 && plan.remainingSeconds === 0 ? 'Time estimate reached' : plan.forecastDate ? `At recent pace: ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Log sessions to estimate finish'}</span>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+          <div className="db-bento-grid-row db-two-col db-project-plans-row">
+            <div className="db-card db-project-plans-card">
+              <div className="db-card-header-flex">
+                <div><h2 className="db-section-title">Project plans</h2><span className="db-section-meta">Estimate, progress, and a pace-based finish forecast</span></div>
+                <button type="button" className="db-manage-link" onClick={() => onNavigate?.('manage')}>Edit plans <span aria-hidden="true">→</span></button>
               </div>
-            )}
+              {projectPlans.length === 0 ? (
+                <div className="db-range-empty"><span>Add a project to plan its estimate, deadline, and milestones.</span><button type="button" onClick={() => onNavigate?.('manage')}>Open project library <span aria-hidden="true">→</span></button></div>
+              ) : (
+                <div className="db-project-plans-list">
+                  {projectPlans.map((plan) => (
+                    <article className="db-project-plan-row" key={plan.id}>
+                      <span className="db-project-plan-dot" style={{ backgroundColor: plan.color || 'var(--db-portfolio-accent)' }} />
+                      <div className="db-project-plan-main">
+                        <div className="db-project-plan-title"><strong>{plan.name}</strong>{plan.estimateHours > 0 && <span>{fmtDur(plan.seconds)} / {fmtDur(plan.estimateHours * 3600)}</span>}</div>
+                        {plan.estimateHours > 0 ? <div className="db-project-plan-track"><span style={{ width: `${plan.progress}%` }} /></div> : <p>Set a total estimate in Manage to track progress.</p>}
+                        <div className="db-project-plan-meta">
+                          <span>{plan.estimateHours > 0 ? `${plan.progress}% complete · ${fmtDur(plan.remainingSeconds)} left` : 'No total estimate set'}</span>
+                          <span>{plan.milestones.length ? `${plan.completedMilestones}/${plan.milestones.length} milestones` : 'No milestones yet'}</span>
+                          <span>{plan.deadline ? `Due ${plan.deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${plan.forecastDate ? ` · pace ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}` : plan.estimateHours > 0 && plan.remainingSeconds === 0 ? 'Time estimate reached' : plan.forecastDate ? `At recent pace: ${plan.forecastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Log sessions to estimate finish'}</span>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="db-card db-hours-project-card">
+              <div className="db-card-header-flex"><div><h2 className="db-section-title">Hours by Project</h2><span className="db-section-meta">Study time in {rangeLabel.toLowerCase()}</span></div></div>
+              {hoursByProject.rows.length ? <div className="db-hours-project-body">
+                <div className="db-hours-project-donut" role="img" aria-label={`Hours by project: ${hoursByProject.rows.map((row) => `${row.name} ${row.pct}%`).join(', ')}`} style={{ background: hoursByProject.gradient }}>
+                  <div className="db-hours-project-total"><strong>{fmtDur(hoursByProject.totalSeconds)}</strong><span>total study</span></div>
+                </div>
+                <div className="db-hours-project-legend">
+                  {hoursByProject.rows.map((row) => <div className="db-hours-project-legend-row" key={row.name} title={`${row.name}: ${fmtDur(row.seconds)}`}>
+                    <span className="db-hours-project-name"><i style={{ backgroundColor: row.color }} /><span>{row.name}</span></span>
+                    <strong>{row.pct}%</strong>
+                  </div>)}
+                </div>
+              </div> : <div className="db-hours-project-empty">No project study time in this date range yet.</div>}
+            </div>
           </div>
         </DashboardSection>
 

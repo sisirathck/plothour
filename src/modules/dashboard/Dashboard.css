@@ -269,7 +269,7 @@
 }
 
 .db-rhythm-row {
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (min-width: 1024px) {
@@ -2241,8 +2241,12 @@
   padding: 16px;
   border: 1px solid var(--db-card-border);
   border-radius: 18px;
-  background: var(--db-card-bg);
+  background: #FBFAFF;
   box-shadow: 0 18px 48px rgba(18, 22, 54, .22), var(--db-card-shadow);
+}
+
+.db-apple-root.dark-mode .db-customizer-panel {
+  background: #151D2B;
 }
 
 .db-customizer-heading {
@@ -2517,6 +2521,34 @@
 .db-project-plans-list {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.db-project-plans-row { align-items: stretch; }
+.db-project-plans-card,
+.db-hours-project-card { height: 370px; min-height: 370px; display: flex; flex-direction: column; }
+.db-project-plans-card > .db-project-plans-list { flex: 1; }
+.db-project-plans-card .db-range-empty { flex: 1; }
+.db-hours-project-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(150px, .9fr) minmax(0, 1fr); align-items: center; gap: 20px; }
+.db-hours-project-donut { width: min(100%, 220px); aspect-ratio: 1; justify-self: center; position: relative; display: grid; place-items: center; border-radius: 50%; }
+.db-hours-project-donut::after { content: ''; position: absolute; inset: 22%; border: 1px solid var(--db-card-border); border-radius: 50%; background: var(--db-card-bg); }
+.db-hours-project-total { position: relative; z-index: 1; display: grid; justify-items: center; gap: 3px; color: var(--db-muted); font-size: 10px; }
+.db-hours-project-total strong { color: var(--db-text); font-size: 16px; }
+.db-hours-project-legend { min-height: 0; max-height: 280px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.db-hours-project-legend-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; color: var(--db-muted); font-size: 11px; }
+.db-hours-project-name { min-width: 0; display: flex; align-items: center; gap: 7px; color: var(--db-text); }
+.db-hours-project-name i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.db-hours-project-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-hours-project-legend-row strong { color: var(--db-muted); font-size: 11px; font-weight: 600; }
+.db-hours-project-empty { flex: 1; display: grid; place-items: center; color: var(--db-muted); font-size: 12px; text-align: center; }
+
+@media (max-width: 760px) {
+  .db-project-plans-card,
+  .db-hours-project-card { height: 370px; min-height: 370px; }
+  .db-hours-project-body { grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr); gap: 14px; }
+  .db-hours-project-donut { width: min(100%, 180px); }
 }
 
 .db-project-plan-row {
