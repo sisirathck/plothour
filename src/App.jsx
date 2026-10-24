@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './components/Auth/LoginPage';
 import { connectWorkspaceSync } from './data/workspaceSync';
+import { resetDemoWorkspace } from './data/demoWorkspace';
 import './App.css';
 
 // Lazy-load the heavy AppShell module (dashboard, timer, charts) so login loads instantly
@@ -62,15 +63,18 @@ function App() {
 
   // Check existing session on load & preload AppShell in background during idle time
   useEffect(() => {
+    let authenticated = false;
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {
+          authenticated = true;
           setUser(data.user);
         }
       })
       .catch(() => {})
       .finally(() => {
+        if (!authenticated && isDemoMode) resetDemoWorkspace();
         setIsCheckingAuth(false);
       });
 
@@ -143,6 +147,7 @@ function App() {
         ) : (
           <LoginPage
             onTryDemo={() => {
+              resetDemoWorkspace();
               setIsDemoMode(true);
               window.history.pushState({}, '', '/timer');
             }}

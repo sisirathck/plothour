@@ -70,7 +70,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
     return day >= dateRange.start && day <= dateRange.end;
   }), [entries, dateRange]);
 
-  const effectivePageSize = pageSize === 'all' ? 100 : Number(pageSize);
+  const effectivePageSize = pageSize === 'all' ? Math.max(1, filteredEntries.length) : Number(pageSize);
   const pageCount = Math.max(1, Math.ceil(filteredEntries.length / effectivePageSize));
   const visibleEntries = filteredEntries.slice((page - 1) * effectivePageSize, page * effectivePageSize);
 
