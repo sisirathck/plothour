@@ -96,8 +96,26 @@ app.listen(PORT, async () => {
   try {
     await query('SELECT 1');
     console.log(` [Database] PostgreSQL connected successfully`);
+
+    // Ensure schema tables exist (auto-migration on cold start)
+    const tableCheck = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `);
+    if (!tableCheck.rows[0]?.exists) {
+      console.log(' [Database] "users" table missing. Applying 001_initial_schema.sql...');
+      const schemaPath = path.resolve(__dirname, '../database/001_initial_schema.sql');
+      if (fs.existsSync(schemaPath)) {
+        const sql = fs.readFileSync(schemaPath, 'utf8');
+        await query(sql);
+        console.log(' [Database] Initial schema successfully applied!');
+      }
+    }
   } catch (err) {
-    console.error(` [Database] Connection failed:`, err.message);
+    console.error(` [Database] Connection or migration failed:`, err.message);
   }
 
   if (process.env.AUTH_SECRET) {
