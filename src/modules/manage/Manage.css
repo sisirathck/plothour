@@ -2,6 +2,8 @@
   --manage-accent: #777dd0;
   --manage-accent-soft: rgba(119, 125, 208, .11);
   --manage-accent-ring: rgba(119, 125, 208, .18);
+  --manage-cta-disabled-bg: rgba(119, 125, 208, .14);
+  --manage-cta-disabled-border: rgba(119, 125, 208, .27);
   --manage-line: var(--sd-border-soft, rgba(120, 123, 160, .14));
   --manage-muted: var(--sd-text-muted, #8588a0);
   --manage-text: var(--sd-text-primary, #252744);
@@ -217,6 +219,12 @@
   color: var(--manage-muted);
   opacity: 1;
   cursor: not-allowed;
+}
+
+.manage-create-project button:disabled {
+  border-color: var(--manage-cta-disabled-border);
+  background: var(--manage-cta-disabled-bg);
+  color: var(--manage-accent);
 }
 
 .manage-notice {
@@ -515,6 +523,8 @@
   --manage-accent: var(--sd-coral, #f3957f);
   --manage-accent-soft: var(--sd-orange-subtle, rgba(243,149,127,.12));
   --manage-accent-ring: rgba(243,149,127,.24);
+  --manage-cta-disabled-bg: rgba(243,149,127,.17);
+  --manage-cta-disabled-border: rgba(243,149,127,.34);
 }
 
 [data-theme='dark'] .manage-notice { color: #e59aad; }
