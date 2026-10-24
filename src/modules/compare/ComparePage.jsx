@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users, Share2, ChevronUp, Info } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users, Share2, ChevronUp, Info, Image as ImageIcon } from 'lucide-react';
 import './Compare.css';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
@@ -38,6 +38,37 @@ const duration = (seconds, empty = '0m') => {
 const prettyDate = (value) => value ? formatDisplayDate(new Date(`${value}T12:00:00`), { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 const compactDate = (value) => value ? formatDisplayDate(new Date(`${value}T12:00:00`), { month: '2-digit', day: '2-digit' }) : '—';
 const readJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } };
+const escapeSvg = (value) => String(value).replace(/[&<>\"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]);
+
+async function createRecapImage({ name, period, metrics }) {
+  const root = document.querySelector('.compare-page');
+  const styles = getComputedStyle(root || document.documentElement);
+  const color = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+  const background = color('--compare-card', '#171923');
+  const textColor = color('--compare-text', '#f6f5fb');
+  const muted = color('--compare-muted', '#a3a2b5');
+  const line = color('--compare-line', '#343647');
+  const accent = color('--compare-accent', '#f58c76');
+  const height = 360 + metrics.length * 82;
+  const rows = metrics.map(([label, value], index) => {
+    const y = 265 + index * 82;
+    return `<g><text x="92" y="${y}" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="24">${escapeSvg(label)}</text><text x="988" y="${y}" fill="${escapeSvg(textColor)}" font-family="Arial,sans-serif" font-size="30" font-weight="700" text-anchor="end">${escapeSvg(value)}</text><line x1="92" y1="${y + 27}" x2="988" y2="${y + 27}" stroke="${escapeSvg(line)}" stroke-width="2" opacity=".72"/></g>`;
+  }).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="${height}" viewBox="0 0 1080 ${height}"><rect width="1080" height="${height}" rx="38" fill="${escapeSvg(background)}"/><rect x="0" y="0" width="1080" height="18" rx="9" fill="${escapeSvg(accent)}"/><text x="92" y="92" fill="${escapeSvg(accent)}" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="4">STUDYDUEL · STUDY RECAP</text><text x="92" y="157" fill="${escapeSvg(textColor)}" font-family="Arial,sans-serif" font-size="42" font-weight="700">${escapeSvg(name)}</text><text x="92" y="202" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="25">${escapeSvg(period)}</text><line x1="92" y1="232" x2="988" y2="232" stroke="${escapeSvg(line)}" stroke-width="2"/>${rows}<text x="92" y="${height - 42}" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="18">A little progress, logged consistently.</text></svg>`;
+  const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+  try {
+    const image = new window.Image();
+    image.src = svgUrl;
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(image, 0, 0);
+    return await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Could not render recap image')), 'image/png'));
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+}
 
 function getPeriod(range, from, to, weekStart) {
   const now = new Date(); const end = new Date(now); const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -282,11 +313,48 @@ export const ComparePage = ({ user, onNavigate }) => {
       if (error?.name !== 'AbortError') setShareStatus('Could not share recap');
     }
   };
+  const shareRecapImage = async () => {
+    const you = profiles.find((profile) => profile.id === profileId);
+    if (!you || !shareFields.length) return;
+    const optionValues = { time: ['Study time', duration(you.current.seconds)], activeDays: ['Active days', String(you.current.activeDays)], sessions: ['Sessions', String(you.current.sessions)], goal: ['Goal progress', you.current.goalProgressPct == null ? 'No goal set' : `${you.current.goalProgressPct}%`], bestDay: ['Best day', you.current.bestDay ? duration(you.current.bestDay.seconds) : 'No study days'] };
+    try {
+      const blob = await createRecapImage({ name: you.name, period: periodLabel, metrics: shareFields.map((field) => optionValues[field]).filter(Boolean) });
+      const safeName = you.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'studyduel';
+      const file = new File([blob], `${safeName}-${range}-study-recap.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] }) && navigator.share) {
+        await navigator.share({ title: 'StudyDuel study recap', files: [file] });
+        setShareStatus('Recap image shared');
+      } else {
+        const imageUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = file.name;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000);
+        setShareStatus('Recap image downloaded');
+      }
+      setShareOpen(false);
+    } catch (error) {
+      if (error?.name !== 'AbortError') setShareStatus('Could not create recap image');
+    }
+  };
 
   return <main className="compare-page" aria-label="Study comparison" style={comparePaletteStyle}>
     <div className="compare-topbar"><div className="compare-range-select" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setRangeOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setRangeOpen(false); }}><div className="compare-control-label"><CalendarDays size={14} /> STUDY PERIOD</div><button className="compare-range-trigger" type="button" aria-haspopup="listbox" aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}><span>{RANGE_OPTIONS.find((option) => option.id === range)?.label || 'This week'}</span><ChevronDown size={15} /></button>{rangeOpen && <div className="compare-range-menu" role="listbox" aria-label="Study period">{RANGE_OPTIONS.map((option) => <button type="button" role="option" aria-selected={range === option.id} className={range === option.id ? 'is-selected' : ''} key={option.id} onClick={() => { setRange(option.id); setRangeOpen(false); }}>{option.label}</button>)}</div>}</div><div className="compare-topbar-actions"><button className="compare-manage-button" type="button" onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails}>{showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />} {showDetails ? 'Hide details' : 'More insights'}</button><button className="compare-manage-button" type="button" onClick={() => setShareOpen(true)} disabled={!profiles.some((profile) => profile.id === profileId)}><Share2 size={15} /> Share recap</button><button className="compare-manage-button" type="button" onClick={() => setManageViewOpen(true)}><Settings2 size={15} /> Manage view <span>{selectedConnections.length}</span></button></div></div>
     {shareStatus && <p className="compare-share-status" role="status">{shareStatus}</p>}
-    {shareOpen && (() => { const you = profiles.find((profile) => profile.id === profileId); if (!you) return null; const options = [['time', 'Study time', duration(you.current.seconds)], ['activeDays', 'Active days', String(you.current.activeDays)], ['sessions', 'Sessions', String(you.current.sessions)], ['goal', 'Goal progress', you.current.goalProgressPct == null ? 'No goal set' : `${you.current.goalProgressPct}%`], ['bestDay', 'Best day', you.current.bestDay ? duration(you.current.bestDay.seconds) : 'No study days']]; return <div className="compare-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}><section className="compare-share-panel" role="dialog" aria-modal="true" aria-labelledby="compare-share-title"><div className="compare-share-heading"><div><span className="compare-eyebrow">STUDY RECAP</span><h2 id="compare-share-title">Choose what to share</h2><p>Only your own summary is included. Preview it before sharing.</p></div><button type="button" aria-label="Close share preview" onClick={() => setShareOpen(false)}>×</button></div><div className="compare-share-options">{options.map(([id, label, value]) => <label key={id}><input type="checkbox" checked={shareFields.includes(id)} onChange={(event) => setShareFields((current) => event.target.checked ? [...current, id] : current.filter((field) => field !== id))} /><span>{label}</span><strong>{value}</strong></label>)}</div><article className="compare-share-preview"><span>{you.name} · {periodLabel}</span>{options.filter(([id]) => shareFields.includes(id)).map(([id, label, value]) => <div key={id}><span>{label}</span><strong>{value}</strong></div>)}</article><div className="compare-share-actions"><button className="compare-manage-button" type="button" onClick={() => setShareOpen(false)}>Cancel</button><button className="compare-manage-button" type="button" disabled={!shareFields.length} onClick={shareRecap}><Share2 size={15} /> Share recap</button></div></section></div>; })()}
+    {shareOpen && (() => {
+      const you = profiles.find((profile) => profile.id === profileId);
+      if (!you) return null;
+      const options = [['time', 'Study time', duration(you.current.seconds)], ['activeDays', 'Active days', String(you.current.activeDays)], ['sessions', 'Sessions', String(you.current.sessions)], ['goal', 'Goal progress', you.current.goalProgressPct == null ? 'No goal set' : `${you.current.goalProgressPct}%`], ['bestDay', 'Best day', you.current.bestDay ? duration(you.current.bestDay.seconds) : 'No study days']];
+      return <div className="compare-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}><section className="compare-share-panel" role="dialog" aria-modal="true" aria-labelledby="compare-share-title">
+        <div className="compare-share-heading"><div><span className="compare-eyebrow">STUDY RECAP</span><h2 id="compare-share-title">Choose what to share</h2><p>Only your own summary is included. Preview it before sharing.</p></div><button type="button" aria-label="Close share preview" onClick={() => setShareOpen(false)}>×</button></div>
+        <div className="compare-share-options">{options.map(([id, label, value]) => <label key={id}><input type="checkbox" checked={shareFields.includes(id)} onChange={(event) => setShareFields((current) => event.target.checked ? [...current, id] : current.filter((field) => field !== id))} /><span>{label}</span><strong>{value}</strong></label>)}</div>
+        <article className="compare-share-preview"><span>{you.name} · {periodLabel}</span>{options.filter(([id]) => shareFields.includes(id)).map(([id, label, value]) => <div key={id}><span>{label}</span><strong>{value}</strong></div>)}</article>
+        <div className="compare-share-actions"><button className="compare-manage-button" type="button" onClick={() => setShareOpen(false)}>Cancel</button><button className="compare-manage-button" type="button" disabled={!shareFields.length} onClick={shareRecap}><Share2 size={15} /> Share recap</button><button className="compare-manage-button compare-share-image-button" type="button" disabled={!shareFields.length} onClick={shareRecapImage}><ImageIcon size={15} /> Share as image</button></div>
+      </section></div>;
+    })()}
     {(() => {
       const you = profiles.find((profile) => profile.id === profileId);
       if (!you) return null;

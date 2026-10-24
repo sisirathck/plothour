@@ -1,114 +1,167 @@
-# StudyDuel
+<div align="center">
+  <img src="public/studyduel_logo.png" alt="StudyDuel" width="300" />
 
-StudyDuel is a React and Express study timer with a PostgreSQL-backed authentication service. The repository also contains a browser extension. This README describes the current implementation; some planned social and persistence features are not yet connected to the main app.
+  <h1>StudyDuel</h1>
+  <p><strong>Make study time visible. Build momentum with friends.</strong></p>
+  <p>Track focused work across projects and subjects, understand your habits, and compare progress with people you choose.</p>
 
-## Current functionality
+  <p>
+    <a href="https://github.com/sisirathck/studyduel-2.0">GitHub repository</a>
+    · <a href="#getting-started">Run locally</a>
+    · <a href="extension/README.md">Browser extension</a>
+  </p>
+</div>
 
-- Email and password registration with emailed verification codes, Argon2id password hashes, and JWT sessions in HTTP-only cookies.
-- Optional Google sign-in when `GOOGLE_CLIENT_ID` is configured.
-- Timer, dashboard, project management, settings, and compare screens.
-- Light and dark themes, timer/session views, dashboard summaries, and browser extension UI.
-- An Express API with health, authentication, project-list/create, and timer endpoints.
+> **Website:** A public production domain is not configured in this repository yet. The app runs locally at `http://localhost:5173` during development. Add the deployed HTTPS URL here when one is available.
 
-### Current data-storage limitation
+## See StudyDuel
 
-Authentication records are stored in PostgreSQL. The main React app currently stores most signed-in workspace data in browser `localStorage`, including projects and subjects, completed sessions, the active timer, goals/plans, dashboard layout, preferences, reminders, and the local friend list. That data is browser- and device-specific; it is not reliably backed up or available on another device.
+These screenshots show the app in dark mode with sample demo data. The same screens support the light theme.
 
-The database schema includes tables for projects, sessions, active timers, goals, and social connections, and the server has project and timer endpoints. However, the main React screens do not currently use those endpoints as their source of truth. As a result, the active timer and most information shown in the UI are **not currently derived from PostgreSQL**. The Compare screen's friend list is local-only; it does not send real invitations or compare data from other accounts. The browser extension has API calls of its own, but that does not make the web app's local data database-backed.
+<table>
+  <tr>
+    <td width="50%"><strong>Focus timer</strong><br /><img src="docs/screenshots/timer-demo-dark.png" alt="StudyDuel focus timer showing project search, frequent sessions, and a running-time dial" /></td>
+    <td width="50%"><strong>Progress dashboard</strong><br /><img src="docs/screenshots/dashboard-demo-dark.png" alt="StudyDuel dashboard with weekly progress, study totals, and project portfolio" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><strong>Compare progress</strong><br /><img src="docs/screenshots/compare-demo-dark.png" alt="StudyDuel comparison view with period standings and study-time charts" /></td>
+    <td width="50%"><strong>Project library</strong><br /><img src="docs/screenshots/manage-demo-dark.png" alt="StudyDuel project library with projects, subprojects, and study goals" /></td>
+  </tr>
+</table>
 
-The demo mode intentionally uses local sample data. A new signed-in account should start without sample projects; sample projects are for demo mode only.
+## What you can do
+
+### Track focused study time
+
+- Start and stop sessions against a project and subject, or use the stopwatch for an open-ended session.
+- Choose a Pomodoro, deep-work, or open stopwatch timer mode.
+- Find projects and subjects from the timer search, then launch a recent project/subject combination with one click.
+- Review, edit, and organize completed sessions. Browse history in the calendar and filter by study area.
+- Use the browser extension to start and stop a timer from the toolbar. See the [extension guide](extension/README.md) for setup and browser-specific details.
+
+### Understand your progress
+
+- Review total study time, sessions, active days, daily goals, and average session length.
+- See weekly summaries, daily charts, project breakdowns, streaks, and personal records.
+- Choose a reporting period, customize dashboard sections, and set your preferred week start.
+- Keep a weekly target in view and compare this period with the previous one.
+
+### Study alongside friends
+
+- Connect study partners using invite codes in Settings.
+- Choose which connected profiles appear in Compare and customize their chart colors.
+- Compare a selected period using standings, study-time trends, active days, sessions, project patterns, and personal records.
+- Share a recap containing only your own selected metrics, as text or as a PNG image. On devices that support file sharing, the image opens the native share sheet; otherwise it downloads for you to share.
+
+### Plan projects and personalize your workspace
+
+- Organize projects into subjects, set daily/weekly/monthly goals, reorder or favorite active work, and archive completed projects.
+- Configure timer defaults, reminder preferences, chimes, theme, time zone, date format, and display name.
+- Import or export workspace data from Settings.
+- Choose light, dark, or automatic daylight themes.
+
+## Data and accounts
+
+StudyDuel has two workspace modes:
+
+- **Demo mode** uses sample profiles and sample study history stored in this browser. It does not connect demo activity to real accounts.
+- **Signed-in mode** uses PostgreSQL for account and connection records. The app keeps an account-scoped working copy in browser storage and syncs it to the server's workspace-state table, so workspace data can be restored after signing in on another browser. Study-partner comparisons are loaded through the API and limited to connected profiles.
+
+Password registration uses email verification. Configure SMTP or Resend to deliver verification and password-reset codes. Google sign-in is available when Google OAuth credentials are configured. For local exploration, use **Try demo** without configuring an email provider.
 
 ## Technology
 
-| Layer | Technologies |
+| Area | Stack |
 |---|---|
-| Frontend | React 19, Vite 8, Lucide React, CSS |
-| Backend | Node.js, Express 5 |
-| Authentication | Argon2id, JWT, HTTP-only cookies, optional Google Identity Services |
-| Database | PostgreSQL 16, `pg` connection pool |
-| Extension | Manifest V3 browser extension |
+| Web app | React 19, Vite 8, Lucide React, CSS |
+| API | Node.js, Express 5 |
+| Database | PostgreSQL, `pg` |
+| Accounts | Argon2id password hashing, JWT session cookies, email verification, optional Google sign-in |
+| Browser add-on | Manifest V3 extension for Chromium-based browsers and Safari-compatible WebExtensions |
 
-## Requirements
+## Getting started
 
-- Node.js `^20.19.0` or `>=22.12.0` (Vite 8 requirement)
+### Requirements
+
+- Node.js `^20.19.0` or `>=22.12.0`
 - npm
-- Docker Compose for the local PostgreSQL service, or an existing PostgreSQL database
+- Docker Compose with PostgreSQL, or a PostgreSQL instance you can connect to
 
-## Local setup
-
-Clone this repository and install dependencies:
+### Install and configure
 
 ```bash
 git clone https://github.com/sisirathck/studyduel-2.0.git
 cd studyduel-2.0
 npm install
-```
-
-Create a local environment file and set a strong `AUTH_SECRET`:
-
-```bash
 cp .env.example .env
 ```
 
-For Docker Compose, set `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`; set `DATABASE_URL` to match them. Then start PostgreSQL and the app:
+Edit `.env` with your local database credentials. For the included Docker Compose database, set `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`, then make `DATABASE_URL` match those values. Replace the example password before using the database.
+
+Start PostgreSQL and the app:
 
 ```bash
 docker compose up -d db
 npm run dev
 ```
 
-Vite serves the frontend at <http://localhost:5173> and proxies `/api` requests to Express at <http://localhost:3001>. On first server startup, the server applies `database/001_initial_schema.sql` if it cannot find the `users` table. Docker also runs that SQL file when it initializes a new data volume.
+Open <http://localhost:5173>. Vite serves the React app and forwards `/api` requests to Express on port `3001`. The server applies the numbered SQL migrations on startup. Use **Try demo** to explore immediately; email delivery is only needed to register a password-based account.
 
-Use **Try demo** to explore the sample workspace, or register an account to use the authentication flow.
+### Environment variables
 
-## Environment variables
-
-| Variable | Required | Purpose |
+| Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `AUTH_SECRET` | Yes for secure deployment | Secret used to sign session JWTs; use a random value of at least 32 bytes |
-| `PORT` | No | Express listen port; defaults to `3001` |
-| `NODE_ENV` | No | Set to `production` in production so session cookies use the `Secure` flag |
-| `GOOGLE_CLIENT_ID` | No | Enables Google sign-in when configured |
-| `RESEND_API_KEY` | Required for password-based registration | API key used to send verification emails through Resend |
-| `EMAIL_FROM` | Required for password-based registration | Verified sender, for example `StudyDuel <verify@example.com>` |
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | For Docker Compose | PostgreSQL container setup |
+| `AUTH_SECRET` | Yes for deployment | Random secret of at least 32 characters for signed sessions. Do not use the development fallback in production. |
+| `PORT` | No | Express port; defaults to `3001` |
+| `NODE_ENV` | No | Set to `production` in deployment so secure cookie settings are used. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | For SMTP email | SMTP settings for verification and reset emails |
+| `EMAIL_FROM` | For email delivery | Sender address accepted by your mail provider |
+| `RESEND_API_KEY` | Alternative email provider | Resend API key; configure `EMAIL_FROM` as a verified sender |
+| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID used to enable Google sign-in |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | For Docker Compose | Initial local PostgreSQL container settings |
 
-Do not use the development fallback JWT secret in production. Keep `.env` and all credentials out of version control.
+Never commit `.env`, OAuth credentials, SMTP passwords, API keys, or production user data.
 
-## Useful commands
+## Commands
 
-| Command | Purpose |
+| Command | What it does |
 |---|---|
-| `npm run dev` | Run Vite and the Express server for development |
-| `npm run build` | Build the frontend into `dist/` |
-| `npm start` | Run the Express server, serving `dist/` when present |
-| `npm run build:start` | Build the frontend and start the Express server |
-| `npm run server` | Run only the Express server |
+| `npm run dev` | Start the Vite development server and Express API |
+| `npm run build` | Create the production frontend in `dist/` |
+| `npm start` | Start Express and serve `dist/` when it exists |
+| `npm run build:start` | Build the frontend, then start Express |
+| `npm run server` | Start only the Express server |
 | `npm run lint` | Run Oxlint |
-| `npm run preview` | Preview the Vite production build |
+| `npm run preview` | Preview the Vite build locally |
 
-## Database
+## API and database
 
-The initial schema is in [`database/001_initial_schema.sql`](database/001_initial_schema.sql). It defines users, OAuth accounts, projects, subprojects, time entries, active timers, goals, and social/challenge tables. The presence of a schema table does not mean the corresponding UI feature is already connected to it; see [Current data-storage limitation](#current-data-storage-limitation).
+The Express API currently mounts these route groups:
 
-Stop the local database while preserving its data:
+| Route | Purpose |
+|---|---|
+| `/api/health` | Health response |
+| `/api/auth` | Registration, email verification, login, password reset, profile, Google sign-in, and logout |
+| `/api/workspace` | Signed-in workspace-state sync |
+| `/api/connections` | Invite codes, partner connections, and comparison data |
+| `/api/projects` | Project API endpoints |
+| `/api/timer` | Timer API endpoints |
 
-```bash
-docker compose down
-```
+Database schema and migrations are in [`database/`](database/). The numbered migrations add account/workspace persistence, invites, email verification, and password reset support. The app's signed-in workspace is synchronized as account-scoped browser-storage items, while account credentials and relationships are stored in PostgreSQL.
 
-Remove the local database volume and its data (destructive):
+## Deployment and domain
 
-```bash
-docker compose down -v
-```
+There is no production domain or automatic deployment target declared in this repository. To publish your own instance:
 
-The server applies the numbered additive SQL migrations on startup. Email verification is enabled only when `RESEND_API_KEY` and a verified `EMAIL_FROM` sender are configured. New password accounts are created after the 6-digit code is verified; existing accounts remain verified. Google sign-in requires a Google-verified email.
+1. Provision a host, PostgreSQL database, and a domain you control.
+2. Point the domain's DNS records at the host and configure HTTPS.
+3. Set production environment variables, including a strong `AUTH_SECRET`, database credentials, and email-provider settings.
+4. Build and launch the app with `npm run build` and `npm start` (or your process manager of choice).
+5. Configure your reverse proxy to forward application traffic to Express on port `3001`, preserving `/api` and SPA routes.
+6. Set the public URL in this README and configure any OAuth/email provider callback or sender settings for that domain.
 
-## Production deployment (manual VPS example)
-
-The repository does not include a CI/CD workflow that deploys on `git push`. A push to GitHub alone does not update a running site. On the server, from the application directory:
+For a manual VPS update after deployment, the basic application steps are:
 
 ```bash
 git pull origin main
@@ -117,21 +170,27 @@ npm run build
 pm2 restart studyduel --update-env
 ```
 
-For a first-time PM2 launch, use `pm2 start npm --name studyduel -- start`, then `pm2 save`. Configure the reverse proxy (for example, Nginx) to pass requests to the Express port, which defaults to `3001`. Adjust the PM2 process name and deployment commands to match the server's actual setup.
+For a first PM2 launch, use `pm2 start npm --name studyduel -- start` and `pm2 save`. Adapt the branch, process name, database migrations, and reverse-proxy configuration to your host. A GitHub push alone does not deploy the app.
 
-## Repository layout
+## Repository map
 
 ```text
-database/                 PostgreSQL schema
-extension/                Manifest V3 browser extension
-public/                   Static images and icons
-scripts/                  Development and asset scripts
-server/                   Express API and authentication
-src/components/           Shared React UI
-src/context/               Theme context
-src/modules/                Timer, dashboard, manage, compare, settings
+database/             PostgreSQL schema and migrations
+docs/screenshots/     README screenshots captured from demo mode
+extension/            Browser extension source and install guide
+public/               Static app images, logos, and icons
+scripts/              Development and asset scripts
+server/               Express API, authentication, and database access
+src/components/       Shared React components
+src/context/           Theme context
+src/data/              Demo workspace and account workspace sync
+src/modules/           Timer, dashboard, compare, manage, settings, calendar
 ```
 
 ## Contributing
 
-Use synthetic data for screenshots and examples. Never commit `.env` files, production credentials, personal tracking data, or user exports. Please ensure documentation reflects the implementation and label planned features clearly.
+Issues and pull requests are welcome. Please keep screenshots and examples synthetic, label planned work as planned, and never include credentials or personal study histories in commits.
+
+## License
+
+This repository does not currently include a license file. Until a license is added, the source remains all rights reserved by its owner; please ask before redistributing or using it outside the rights granted by GitHub's default repository terms.
