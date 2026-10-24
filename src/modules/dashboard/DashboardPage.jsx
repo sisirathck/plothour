@@ -1904,7 +1904,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
         <DashboardSection section={dashboardSection('projects')} order={dashboardSectionOrder('projects')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
           {/* ROW 4: WEEKLY STUDY BAR CHART (LEFT) + PROJECT PORTFOLIO (RIGHT) */}
-          <div className="db-bento-grid-row db-two-col">
+          <div className="db-bento-grid-row db-two-col db-weekly-portfolio-row">
             {/* Weekly Study Bar Chart */}
             <div className="db-card">
               <div className="db-card-header-flex mb-6">

@@ -264,6 +264,10 @@
   grid-template-columns: 1fr;
 }
 
+.db-weekly-portfolio-row {
+  align-items: start;
+}
+
 @media (min-width: 1024px) {
   .db-two-col {
     grid-template-columns: 1fr 1fr;
