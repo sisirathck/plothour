@@ -6,6 +6,28 @@ import { SocialAuth } from './SocialAuth';
 import { useTheme } from '../../context/ThemeContext';
 import './LoginForm.css';
 
+let googleIdentityScriptPromise;
+
+const loadGoogleIdentityScript = () => {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  if (googleIdentityScriptPromise) return googleIdentityScriptPromise;
+
+  googleIdentityScriptPromise = new Promise((resolve, reject) => {
+    let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (!script) {
+      script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+    script.addEventListener('load', resolve, { once: true });
+    script.addEventListener('error', reject, { once: true });
+  });
+
+  return googleIdentityScriptPromise;
+};
+
 export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onLogInClick }) => {
   const { theme } = useTheme();
   const [email, setEmail] = useState('');
@@ -13,6 +35,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleButtonReady, setGoogleButtonReady] = useState(false);
   const [error, setError] = useState('');
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -90,6 +113,41 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
   useEffect(() => {
     if (!serverStatus.googleClientId) return;
 
+    const renderGoogleBtn = () => {
+      const btnEl = document.getElementById('google-signin-btn-container');
+      if (!btnEl || !window.google?.accounts?.id) return;
+
+      const measuredWidth = Math.floor(
+        btnEl.clientWidth ||
+        btnEl.getBoundingClientRect().width ||
+        document.querySelector('.login-submit-btn')?.clientWidth ||
+        368
+      );
+      const targetWidth = Math.min(400, Math.max(200, measuredWidth || 368));
+      const signature = `${targetWidth}:${theme}:${serverStatus.googleClientId}`;
+
+      if (btnEl.dataset.renderedSignature === signature && btnEl.querySelector('[role="button"]')) {
+        setGoogleButtonReady(true);
+        return;
+      }
+
+      btnEl.dataset.ready = 'false';
+      setGoogleButtonReady(false);
+      btnEl.innerHTML = '';
+      window.google.accounts.id.renderButton(btnEl, {
+        theme: theme === 'dark' ? 'filled_black' : 'outline',
+        size: 'large',
+        type: 'standard',
+        text: 'continue_with',
+        shape: 'pill',
+        logo_alignment: 'center',
+        width: targetWidth,
+      });
+      btnEl.dataset.renderedSignature = signature;
+      btnEl.dataset.ready = 'true';
+      setGoogleButtonReady(true);
+    };
+
     const setupGsi = () => {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
@@ -98,36 +156,36 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         });
 
         const btnEl = document.getElementById('google-signin-btn-container');
-        if (btnEl) {
-          btnEl.innerHTML = '';
-          window.google.accounts.id.renderButton(btnEl, {
-            theme: theme === 'dark' ? 'filled_black' : 'outline',
-            size: 'large',
-            type: 'standard',
-            text: 'continue_with',
-            shape: 'pill',
-            logo_alignment: 'left',
-            width: Math.min(400, Math.floor(btnEl.clientWidth) || 336),
-          });
+        if (theme === 'dark') {
+          if (btnEl) {
+            btnEl.innerHTML = '';
+            delete btnEl.dataset.renderedSignature;
+            btnEl.dataset.ready = 'false';
+          }
+          setGoogleButtonReady(false);
+        } else {
+          renderGoogleBtn();
         }
       }
     };
 
-    if (window.google?.accounts?.id) {
-      setupGsi();
-      return;
+    if (window.google?.accounts?.id) setupGsi();
+    else loadGoogleIdentityScript().then(setupGsi).catch(() => setGoogleButtonReady(false));
+
+    if (theme === 'dark') return;
+
+    const btnEl = document.getElementById('google-signin-btn-container');
+    let resizeObserver = null;
+    if (btnEl && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        renderGoogleBtn();
+      });
+      resizeObserver.observe(btnEl);
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = setupGsi;
-    document.body.appendChild(script);
-
     return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
       }
     };
   }, [serverStatus.googleClientId, handleGoogleCredentialResponse, isSignUp, theme]);
@@ -675,7 +733,14 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
       )}
 
       {/* Social Auth Option */}
-      {!verificationEmail && !isForgotPassword && <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />}
+      {!verificationEmail && !isForgotPassword && (
+        <SocialAuth
+          onGoogleClick={handleGoogleLogin}
+          isLoading={isLoading}
+          googleAvailable={Boolean(serverStatus.googleClientId) && theme !== 'dark'}
+          googleButtonReady={googleButtonReady}
+        />
+      )}
 
       {/* Footer Link */}
       {!verificationEmail && !isForgotPassword && (

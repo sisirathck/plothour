@@ -55,18 +55,22 @@
 
 .google-signin-btn-wrapper {
   display: flex;
-  justify-content: center;
+  align-items: center;
   width: 100%;
-  min-height: 44px;
-  overflow: hidden;
+  height: 40px;
+  min-height: 40px;
+  position: relative;
 }
 
-.google-signin-btn-wrapper iframe {
-  max-width: 100%;
-  border-radius: 999px;
+.google-signin-btn-wrapper[data-ready='false'] {
+  display: none;
 }
 
-.google-signin-btn-wrapper:not(:empty) + #google-login-btn {
+.google-signin-btn-wrapper[data-ready='true'] + #google-login-btn {
+  display: none;
+}
+
+.compact-google-btn[hidden] {
   display: none;
 }
 

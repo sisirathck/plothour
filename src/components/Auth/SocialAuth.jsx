@@ -1,7 +1,7 @@
 import React from 'react';
 import './SocialAuth.css';
 
-export const SocialAuth = ({ onGoogleClick, isLoading = false }) => {
+export const SocialAuth = ({ onGoogleClick, isLoading = false, googleAvailable = false, googleButtonReady = false }) => {
   return (
     <div className="compact-social-section">
       <div className="compact-divider" role="separator" aria-label="or continue with">
@@ -10,7 +10,12 @@ export const SocialAuth = ({ onGoogleClick, isLoading = false }) => {
         <span className="divider-line" />
       </div>
 
-      <div id="google-signin-btn-container" className="google-signin-btn-wrapper" />
+      <div
+        id="google-signin-btn-container"
+        className="google-signin-btn-wrapper"
+        data-ready={googleButtonReady ? 'true' : 'false'}
+        aria-hidden={!googleButtonReady}
+      />
 
       <button
         type="button"
@@ -18,6 +23,7 @@ export const SocialAuth = ({ onGoogleClick, isLoading = false }) => {
         className="compact-google-btn"
         onClick={onGoogleClick}
         disabled={isLoading}
+        hidden={googleAvailable && googleButtonReady}
       >
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
           <path
