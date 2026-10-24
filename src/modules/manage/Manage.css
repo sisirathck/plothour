@@ -164,9 +164,15 @@
   gap: 11px;
   margin: 18px 20px 4px;
   padding: 9px 10px 9px 12px;
-  border: 1px solid var(--manage-accent-ring);
+  border: 1px solid var(--manage-line);
   border-radius: 14px;
-  background: linear-gradient(105deg, var(--manage-accent-soft), rgba(255,255,255,.42));
+  background: var(--sd-bg-subtle, rgba(120,123,160,.045));
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.manage-create-project:focus-within {
+  border-color: var(--manage-accent);
+  box-shadow: 0 0 0 3px var(--manage-accent-soft);
 }
 
 .manage-create-icon {
@@ -205,7 +211,13 @@
 .manage-create-project button:hover:not(:disabled),
 .manage-add-subproject button:hover:not(:disabled) { transform: translateY(-1px); }
 .manage-create-project button:disabled,
-.manage-add-subproject button:disabled { opacity: .48; cursor: not-allowed; }
+.manage-add-subproject button:disabled {
+  border-color: var(--manage-line);
+  background: var(--sd-bg-subtle, rgba(120,123,160,.045));
+  color: var(--manage-muted);
+  opacity: 1;
+  cursor: not-allowed;
+}
 
 .manage-notice {
   margin: 14px 20px 0;
@@ -505,7 +517,6 @@
   --manage-accent-ring: rgba(243,149,127,.24);
 }
 
-[data-theme='dark'] .manage-create-project { background: linear-gradient(105deg, var(--manage-accent-soft), rgba(23,24,31,.55)); }
 [data-theme='dark'] .manage-notice { color: #e59aad; }
 
 .manage-plan-editor {
