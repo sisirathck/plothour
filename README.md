@@ -12,7 +12,7 @@
   </p>
 </div>
 
-> **Website:** A public production domain is not configured in this repository yet. The app runs locally at `http://localhost:5173` during development. Add the deployed HTTPS URL here when one is available.
+> **Website:** [study.thoughtpolice.space](https://study.thoughtpolice.space/)
 
 ## See StudyDuel
 
@@ -26,6 +26,21 @@ These screenshots show the app in dark mode with sample demo data. The same scre
   <tr>
     <td width="50%"><strong>Compare progress</strong><br /><img src="docs/screenshots/compare-demo-dark.png" alt="StudyDuel comparison view with period standings and study-time charts" /></td>
     <td width="50%"><strong>Project library</strong><br /><img src="docs/screenshots/manage-demo-dark.png" alt="StudyDuel project library with projects, subprojects, and study goals" /></td>
+  </tr>
+</table>
+
+### Light theme
+
+These additional captures show the light theme. Dashboard, Compare, and Project library are scrolled to their middle sections; the Timer fits in one viewport, so its capture shows the complete timer layout.
+
+<table>
+  <tr>
+    <td width="50%"><strong>Focus timer · light</strong><br /><img src="docs/screenshots/timer-demo-light.png" alt="StudyDuel focus timer in light theme" /></td>
+    <td width="50%"><strong>Progress dashboard · light</strong><br /><img src="docs/screenshots/dashboard-demo-light.png" alt="Middle of the light theme StudyDuel dashboard showing project plans, focus distribution, and study charts" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><strong>Compare progress · light</strong><br /><img src="docs/screenshots/compare-demo-light.png" alt="Middle of the light theme StudyDuel compare page showing study patterns by profile" /></td>
+    <td width="50%"><strong>Project library · light</strong><br /><img src="docs/screenshots/manage-demo-light.png" alt="Middle of the light theme StudyDuel project library showing projects, goals, and subjects" /></td>
   </tr>
 </table>
 
@@ -152,14 +167,14 @@ Database schema and migrations are in [`database/`](database/). The numbered mig
 
 ## Deployment and domain
 
-There is no production domain or automatic deployment target declared in this repository. To publish your own instance:
+The public StudyDuel website is [study.thoughtpolice.space](https://study.thoughtpolice.space/). This repository does not declare its hosting provider or an automatic deployment workflow. To deploy or update an instance:
 
 1. Provision a host, PostgreSQL database, and a domain you control.
 2. Point the domain's DNS records at the host and configure HTTPS.
 3. Set production environment variables, including a strong `AUTH_SECRET`, database credentials, and email-provider settings.
 4. Build and launch the app with `npm run build` and `npm start` (or your process manager of choice).
 5. Configure your reverse proxy to forward application traffic to Express on port `3001`, preserving `/api` and SPA routes.
-6. Set the public URL in this README and configure any OAuth/email provider callback or sender settings for that domain.
+6. Configure OAuth and email-provider settings for the domain you deploy to, including `https://study.thoughtpolice.space/` for this public instance where applicable.
 
 For a manual VPS update after deployment, the basic application steps are:
 
