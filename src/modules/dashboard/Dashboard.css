@@ -265,7 +265,7 @@
 }
 
 .db-weekly-portfolio-row {
-  align-items: start;
+  align-items: stretch;
 }
 
 .db-rhythm-row {
@@ -2491,8 +2491,23 @@
 
 .db-weekly-chart-scroll {
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-x: auto;
   padding-bottom: 4px;
+}
+
+.db-weekly-portfolio-row > .db-card:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-weekly-portfolio-row .db-weekly-bar-chart-stage {
+  flex: 1;
+  height: auto;
+  min-height: 176px;
 }
 
 .db-weekly-bar-days-footer {
