@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Archive,
   ArchiveRestore,
@@ -56,6 +57,13 @@ const projectColorPresets = [
   { name: 'Slate', value: '#7D8799' },
 ];
 
+const getRandomProjectColor = (exclude = []) => {
+  const excluded = new Set(exclude.filter(Boolean).map((color) => color.toLowerCase()));
+  const available = projectColorPresets.filter((color) => !excluded.has(color.value.toLowerCase()));
+  const choices = available.length ? available : projectColorPresets;
+  return choices[Math.floor(Math.random() * choices.length)].value;
+};
+
 const formatGoalHours = (hours) => {
   const value = Number(hours) || 0;
   if (Number.isInteger(value)) return `${value}h`;
@@ -103,13 +111,55 @@ const getProjectStats = (project, entries) => {
 
 const ColorPicker = ({ value, label, onChange }) => {
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 12, left: 12 });
+  const controlRef = useRef(null);
+  const triggerRef = useRef(null);
+  const paletteRef = useRef(null);
   const current = value || projectColorPresets[0].value;
 
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const updatePosition = () => {
+      const trigger = triggerRef.current?.getBoundingClientRect();
+      const control = controlRef.current;
+      const palette = paletteRef.current;
+      if (!trigger || !control || !palette) return;
+      const margin = 12;
+      const width = Math.min(palette.offsetWidth, window.innerWidth - margin * 2);
+      const height = palette.offsetHeight;
+      const left = Math.max(margin, Math.min(trigger.left, window.innerWidth - width - margin));
+      let top = trigger.bottom + 8;
+      if (top + height > window.innerHeight - margin) top = trigger.top - height - 8;
+      top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+      setPosition({ top, left });
+      const controlStyles = getComputedStyle(control);
+      ['--manage-line', '--manage-text', '--manage-muted', '--manage-accent', '--manage-accent-soft', '--manage-accent-ring'].forEach((property) => {
+        palette.style.setProperty(property, controlStyles.getPropertyValue(property));
+      });
+    };
+    const closeOnOutsideClick = (event) => {
+      if (!controlRef.current?.contains(event.target) && !paletteRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setOpen(false); };
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [open]);
+
   return (
-    <div className="manage-color-control" onBlur={(event) => {
-      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+    <div ref={controlRef} className="manage-color-control" onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget) && !paletteRef.current?.contains(event.relatedTarget)) setOpen(false);
     }}>
       <button
+        ref={triggerRef}
         type="button"
         className="manage-color-trigger"
         style={{ '--project-color': current }}
@@ -120,8 +170,8 @@ const ColorPicker = ({ value, label, onChange }) => {
       >
         <span />
       </button>
-      {open && (
-        <div className="manage-color-palette" role="group" aria-label={`Color options for ${label}`}>
+      {open && createPortal(
+        <div ref={paletteRef} className="manage-color-palette" style={{ top: position.top, left: position.left }} role="group" aria-label={`Color options for ${label}`}>
           <span className="manage-color-palette-title">Choose a color</span>
           <div className="manage-color-swatches">
             {projectColorPresets.map((color) => (
@@ -146,7 +196,8 @@ const ColorPicker = ({ value, label, onChange }) => {
               onBlur={() => setOpen(false)}
             />
           </label>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -286,7 +337,7 @@ export const ManagePage = ({ user }) => {
     const name = newProject.trim();
     if (!name) return;
     setProjects((items) => [...items, {
-      id: crypto.randomUUID(), name, color: '#8086d4', subjects: [], archived: false,
+      id: crypto.randomUUID(), name, color: getRandomProjectColor(items.map((project) => project.color)), subjects: [], archived: false,
     }]);
     setNewProject('');
   };
@@ -300,7 +351,7 @@ export const ManagePage = ({ user }) => {
       subjects: [...(project.subjects || []), {
         id: crypto.randomUUID(),
         name,
-        color: project.color,
+        color: getRandomProjectColor([project.color, ...(project.subjects || []).map((subject) => subject.color)]),
         goals: { daily: 0, weekly: 0, monthly: 0 },
       }],
     } : project));
