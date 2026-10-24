@@ -8,15 +8,10 @@
   --sd-coral-deep: #E06D53;
   --sd-sage-primary: #5F7F67;
   --sd-sage-glow: rgba(95, 127, 103, 0.15);
-  --sd-scrollbar-thumb: #8574D6;
-  --sd-scrollbar-track: #E7E5EF;
+  --sd-scrollbar-thumb: var(--sd-coral, #8086D4);
+  --sd-scrollbar-track: var(--sd-track-bg, #E7E5EF);
   scrollbar-width: thin;
   scrollbar-color: var(--sd-scrollbar-thumb) var(--sd-scrollbar-track);
-}
-
-:root[data-theme='dark'] {
-  --sd-scrollbar-thumb: #E58C59;
-  --sd-scrollbar-track: #252433;
 }
 
 * { scrollbar-width: thin; scrollbar-color: var(--sd-scrollbar-thumb) var(--sd-scrollbar-track); }
@@ -64,6 +59,8 @@
   --db-empty-cell: #E7E7F2;
   --db-divider: rgba(91, 96, 164, 0.1);
   --db-track-bg: #E9E8F5;
+  --sd-scrollbar-thumb: var(--sd-coral-primary);
+  --sd-scrollbar-track: var(--db-track-bg);
   --db-glass-goal-bg: rgba(251, 250, 255, 0.88);
   --db-glass-goal-border: rgba(255, 255, 255, 0.92);
   --db-glass-goal-shadow: 0 10px 30px rgba(85, 86, 150, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
@@ -98,6 +95,8 @@
   --db-empty-cell: #1E2738;
   --db-divider: rgba(255, 255, 255, 0.06);
   --db-track-bg: #0D121B;
+  --sd-scrollbar-thumb: var(--sd-coral-primary);
+  --sd-scrollbar-track: var(--db-track-bg);
   --db-glass-goal-bg: rgba(18, 24, 36, 0.75);
   --db-glass-goal-border: rgba(255, 255, 255, 0.12);
   --db-glass-goal-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -606,6 +605,8 @@
 }
 
 .db-kpi-card {
+  position: relative;
+  overflow: hidden;
   border-radius: 20px;
   padding: 16px 18px;
   background: var(--db-card-bg);
@@ -620,9 +621,68 @@
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.light-mode .db-kpi-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 239, 252, 0.94));
+  border-color: rgba(128, 134, 212, 0.2);
+  box-shadow: 0 8px 22px rgba(79, 82, 151, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.light-mode .db-kpi-card::before {
+  content: '';
+  position: absolute;
+  inset: 16px auto 16px 0;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #9da2ed, #747bd0);
+  opacity: 0.82;
+}
+
+.light-mode .db-kpi-label { color: #6f7398; }
+.light-mode .db-kpi-value { color: #555db4; }
+.light-mode .db-kpi-sub { color: #686e91; }
+
 .db-kpi-card:hover {
   transform: translateY(-2px);
 }
+
+.db-kpi-calendar-card {
+  width: 100%;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  text-align: left;
+  color: var(--db-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.light-mode .db-kpi-calendar-card {
+  background: linear-gradient(145deg, rgba(252, 251, 255, 0.98), rgba(231, 232, 250, 0.98));
+  border-color: rgba(128, 134, 212, 0.26);
+}
+
+.dark-mode .db-kpi-calendar-card {
+  background: linear-gradient(145deg, rgba(39, 47, 67, 0.94), rgba(20, 26, 39, 0.94));
+  border-color: rgba(242, 139, 114, 0.22);
+}
+
+.db-kpi-calendar-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--sd-coral-primary);
+  background: color-mix(in srgb, var(--sd-coral-primary) 13%, transparent);
+}
+
+.db-kpi-calendar-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; }
+.db-kpi-calendar-copy strong { font-size: 14px; font-weight: 750; letter-spacing: -0.015em; }
+.db-kpi-calendar-copy small { color: var(--db-muted); font-size: 10px; line-height: 1.3; }
+.db-kpi-calendar-arrow { flex: 0 0 auto; color: var(--sd-coral-primary); transition: transform 160ms ease; }
+.db-kpi-calendar-card:hover .db-kpi-calendar-arrow { transform: translateX(3px); }
 
 .db-kpi-header {
   display: flex;
@@ -698,6 +758,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.db-kpi-comparison {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--db-muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-kpi-comparison.is-positive { color: #56855f; }
+.db-kpi-comparison.is-negative { color: #aa536a; }
+.db-kpi-comparison.is-neutral { color: var(--db-muted); }
 
 /* ── ROW 2: Focus Depth & Flow State ──────────────────────────────────────── */
 .db-flow-card {

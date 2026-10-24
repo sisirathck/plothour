@@ -10,6 +10,8 @@ import {
   SlidersHorizontal,
   ArrowUp,
   ArrowDown,
+  ArrowRight,
+  CalendarDays,
   Pin,
   Clock,
   Target,
@@ -17,6 +19,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { CalendarPage } from '../calendar/CalendarPage';
 import './Dashboard.css';
 
 // Dedicated dashboard artwork assets (8 pictures each for light and dark modes)
@@ -605,6 +608,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const weeklyStudyScrollRef = useRef(null);
   useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(id); }, []);
@@ -828,10 +832,37 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     [previousRangeEntries]
   );
   const rangeDeltaSecs = rangeSecs - previousRangeSecs;
-  const rangeDeltaPct = previousRangeSecs > 0 ? Math.round((rangeDeltaSecs / previousRangeSecs) * 100) : null;
   const rangeActiveDays = new Set(rangeEntries.filter((entry) => entry.durationSeconds > 0).map((entry) => dateKey(entry.startedAt))).size;
   const averageSessionSecs = rangeEntries.length ? Math.round(rangeSecs / rangeEntries.length) : 0;
   const averageActiveDaySecs = rangeActiveDays ? Math.round(rangeSecs / rangeActiveDays) : 0;
+  const previousRangeDaysCount = previousWindow
+    ? Math.max(1, Math.floor((previousWindow.end.getTime() - previousWindow.start.getTime()) / 86400000) + 1)
+    : 1;
+  const previousRangeActiveDays = new Set(previousRangeEntries.map((entry) => dateKey(entry.startedAt))).size;
+  const previousAverageSessionSecs = previousRangeEntries.length
+    ? Math.round(previousRangeSecs / previousRangeEntries.length)
+    : 0;
+  const averageSessionsPerDay = rangeEntries.length / rangeDaysCount;
+  const previousAverageSessionsPerDay = previousRangeEntries.length / previousRangeDaysCount;
+  const compareMetric = (current, previous, formatDelta) => {
+    if (!previousWindow) return { label: 'No previous range', tone: 'neutral' };
+    const delta = current - previous;
+    if (Math.abs(delta) < 0.0001) return { label: 'No change vs previous', tone: 'neutral' };
+    const roundedDelta = Number.isInteger(current) && Number.isInteger(previous)
+      ? Math.abs(delta)
+      : Math.round(Math.abs(delta) * 10) / 10;
+    return {
+      label: `${delta > 0 ? '+' : '−'}${formatDelta(roundedDelta)} vs previous`,
+      tone: delta > 0 ? 'positive' : 'negative',
+    };
+  };
+  const kpiComparisons = {
+    time: compareMetric(rangeSecs, previousRangeSecs, fmtDur),
+    sessions: compareMetric(rangeEntries.length, previousRangeEntries.length, (value) => `${value} ${value === 1 ? 'session' : 'sessions'}`),
+    activeDays: compareMetric(rangeActiveDays, previousRangeActiveDays, (value) => `${value} ${value === 1 ? 'day' : 'days'}`),
+    averageSession: compareMetric(averageSessionSecs, previousAverageSessionSecs, fmtDur),
+    sessionsPerDay: compareMetric(averageSessionsPerDay, previousAverageSessionsPerDay, (value) => `${value.toFixed(1)} / day`),
+  };
   const rangeLabel = dateRange === 'custom'
     ? `${dateWindow.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} – ${dateWindow.end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
     : dashboardRangeOptions.find((item) => item.id === dateRange)?.label || 'This week';
@@ -1789,34 +1820,46 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                   label: 'TIME TRACKED',
                   value: rangeEntries.length ? fmtDur(rangeSecs) : '—',
                   sub: rangeGoalSecs > 0 ? `${fmtDur(rangeSecs)} / ${fmtDur(rangeGoalSecs)} goal` : rangeLabel,
+                  comparison: kpiComparisons.time,
                 },
                 {
-                  label: 'VS PREVIOUS',
-                  value: previousWindow ? `${rangeDeltaSecs > 0 ? '+' : rangeDeltaSecs < 0 ? '−' : ''}${fmtDur(Math.abs(rangeDeltaSecs))}` : '—',
-                  sub: dateRange === 'week' ? 'vs same days last week' : 'vs previous period',
-                  badge: rangeDeltaPct === null ? null : `${rangeDeltaPct > 0 ? '+' : ''}${rangeDeltaPct}%`,
+                  label: 'AVG SESSIONS / DAY',
+                  value: rangeEntries.length ? averageSessionsPerDay.toFixed(1) : '—',
+                  sub: `over ${rangeDaysCount} ${rangeDaysCount === 1 ? 'day' : 'days'}`,
+                  comparison: kpiComparisons.sessionsPerDay,
                 },
                 {
                   label: 'SESSIONS',
                   value: rangeEntries.length || '—',
                   sub: `in ${rangeLabel.toLocaleLowerCase()}`,
+                  comparison: kpiComparisons.sessions,
                 },
                 {
                   label: 'ACTIVE DAYS',
                   value: rangeActiveDays || '—',
                   sub: `of ${rangeDaysCount} days · ${rangeActiveDays ? `${fmtDur(averageActiveDaySecs)} avg / active day` : 'no active days'}`,
+                  comparison: kpiComparisons.activeDays,
                 },
                 {
                   label: 'AVG / SESSION',
                   value: rangeEntries.length ? fmtDur(averageSessionSecs) : '—',
                   sub: 'tracked session length',
+                  comparison: kpiComparisons.averageSession,
                 },
-                {
-                  label: 'AVG SESSIONS / DAY',
-                  value: rangeEntries.length ? (rangeEntries.length / rangeDaysCount).toFixed(1) : '—',
-                  sub: `over ${rangeDaysCount} ${rangeDaysCount === 1 ? 'day' : 'days'}`,
-                },
+                { action: 'calendar' },
               ].map((kpi, idx) => {
+                if (kpi.action === 'calendar') {
+                  return (
+                    <button key="calendar-view" type="button" className="db-kpi-card db-kpi-calendar-card" onClick={() => setCalendarOpen(true)}>
+                      <span className="db-kpi-calendar-icon"><CalendarDays size={20} /></span>
+                      <span className="db-kpi-calendar-copy">
+                        <strong>Calendar View</strong>
+                        <small>Browse study sessions by day</small>
+                      </span>
+                      <ArrowRight size={17} className="db-kpi-calendar-arrow" />
+                    </button>
+                  );
+                }
                 return (
                   <div key={idx} className="db-kpi-card">
                     <div className="db-kpi-header">
@@ -1835,6 +1878,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                         <span className="db-kpi-sub">{kpi.sub}</span>
                       )}
                     </div>
+                    {kpi.comparison && <div className={`db-kpi-comparison is-${kpi.comparison.tone}`}>{kpi.comparison.label}</div>}
                   </div>
                 );
               })}
@@ -2431,6 +2475,15 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           </div>
         </DashboardSection>
       </div>
+      {calendarOpen && (
+        <CalendarPage
+          user={user}
+          entries={entries}
+          setEntries={setEntries}
+          projects={projects}
+          onClose={() => setCalendarOpen(false)}
+        />
+      )}
     </div>
   );
 }
