@@ -10,7 +10,7 @@ const AppShell = lazy(() =>
   import('./components/Navigation/AppShell').then((m) => ({ default: m.AppShell }))
 );
 
-const validAppRoutes = ['/timer', '/dashboard', '/compare', '/manage', '/settings'];
+const validAppRoutes = ['/timer', '/dashboard', '/compare', '/manage', '/settings', '/calendar'];
 
 function App() {
   const [user, setUser] = useState(null);
@@ -74,7 +74,11 @@ function App() {
       })
       .catch(() => {})
       .finally(() => {
-        if (!authenticated && isDemoMode) resetDemoWorkspace();
+        if (!authenticated && isDemoMode) {
+          const openingCalendarPopup = window.location.pathname.startsWith('/calendar');
+          const hasExistingDemoEntries = Boolean(localStorage.getItem('studyduel_demo_time_entries'));
+          if (!openingCalendarPopup || !hasExistingDemoEntries) resetDemoWorkspace();
+        }
         setIsCheckingAuth(false);
       });
 

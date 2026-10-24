@@ -7,6 +7,7 @@ import { DashboardPage } from '../../modules/dashboard/DashboardPage';
 import { ComparePage } from '../../modules/compare/ComparePage';
 import { ManagePage } from '../../modules/manage/ManagePage';
 import { SettingsPage } from '../../modules/settings/SettingsPage';
+import { CalendarPage } from '../../modules/calendar/CalendarPage';
 import './AppShell.css';
 
 const navItems = [
@@ -18,7 +19,7 @@ const navItems = [
 
 const getRouteFromPath = () => {
   const clean = window.location.pathname.toLowerCase().replace(/^\/+/, '').split('/')[0];
-  if (['timer', 'dashboard', 'compare', 'manage', 'settings'].includes(clean)) {
+  if (['timer', 'dashboard', 'compare', 'manage', 'settings', 'calendar'].includes(clean)) {
     return clean;
   }
   return 'timer';
@@ -304,6 +305,7 @@ export const AppShell = ({ user, onLogout }) => {
         {currentRoute === 'settings' && (
           <SettingsPage user={user} onBack={() => navigateTo('timer')} />
         )}
+        {currentRoute === 'calendar' && <CalendarPage user={user} />}
       </main>
     </div>
   );

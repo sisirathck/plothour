@@ -921,6 +921,28 @@
   gap: 14px;
 }
 
+.entries-calendar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: var(--sd-radius-pill);
+  border: 1px solid var(--sd-border-glass);
+  background: var(--sd-bg-subtle);
+  color: var(--sd-text-primary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.entries-calendar-btn:hover {
+  border-color: var(--sd-coral);
+  background: color-mix(in srgb, var(--sd-coral) 12%, var(--sd-bg-subtle));
+  transform: translateY(-1px);
+}
+
 /* Segmented Range Pills */
 .entries-range-pills {
   display: flex;

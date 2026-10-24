@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X, Calendar } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X, Calendar, CalendarDays } from 'lucide-react';
 
 const localDateKey = (value) => {
   const date = new Date(value);
@@ -49,7 +49,7 @@ const durationLabel = (seconds) => {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
-export const TimerEntriesList = ({ entries, setEntries, projects }) => {
+export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate = null, hideRangeControls = false }) => {
   const [expanded, setExpanded] = useState(true);
   const [range, setRange] = useState('today');
   const [pageSize, setPageSize] = useState('20');
@@ -64,13 +64,15 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
     return () => window.clearInterval(interval);
   }, []);
 
-  const dateRange = useMemo(() => getDateRange(range, filterDate), [range, filterDate]);
+  const dateRange = useMemo(() => selectedDate
+    ? { start: localDateKey(selectedDate), end: localDateKey(selectedDate) }
+    : getDateRange(range, filterDate), [range, filterDate, selectedDate]);
   const filteredEntries = useMemo(() => entries.filter((entry) => {
     const day = localDateKey(entry.startedAt);
     return day >= dateRange.start && day <= dateRange.end;
   }), [entries, dateRange]);
 
-  const effectivePageSize = pageSize === 'all' ? Math.max(1, filteredEntries.length) : Number(pageSize);
+  const effectivePageSize = hideRangeControls || pageSize === 'all' ? Math.max(1, filteredEntries.length) : Number(pageSize);
   const pageCount = Math.max(1, Math.ceil(filteredEntries.length / effectivePageSize));
   const visibleEntries = filteredEntries.slice((page - 1) * effectivePageSize, page * effectivePageSize);
 
@@ -143,8 +145,17 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
 
         {expanded && (
           <div className="entries-controls">
+            {!hideRangeControls && (
+              <button type="button" className="entries-calendar-btn" onClick={() => {
+                const popup = window.open('/calendar', 'studyduel-calendar', 'popup=yes,width=1180,height=900,resizable=yes,scrollbars=yes');
+                if (popup) popup.focus();
+                else window.location.assign('/calendar');
+              }}>
+                <CalendarDays size={15} /> Calendar view
+              </button>
+            )}
             {/* Segmented Range Buttons */}
-            <div className="entries-range-pills" role="radiogroup" aria-label="Date range">
+            {!hideRangeControls && <div className="entries-range-pills" role="radiogroup" aria-label="Date range">
               {[
                 { id: 'today', label: 'Today' },
                 { id: 'week', label: 'Week' },
@@ -160,10 +171,10 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
                   {r.label}
                 </button>
               ))}
-            </div>
+            </div>}
 
             {/* Page Size */}
-            <div className="entries-size-picker">
+            {!hideRangeControls && <div className="entries-size-picker">
               <span className="size-picker-lbl">Show</span>
               <select
                 className="entries-native-select"
@@ -175,7 +186,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects }) => {
                 <option value="50">50</option>
                 <option value="all">All</option>
               </select>
-            </div>
+            </div>}
           </div>
         )}
       </div>
