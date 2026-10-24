@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Sun,
@@ -120,7 +120,7 @@ const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
         </div>
       </div>
       {!hasData ? <QuietEmptyState message="No sessions in this date range yet." onStart={onStart} /> : <div className="db-chart-scroll">
-        <svg className="db-svg-chart db-daily-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily study hours for ${title}`}>
+        <svg className="db-svg-chart db-daily-chart" style={{ width: `${width}px` }} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Study hours for ${title}`}>
           {hourTicks.map((value) => {
             const y = margin.top + plotHeight - (value / maxHours) * plotHeight;
             return (
@@ -154,7 +154,7 @@ const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
                   <title>{`${day.dateLabel} · ${fmtDur(day.seconds)} · ${day.sessions} sessions`}</title>
                 </rect>
                 {(index === 0 || index % Math.max(1, Math.ceil(days.length / 10)) === 0 || index === days.length - 1) && (
-                  <text className="db-chart-axis-label" x={x + barWidth / 2} y={height - 10} textAnchor="middle">{day.dayOfMonth}</text>
+                <text className="db-chart-axis-label" x={x + barWidth / 2} y={height - 10} textAnchor="middle">{day.axisLabel || day.dayOfMonth}</text>
                 )}
               </g>
             );
@@ -166,7 +166,7 @@ const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
   );
 };
 
-const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
+const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'week' }) => {
   const chartTooltip = useSvgChartTooltip();
   const width = Math.max(900, weeks.length * 56);
   const height = 300;
@@ -184,16 +184,16 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
     <div className="db-chart-card db-card">
       <div className="db-chart-heading db-chart-heading-stack">
         <div>
-          <h3 className="db-section-title">Weekly Study Trend</h3>
-          <span className="db-section-meta">{rangeLabel} · {weeks[0]?.weekStartLabel || 'Monday'}-start weeks</span>
+          <h3 className="db-section-title">{periodUnit === 'week' ? 'Weekly Study Trend' : 'Study Trend'}</h3>
+          <span className="db-section-meta">{rangeLabel} · {periodUnit === 'week' ? `${weeks[0]?.weekStartLabel || 'Monday'}-start weeks` : `${periodUnit} totals`}</span>
         </div>
         <div className="db-chart-legend" aria-label="Chart legend">
           <span><i className="db-legend-bar" /> Study hours</span>
-          <span><i className="db-legend-line" /> 4-week average</span>
+          <span><i className="db-legend-line" /> 4-{periodUnit} average</span>
         </div>
       </div>
       {!hasData ? <QuietEmptyState message="No weekly activity to chart in this range." onStart={onStart} /> : <div className="db-chart-scroll">
-        <svg className="db-svg-chart db-trend-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Weekly study hours and four-week moving average">
+        <svg className="db-svg-chart db-trend-chart" style={{ width: `${width}px` }} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Study hours and four-${periodUnit} moving average`}>
           {hourTicks.map((value) => {
             const y = margin.top + plotHeight - (value / maxHours) * plotHeight;
             return (
@@ -219,14 +219,14 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
                   height={Math.max(week.seconds ? 2 : 0, barHeight)}
                   rx="4"
                   tabIndex="0"
-                  aria-label={`Week of ${week.startLabel}: ${fmtDur(week.seconds)}, ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`}
-                  onMouseEnter={(event) => chartTooltip.show(event, `Week of ${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
-                  onMouseMove={(event) => chartTooltip.show(event, `Week of ${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
+                  aria-label={`${periodUnit === 'week' ? 'Week of ' : ''}${week.startLabel}: ${fmtDur(week.seconds)}, ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`}
+                  onMouseEnter={(event) => chartTooltip.show(event, `${periodUnit === 'week' ? 'Week of ' : ''}${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
+                  onMouseMove={(event) => chartTooltip.show(event, `${periodUnit === 'week' ? 'Week of ' : ''}${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
                   onMouseLeave={chartTooltip.hide}
                   onFocus={(event) => chartTooltip.show(event, `Week of ${week.startLabel}`, `${fmtDur(week.seconds)} · ${week.sessions} ${week.sessions === 1 ? 'session' : 'sessions'}`)}
                   onBlur={chartTooltip.hide}
                 >
-                  <title>{`Week of ${week.startLabel} · ${fmtDur(week.seconds)} · ${week.sessions} sessions`}</title>
+                  <title>{`${periodUnit === 'week' ? 'Week of ' : ''}${week.startLabel} · ${fmtDur(week.seconds)} · ${week.sessions} sessions`}</title>
                 </rect>
                 {(index === 0 || index % Math.max(1, Math.ceil(weeks.length / 8)) === 0 || index === weeks.length - 1) && (
                   <text className="db-chart-axis-label" x={xFor(index)} y={height - 12} textAnchor="middle">{week.axisLabel}</text>
@@ -237,9 +237,9 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel }) => {
                   cy={yFor(week.averageSeconds)}
                   r="10"
                   tabIndex="0"
-                  aria-label={`Four-week average through ${week.startLabel}: ${fmtDur(week.averageSeconds)}`}
-                  onMouseEnter={(event) => chartTooltip.show(event, `4-week average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
-                  onMouseMove={(event) => chartTooltip.show(event, `4-week average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
+                  aria-label={`Four-${periodUnit} average through ${week.startLabel}: ${fmtDur(week.averageSeconds)}`}
+                  onMouseEnter={(event) => chartTooltip.show(event, `4-${periodUnit} average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
+                  onMouseMove={(event) => chartTooltip.show(event, `4-${periodUnit} average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
                   onMouseLeave={chartTooltip.hide}
                   onFocus={(event) => chartTooltip.show(event, `4-week average through ${week.startLabel}`, fmtDur(week.averageSeconds))}
                   onBlur={chartTooltip.hide}
@@ -606,6 +606,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const weeklyStudyScrollRef = useRef(null);
   useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(id); }, []);
   const [dashboardPreferences, setDashboardPreferences] = useState(() => {
     try {
@@ -1083,7 +1084,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       map.set(k, (map.get(k) || 0) + (e.durationSeconds || 0));
     });
     const useYears = dateRange === 'all' && rangeDaysCount > 365 * 5;
-    const useQuarters = dateRange === 'all' && rangeDaysCount > 365 && !useYears;
+    const useQuarters = dateRange === 'all' && rangeDaysCount > 180 && !useYears;
     const useWeeks = !useYears && !useQuarters && rangeDaysCount > 45;
     const days = [];
     const dayCount = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
@@ -1156,6 +1157,13 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     };
   }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount, weekStart, dateRange]);
 
+  useEffect(() => {
+    const scroller = weeklyStudyScrollRef.current;
+    if (!scroller) return undefined;
+    const frame = window.requestAnimationFrame(() => { scroller.scrollLeft = scroller.scrollWidth; });
+    return () => window.cancelAnimationFrame(frame);
+  }, [dateRange, weekBarData.minWidth]);
+
   const dailyHoursData = useMemo(() => {
     const totals = new Map();
     rangeEntries.forEach((entry) => {
@@ -1166,9 +1174,31 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       total.sessions += 1;
       totals.set(key, total);
     });
-    const useWeeks = rangeDaysCount > 45;
+    const useYears = dateRange === 'all' && rangeDaysCount > 365 * 5;
+    const useQuarters = dateRange === 'all' && rangeDaysCount > 180 && !useYears;
+    const useWeeks = !useYears && !useQuarters && rangeDaysCount > 45;
     const days = [];
     if (!useWeeks) {
+      if (useQuarters || useYears) {
+        const cursor = new Date(dateWindow.start.getFullYear(), useYears ? 0 : Math.floor(dateWindow.start.getMonth() / 3) * 3, 1);
+        while (cursor <= dateWindow.end) {
+          const periodStart = new Date(cursor);
+          const periodEnd = useYears
+            ? new Date(periodStart.getFullYear() + 1, 0, 1)
+            : new Date(periodStart.getFullYear(), periodStart.getMonth() + 3, 1);
+          let seconds = 0;
+          let sessions = 0;
+          for (let date = new Date(periodStart); date < periodEnd && date <= dateWindow.end; date.setDate(date.getDate() + 1)) {
+            const total = totals.get(dateKey(date)) || { seconds: 0, sessions: 0 };
+            seconds += total.seconds;
+            sessions += total.sessions;
+          }
+          const quarter = Math.floor(periodStart.getMonth() / 3) + 1;
+          const dateLabel = useYears ? `${periodStart.getFullYear()}` : `Q${quarter} ${periodStart.getFullYear()}`;
+          days.push({ key: dateKey(periodStart), dayOfMonth: useYears ? `${periodStart.getFullYear()}` : `Q${quarter}`, dateLabel, axisLabel: useYears ? `${periodStart.getFullYear()}` : `Q${quarter} '${String(periodStart.getFullYear()).slice(-2)}`, seconds, sessions });
+          cursor.setTime(periodEnd.getTime());
+        }
+      } else {
       const count = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
       for (let index = 0; index < count; index++) {
         const date = new Date(dateWindow.start);
@@ -1176,6 +1206,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         const key = dateKey(date);
         const total = totals.get(key) || { seconds: 0, sessions: 0 };
         days.push({ key, dayOfMonth: date.getDate(), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), seconds: total.seconds, sessions: total.sessions });
+      }
       }
     } else {
       const cursor = new Date(dateWindow.start);
@@ -1195,11 +1226,12 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         cursor.setDate(cursor.getDate() + 7);
       }
     }
+    const period = useYears ? 'yearly' : useQuarters ? 'quarterly' : useWeeks ? 'weekly' : 'daily';
     return {
       days,
-      title: `${rangeLabel} · ${useWeeks ? 'weekly totals' : 'daily totals'}`,
+      title: `${rangeLabel} · ${period} totals`,
     };
-  }, [rangeEntries, dateWindow, rangeDaysCount, rangeLabel, weekStart]);
+  }, [rangeEntries, dateWindow, rangeDaysCount, rangeLabel, weekStart, dateRange]);
 
   const studyVelocityStats = useMemo(() => {
     const totalDaysCount = Math.max(1, rangeDaysCount);
@@ -1287,11 +1319,16 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, [rangeEntries, dateWindow, rangeDaysCount, rangeSecs, dailyGoalHours]);
 
   const weeklyTrendData = useMemo(() => {
+    const useYears = dateRange === 'all' && rangeDaysCount > 365 * 5;
+    const useQuarters = dateRange === 'all' && rangeDaysCount > 180 && !useYears;
+    const unit = useYears ? 'year' : useQuarters ? 'quarter' : 'week';
     const totals = new Map();
     rangeEntries.forEach((entry) => {
       if (!entry.startedAt) return;
       const date = new Date(entry.startedAt);
-      date.setDate(date.getDate() - getWeekStartOffset(date, weekStart));
+      if (useYears) date.setMonth(0, 1);
+      else if (useQuarters) date.setMonth(Math.floor(date.getMonth() / 3) * 3, 1);
+      else date.setDate(date.getDate() - getWeekStartOffset(date, weekStart));
       date.setHours(0, 0, 0, 0);
       const key = dateKey(date);
       const total = totals.get(key) || { seconds: 0, sessions: 0 };
@@ -1301,28 +1338,37 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     });
     const weeks = [];
     const cursor = new Date(dateWindow.start);
-    cursor.setDate(cursor.getDate() - getWeekStartOffset(cursor, weekStart));
+    if (useYears) cursor.setMonth(0, 1);
+    else if (useQuarters) cursor.setMonth(Math.floor(cursor.getMonth() / 3) * 3, 1);
+    else cursor.setDate(cursor.getDate() - getWeekStartOffset(cursor, weekStart));
     while (cursor <= dateWindow.end) {
       const start = new Date(cursor);
       const key = dateKey(start);
       const total = totals.get(key) || { seconds: 0, sessions: 0 };
       const seconds = total.seconds;
+      const quarter = Math.floor(start.getMonth() / 3) + 1;
+      const periodLabel = useYears ? `${start.getFullYear()}` : useQuarters ? `Q${quarter} ${start.getFullYear()}` : start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       weeks.push({
         key,
         seconds,
         sessions: total.sessions,
         averageSeconds: seconds,
-        startLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        axisLabel: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        startLabel: periodLabel,
+        axisLabel: useYears ? `${start.getFullYear()}` : useQuarters ? `Q${quarter} '${String(start.getFullYear()).slice(-2)}` : start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         weekStartLabel: `${weekDayKeys[getWeekStartDayIndex(weekStart)][0].toUpperCase()}${weekDayKeys[getWeekStartDayIndex(weekStart)].slice(1)}`,
       });
-      cursor.setDate(cursor.getDate() + 7);
+      if (useYears) cursor.setFullYear(cursor.getFullYear() + 1);
+      else if (useQuarters) cursor.setMonth(cursor.getMonth() + 3);
+      else cursor.setDate(cursor.getDate() + 7);
     }
-    return weeks.map((week, index) => ({
-      ...week,
-      averageSeconds: weeks.slice(Math.max(0, index - 3), index + 1).reduce((sum, item) => sum + item.seconds, 0) / Math.min(4, index + 1),
-    }));
-  }, [rangeEntries, dateWindow, weekStart]);
+    return {
+      unit,
+      points: weeks.map((week, index) => ({
+        ...week,
+        averageSeconds: weeks.slice(Math.max(0, index - 3), index + 1).reduce((sum, item) => sum + item.seconds, 0) / Math.min(4, index + 1),
+      })),
+    };
+  }, [rangeEntries, dateWindow, weekStart, dateRange, rangeDaysCount]);
 
   const sessionLengthData = useMemo(() => {
     const buckets = [
@@ -2055,7 +2101,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               </div>
 
               {/* Zero Overlap Bar Chart Container with Headroom */}
-              {rangeEntries.length === 0 ? <QuietEmptyState message="No study logged in this date range." onStart={() => onNavigate?.('timer')} /> : <div className="db-weekly-chart-scroll">
+              {rangeEntries.length === 0 ? <QuietEmptyState message="No study logged in this date range." onStart={() => onNavigate?.('timer')} /> : <div className="db-weekly-chart-scroll" ref={weeklyStudyScrollRef}>
                 <div className="db-weekly-bar-chart-stage" style={{ minWidth: weekBarData.minWidth }}>
                   {weekBarData.cols.map((col, i) => (
                     <div
@@ -2217,7 +2263,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               <StudyVelocityCard stats={studyVelocityStats} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
             </div>
             <div className="db-bento-grid-row db-two-col db-chart-pair">
-              <WeeklyTrendGraph weeks={weeklyTrendData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} rangeLabel={rangeLabel} />
+              <WeeklyTrendGraph weeks={weeklyTrendData.points} periodUnit={weeklyTrendData.unit} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} rangeLabel={rangeLabel} />
               <SessionLengthGraph buckets={sessionLengthData} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
             </div>
           </section>

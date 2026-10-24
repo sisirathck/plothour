@@ -1282,7 +1282,18 @@
   width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--db-portfolio-accent) 68%, transparent) var(--db-track-bg);
 }
+
+.db-chart-scroll::-webkit-scrollbar,
+.db-weekly-chart-scroll::-webkit-scrollbar { height: 7px; }
+.db-chart-scroll::-webkit-scrollbar-track,
+.db-weekly-chart-scroll::-webkit-scrollbar-track { border-radius: 99px; background: var(--db-track-bg); }
+.db-chart-scroll::-webkit-scrollbar-thumb,
+.db-weekly-chart-scroll::-webkit-scrollbar-thumb { border: 1px solid var(--db-bg); border-radius: 99px; background: color-mix(in srgb, var(--db-portfolio-accent) 68%, transparent); }
+.db-chart-scroll::-webkit-scrollbar-thumb:hover,
+.db-weekly-chart-scroll::-webkit-scrollbar-thumb:hover { background: var(--db-portfolio-accent); }
 
 .db-svg-chart {
   display: block;
@@ -2505,6 +2516,8 @@
   display: flex;
   flex-direction: column;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--db-portfolio-accent) 68%, transparent) var(--db-track-bg);
   padding-bottom: 4px;
 }
 
