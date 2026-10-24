@@ -150,7 +150,7 @@ export const ComparePage = ({ user, onNavigate }) => {
   const demoMode = !user?.id && localStorage.getItem('studyduel_demo_mode') === 'true';
   const profileId = user?.id ? String(user.id) : demoMode ? 'demo-profile' : '';
   const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : demoMode ? 'studyduel_demo_preferences' : '';
-  const rangeKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences_range` : demoMode ? 'studyduel_demo_dashboard_preferences_range' : '';
+  const rangeKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences_range_v2` : demoMode ? 'studyduel_demo_dashboard_preferences_range_v2' : '';
   const compareSelectionKey = user?.id ? `studyduel_user_${user.id}_compare_profiles` : demoMode ? 'studyduel_demo_compare_profiles_selected' : '';
   const colorStorageKey = user?.id ? `studyduel_user_${user.id}_compare_profile_colors` : demoMode ? 'studyduel_demo_compare_profile_colors' : '';
   const [connections, setConnections] = useState([]); const [selectedIds, setSelectedIds] = useState(() => {

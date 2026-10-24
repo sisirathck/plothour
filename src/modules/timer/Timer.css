@@ -963,6 +963,8 @@
   color: var(--sd-text-primary);
 }
 
+.entries-collapse-btn.is-static { cursor: default; }
+
 .entries-caret-icon {
   display: flex;
   align-items: center;

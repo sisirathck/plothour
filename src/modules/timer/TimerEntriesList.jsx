@@ -51,6 +51,7 @@ const durationLabel = (seconds) => {
 
 export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate = null, hideRangeControls = false, onOpenCalendar }) => {
   const [expanded, setExpanded] = useState(false);
+  const isExpanded = hideRangeControls || expanded;
   const [range, setRange] = useState('today');
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
@@ -128,22 +129,30 @@ export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate =
     <section className="demo-entry-card" aria-label="Completed time entries">
       {/* Panel Header */}
       <div className="entries-panel-heading">
-        <button
-          type="button"
-          className="entries-collapse-btn"
-          onClick={() => setExpanded((current) => !current)}
-          aria-expanded={expanded}
-        >
-          <span className="entries-caret-icon">
-            {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </span>
-          <span className="entries-heading-title">SESSION HISTORY</span>
-          <span className="date-badge">
-            {filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}
-          </span>
-        </button>
+        {hideRangeControls ? (
+          <div className="entries-collapse-btn is-static" aria-label="Session history, expanded">
+            <span className="entries-caret-icon"><ChevronDown size={16} /></span>
+            <span className="entries-heading-title">SESSION HISTORY</span>
+            <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="entries-collapse-btn"
+            onClick={() => setExpanded((current) => !current)}
+            aria-expanded={expanded}
+          >
+            <span className="entries-caret-icon">
+              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </span>
+            <span className="entries-heading-title">SESSION HISTORY</span>
+            <span className="date-badge">
+              {filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}
+            </span>
+          </button>
+        )}
 
-        {expanded && (
+        {isExpanded && (
           <div className="entries-controls">
             {!hideRangeControls && onOpenCalendar && (
               <button type="button" className="entries-calendar-btn" onClick={() => {
@@ -190,7 +199,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate =
       </div>
 
       {/* Expanded Content */}
-      {expanded && (
+      {isExpanded && (
         <div className="entries-content-body">
           {filteredEntries.length === 0 ? (
             <div className="demo-entry-empty">

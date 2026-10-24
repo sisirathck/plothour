@@ -604,7 +604,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [activeNav, setActiveNav] = useState('Dashboard');
   const preferenceKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences` : 'studyduel_demo_dashboard_preferences';
   const [dateRange, setDateRange] = useState(() => {
-    try { return localStorage.getItem(`${preferenceKey}_range`) || 'week'; } catch { return 'week'; }
+    try { return localStorage.getItem(`${preferenceKey}_range_v2`) || 'week'; } catch { return 'week'; }
   });
   const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
@@ -638,7 +638,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     } catch { return dashboardSectionDefaults; }
   });
   useEffect(() => {
-    localStorage.setItem(`${preferenceKey}_range`, dateRange);
+    localStorage.setItem(`${preferenceKey}_range_v2`, dateRange);
   }, [preferenceKey, dateRange]);
   useEffect(() => {
     localStorage.setItem(preferenceKey, JSON.stringify(dashboardPreferences));

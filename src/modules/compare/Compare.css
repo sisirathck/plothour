@@ -250,12 +250,13 @@
 .compare-manage-list { display:flex; flex-direction:column; gap:10px; overflow:auto; padding:20px 28px; }
 .compare-manage-person { display:flex; min-height:68px; align-items:center; justify-content:space-between; gap:14px; padding:12px 16px; border:1px solid rgba(128,134,212,.17); border-radius:17px; background:rgba(255,255,255,.84); box-shadow:0 5px 18px rgba(71,69,132,.07),inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer; transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease; }
 .compare-manage-person.is-you { background:linear-gradient(110deg,rgba(255,255,255,.93),rgba(244,243,255,.9)); }
-.compare-manage-person input { position:relative; display:grid; width:21px; height:21px; flex:0 0 21px; place-items:center; margin:0; padding:0; appearance:none; border:1.5px solid rgba(105,111,195,.38); border-radius:6px; background:rgba(255,255,255,.9); cursor:pointer; transition:background .14s ease,border-color .14s ease,box-shadow .14s ease; }
-.compare-manage-person input::after { position:absolute; top:2px; left:6px; width:5px; height:9px; border:solid #fff; border-width:0 2px 2px 0; content:''; opacity:0; transform:rotate(45deg) scale(.55); transition:opacity .14s ease,transform .14s ease; }
-.compare-manage-person input:checked { border-color:var(--compare-accent); background:var(--compare-accent); }
-.compare-manage-person input:checked::after { opacity:1; transform:rotate(45deg) scale(1); }
-.compare-manage-person input:disabled { cursor:default; opacity:.55; }
-.compare-manage-person input:focus-visible { outline:none; box-shadow:0 0 0 4px var(--compare-accent-soft); }
+.compare-profile-toggle { display:grid; width:25px; height:25px; flex:0 0 25px; place-items:center; padding:0; border:1.5px solid rgba(105,111,195,.3); border-radius:8px; background:rgba(255,255,255,.9); color:#fff; cursor:pointer; transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease; }
+.compare-profile-toggle svg { opacity:0; transform:scale(.72); transition:opacity .16s ease,transform .16s ease; }
+.compare-profile-toggle[aria-checked='true'] { border-color:var(--compare-accent); background:linear-gradient(145deg,color-mix(in srgb,var(--compare-accent) 86%,white),var(--compare-accent)); box-shadow:0 3px 9px color-mix(in srgb,var(--compare-accent) 22%,transparent),inset 0 1px 0 rgba(255,255,255,.24); }
+.compare-profile-toggle[aria-checked='true'] svg { opacity:1; transform:scale(1); }
+.compare-profile-toggle:hover:not(:disabled) { transform:translateY(-1px); border-color:var(--compare-accent); box-shadow:0 0 0 4px var(--compare-accent-soft); }
+.compare-profile-toggle:focus-visible { outline:none; box-shadow:0 0 0 4px var(--compare-accent-soft); }
+.compare-profile-toggle:disabled { cursor:default; opacity:.52; }
 :root[data-theme='dark'] .compare-manage-person { border-color:rgba(255,255,255,.08); background:rgba(36,46,64,.9); box-shadow:0 5px 18px rgba(0,0,0,.17),inset 0 1px 0 rgba(255,255,255,.045); }
 :root[data-theme='dark'] .compare-manage-person.is-you { background:linear-gradient(110deg,rgba(42,53,72,.96),rgba(32,41,59,.92)); }
 .compare-manage-person:hover { transform:translateY(-1px); border-color:color-mix(in srgb,var(--profile-color) 42%,var(--compare-line)); background:color-mix(in srgb,var(--compare-card) 72%,var(--compare-accent-soft)); box-shadow:var(--sd-shadow-card); }
@@ -265,7 +266,6 @@
 .compare-manage-person strong { overflow:hidden; font-size:14px; text-overflow:ellipsis; white-space:nowrap; }
 .compare-manage-person small { overflow:hidden; color:var(--compare-muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
 .compare-person-dot { width:10px; height:10px; flex:0 0 10px; border-radius:50%; background:var(--profile-color); }
-.compare-manage-person .compare-include-check { display:flex; align-items:center; gap:0; cursor:pointer; }
 .compare-color-chooser { position:relative; display:flex; flex:0 0 auto; align-items:center; justify-content:center; }
 .compare-color-trigger { width:26px; height:26px; padding:0; border:4px solid var(--compare-card); border-radius:50%; outline:1px solid var(--compare-line); background:var(--profile-color); cursor:pointer; }
 .compare-color-trigger:hover,.compare-color-trigger[aria-expanded='true'] { outline:2px solid var(--compare-accent); }
