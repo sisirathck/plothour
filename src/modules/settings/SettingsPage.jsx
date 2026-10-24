@@ -268,7 +268,8 @@ export const SettingsPage = ({ onBack, user }) => {
   };
 
   // Tab 2: Connections State
-  const [userInviteCode] = useState(() => {
+  const [userInviteCode, setUserInviteCode] = useState(() => {
+    if (user?.id) return '';
     const stored = localStorage.getItem(inviteCodeKey);
     if (stored) return stored;
     const randomBytes = new Uint8Array(5);
@@ -298,6 +299,32 @@ export const SettingsPage = ({ onBack, user }) => {
     return realFriends;
   });
 
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let active = true;
+    fetch('/api/connections', { credentials: 'same-origin' })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Could not load study partners.');
+        if (!active) return;
+        setUserInviteCode(result.inviteCode || '');
+        const partners = Array.isArray(result.connections) ? result.connections : [];
+        setFriends(partners.map((friend) => ({
+          ...friend,
+          streakDays: 0,
+          status: 'Connected',
+          isStudying: false,
+          todayHours: 0,
+          goalHours: 0,
+          isRemoteConnection: true,
+        })));
+      })
+      .catch((error) => {
+        if (active) setFriendNotice({ type: 'error', message: error.message });
+      });
+    return () => { active = false; };
+  }, [user?.id]);
+
   const copyInviteCode = async () => {
     try {
       if (navigator?.clipboard?.writeText) {
@@ -317,10 +344,33 @@ export const SettingsPage = ({ onBack, user }) => {
     }
   };
 
-  const handleAddFriend = (e) => {
+  const handleAddFriend = async (e) => {
     e?.preventDefault();
     const cleanCode = peerCodeInput.trim().toUpperCase();
     if (!cleanCode) return;
+
+    if (user?.id) {
+      try {
+        const response = await fetch('/api/connections', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: cleanCode }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Could not connect this study partner.');
+        const listing = await fetch('/api/connections', { credentials: 'same-origin' });
+        const listingResult = await listing.json();
+        setFriends((listingResult.connections || []).map((friend) => ({
+          ...friend, streakDays: 0, status: 'Connected', isStudying: false, todayHours: 0, goalHours: 0, isRemoteConnection: true,
+        })));
+        setPeerCodeInput('');
+        setFriendNotice({ type: 'success', message: `Connected with ${result.connection?.name || 'study partner'}. You can now compare study data.` });
+      } catch (error) {
+        setFriendNotice({ type: 'error', message: error.message });
+      }
+      return;
+    }
 
     if (cleanCode === userInviteCode) {
       setFriendNotice({ type: 'error', message: 'You cannot duel with your own invite code.' });
@@ -361,6 +411,16 @@ export const SettingsPage = ({ onBack, user }) => {
   };
 
   const handleRemoveFriend = (id) => {
+    if (user?.id) {
+      fetch(`/api/connections/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'same-origin' })
+        .then(async (response) => {
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.error || 'Could not remove this study partner.');
+          setFriends((prev) => prev.filter((friend) => friend.id !== id));
+        })
+        .catch((error) => setFriendNotice({ type: 'error', message: error.message }));
+      return;
+    }
     const updated = friends.filter((f) => f.id !== id);
     setFriends(updated);
     try {
@@ -725,7 +785,7 @@ export const SettingsPage = ({ onBack, user }) => {
             <div className="settings-invite-wrap">
               <div className="settings-row-info">
                 <strong>Personal Duel Invite Code</strong>
-                <span>Share this code with a classmate or study partner to start competing.</span>
+                <span>Share this code with a study partner to connect profiles and compare study summaries.</span>
               </div>
               <div className="settings-invite-code-box">
                 <span className="settings-monospace-code">{userInviteCode}</span>
@@ -733,6 +793,7 @@ export const SettingsPage = ({ onBack, user }) => {
                   type="button"
                   className={`settings-copy-btn ${copiedInvite ? 'copied' : ''}`}
                   onClick={copyInviteCode}
+                  disabled={!userInviteCode}
                   title="Copy invite code to clipboard"
                 >
                   {copiedInvite ? (
@@ -754,7 +815,7 @@ export const SettingsPage = ({ onBack, user }) => {
             <div className="settings-add-friend-section">
               <div className="settings-row-info">
                 <strong>Enter Peer Invite Code</strong>
-                <span>Initiate a study duel by pasting a friend's code below:</span>
+                <span>Enter a partner's unique invite code to connect both profiles for Compare.</span>
               </div>
               <form className="settings-add-friend-form" onSubmit={handleAddFriend}>
                 <input
@@ -767,7 +828,7 @@ export const SettingsPage = ({ onBack, user }) => {
                 />
                 <button type="submit" className="settings-primary-btn" disabled={!peerCodeInput.trim()}>
                   <UserPlus size={15} />
-                  <span>Add Friend</span>
+                  <span>Connect</span>
                 </button>
               </form>
 
@@ -837,7 +898,7 @@ export const SettingsPage = ({ onBack, user }) => {
 
                       {/* Right: Today's Progress (todayHours / goalHours) with Progress Bar */}
                       <div className="settings-partner-right">
-                        <div className="settings-progress-group">
+                        {friend.isRemoteConnection ? <span className="settings-progress-label">Compare data available</span> : <div className="settings-progress-group">
                           <span className="settings-progress-label">
                             <strong>{friend.todayHours}h</strong> / {friend.goalHours}h today
                           </span>
@@ -851,7 +912,7 @@ export const SettingsPage = ({ onBack, user }) => {
                           >
                             <div className="settings-progress-bar" style={{ width: `${pct}%` }} />
                           </div>
-                        </div>
+                        </div>}
 
                         <button
                           type="button"

@@ -10,6 +10,7 @@ import { authRouter } from './routes/auth.js';
 import { projectsRouter } from './routes/projects.js';
 import { timerRouter } from './routes/timer.js';
 import { workspaceRouter } from './routes/workspace.js';
+import { connectionsRouter } from './routes/connections.js';
 import { query } from './db.js';
 
 dotenv.config();
@@ -50,6 +51,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/timer', timerRouter);
 app.use('/api/workspace', workspaceRouter);
+app.use('/api/connections', connectionsRouter);
 
 // Serve frontend static build if dist/ exists (Production mode)
 if (fs.existsSync(distPath)) {
@@ -121,6 +123,11 @@ app.listen(PORT, async () => {
     const workspaceSchemaPath = path.resolve(__dirname, '../database/002_user_workspace_state.sql');
     if (fs.existsSync(workspaceSchemaPath)) {
       await query(fs.readFileSync(workspaceSchemaPath, 'utf8'));
+    }
+
+    const inviteCodeSchemaPath = path.resolve(__dirname, '../database/003_invite_codes.sql');
+    if (fs.existsSync(inviteCodeSchemaPath)) {
+      await query(fs.readFileSync(inviteCodeSchemaPath, 'utf8'));
     }
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);

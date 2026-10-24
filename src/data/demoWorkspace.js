@@ -50,6 +50,8 @@ const demoPartners = [
   { id: 'demo-friend-maya', name: 'Maya Chen', code: 'DUEL-MAYA', subtext: 'Study partner', seconds: 3 * 3600 + 42 * 60, activeDays: 5, consistencyPct: 71, avgSessionSeconds: 52 * 60, goalProgressPct: 82, sharedStatsAvailable: true },
   { id: 'demo-friend-noah', name: 'Noah Patel', code: 'DUEL-NOAH', subtext: 'Study partner', seconds: 2 * 3600 + 55 * 60, activeDays: 4, consistencyPct: 57, avgSessionSeconds: 46 * 60, goalProgressPct: 68, sharedStatsAvailable: true },
   { id: 'demo-friend-ava', name: 'Ava Williams', code: 'DUEL-AVA', subtext: 'Study partner', seconds: 2 * 3600 + 18 * 60, activeDays: 4, consistencyPct: 57, avgSessionSeconds: 41 * 60, goalProgressPct: 61, sharedStatsAvailable: true },
+  { id: 'demo-friend-liam', name: 'Liam Patel', code: 'DUEL-LIAM', subtext: 'Study partner', seconds: 2 * 3600 + 6 * 60, activeDays: 3, consistencyPct: 48, avgSessionSeconds: 44 * 60, goalProgressPct: 59, sharedStatsAvailable: true },
+  { id: 'demo-friend-emily', name: 'Emily Carter', code: 'DUEL-EMILY', subtext: 'Study partner', seconds: 1 * 3600 + 49 * 60, activeDays: 3, consistencyPct: 43, avgSessionSeconds: 38 * 60, goalProgressPct: 52, sharedStatsAvailable: true },
 ];
 
 const randomBetween = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -121,12 +123,40 @@ const makeYearOfEntries = () => {
   return dayBuckets.flat().sort((a, b) => b.startedAt - a.startedAt);
 };
 
+const makePartnerEntries = (partnerIndex) => {
+  const now = new Date();
+  const projectPool = demoProjects.filter((project) => !project.archived);
+  const entries = [];
+  for (let dayOffset = 0; dayOffset < 180; dayOffset += 1) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOffset);
+    if (dayOffset !== 0 && (dayOffset + partnerIndex * 2) % 7 > 3) continue;
+    const sessionCount = 1 + ((dayOffset + partnerIndex) % 3 === 0 ? 1 : 0);
+    for (let session = 0; session < sessionCount; session += 1) {
+      const project = projectPool[(dayOffset + partnerIndex * 2 + session) % projectPool.length];
+      const subject = project.subjects[(dayOffset + partnerIndex + session) % project.subjects.length];
+      const durationSeconds = (25 + ((dayOffset * 13 + partnerIndex * 19 + session * 11) % 66)) * 60;
+      const end = new Date(day);
+      end.setHours(10 + ((dayOffset + partnerIndex * 3 + session * 4) % 12), (dayOffset * 7 + partnerIndex * 13 + session * 17) % 60, 0, 0);
+      if (dayOffset === 0 && end.getTime() > now.getTime()) end.setTime(Math.max(day.getTime() + 60_000, now.getTime() - 3 * 60_000));
+      entries.push({
+        id: `demo-${demoPartners[partnerIndex].id}-${dayOffset}-${session}`,
+        projectId: project.id, projectName: project.name, subjectId: subject.id, subjectName: subject.name,
+        color: subject.color || project.color, startedAt: end.getTime() - durationSeconds * 1000,
+        endedAt: end.getTime(), durationSeconds, mode: '50m', note: '',
+      });
+    }
+  }
+  return entries;
+};
+
 /** Reset sample data to a fresh, rolling 365-day demo whenever demo mode starts. */
 export function resetDemoWorkspace() {
   localStorage.setItem('studyduel_demo_projects', JSON.stringify(demoProjects));
   localStorage.setItem('studyduel_demo_time_entries', JSON.stringify(makeYearOfEntries()));
   localStorage.setItem('studyduel_demo_active_timer', 'null');
   localStorage.setItem('studyduel_demo_friends', JSON.stringify(demoPartners));
+  localStorage.setItem('studyduel_demo_compare_profiles', JSON.stringify(demoPartners.map((partner, index) => ({ ...partner, entries: makePartnerEntries(index) }))));
+  localStorage.setItem('studyduel_demo_compare_profiles_selected', JSON.stringify(['demo-profile', ...demoPartners.map((partner) => partner.id)]));
   localStorage.setItem('studyduel_demo_preferences', JSON.stringify({
     displayName: 'Alex Morgan',
     dailyGoalHours: 3,

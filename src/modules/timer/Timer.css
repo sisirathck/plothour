@@ -378,13 +378,14 @@
 }
 
 .t-combo-btn.start {
-  background: var(--sd-text-primary);
-  color: var(--sd-bg-base);
-  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--sd-coral) 0%, var(--sd-coral-hover) 100%);
+  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--sd-coral) 72%, transparent);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--sd-coral) 22%, transparent);
 }
 
 .t-combo-btn.start:hover {
-  background: var(--sd-coral);
+  background: linear-gradient(135deg, var(--sd-coral-hover) 0%, var(--sd-coral-active) 100%);
   color: #ffffff;
   transform: scale(1.02);
   box-shadow: 0 4px 12px -2px var(--sd-coral-glow);
@@ -716,15 +717,16 @@
   font-size: 13.5px;
   font-weight: 600;
   border-radius: var(--sd-radius-md);
-  background: var(--sd-text-primary);
-  color: var(--sd-bg-base);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  background: linear-gradient(135deg, var(--sd-coral) 0%, var(--sd-coral-hover) 100%);
+  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--sd-coral) 72%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--sd-coral) 24%, transparent);
   cursor: pointer;
   transition: all var(--sd-transition);
 }
 
 .horology-btn-start:hover:not(:disabled) {
-  background: var(--sd-coral);
+  background: linear-gradient(135deg, var(--sd-coral-hover) 0%, var(--sd-coral-active) 100%);
   color: #ffffff;
   transform: translateY(-1px);
   box-shadow: 0 8px 20px -4px var(--sd-coral-glow);

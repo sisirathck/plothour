@@ -179,7 +179,7 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'w
   const maxSeconds = Math.max(1800, ...weeks.flatMap((week) => [week.seconds, week.averageSeconds]));
   const hourTicks = getHourTicks(maxSeconds);
   const maxHours = hourTicks[hourTicks.length - 1];
-  const xFor = (index) => margin.left + (index / Math.max(1, weeks.length - 1)) * plotWidth;
+  const xFor = (index) => margin.left + ((index + 0.5) / Math.max(1, weeks.length)) * plotWidth;
   const yFor = (seconds) => margin.top + plotHeight - (seconds / (maxHours * 3600)) * plotHeight;
   const linePoints = weeks.map((week, index) => `${xFor(index)},${yFor(week.averageSeconds)}`).join(' ');
 
@@ -610,6 +610,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [hoursDonutTooltip, setHoursDonutTooltip] = useState(null);
   const weeklyStudyScrollRef = useRef(null);
   useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(id); }, []);
   const [dashboardPreferences, setDashboardPreferences] = useState(() => {
@@ -1442,6 +1443,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       const key = `${proj}:::${sub}`;
       if (!map.has(key)) {
         map.set(key, {
+          projectId: project?.id || e.projectId,
           projectName: proj,
           subjectName: sub,
           color: selectedColor,
@@ -1476,14 +1478,18 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const hoursByProject = useMemo(() => {
     const totals = new Map();
     portfolioStats.list.forEach((item) => {
-      const project = projects.find((candidate) => candidate.name === item.projectName);
-      const current = totals.get(item.projectName) || {
-        name: item.projectName,
-        color: project?.color || item.color || 'var(--db-portfolio-accent)',
+      const project = projects.find((candidate) => candidate.id === item.projectId || candidate.name === item.projectName);
+      const hasSubprojects = Boolean(project?.subjects?.length);
+      const kind = hasSubprojects ? 'subproject' : 'project';
+      const name = kind === 'subproject' ? `${item.projectName} · ${item.subjectName || 'Unassigned'}` : item.projectName;
+      const current = totals.get(name) || {
+        name,
+        kind,
+        color: item.color || project?.color || 'var(--db-portfolio-accent)',
         seconds: 0,
       };
       current.seconds += item.secs;
-      totals.set(item.projectName, current);
+      totals.set(name, current);
     });
     const rows = [...totals.values()].sort((a, b) => b.seconds - a.seconds);
     const totalSeconds = rows.reduce((sum, item) => sum + item.seconds, 0);
@@ -1497,6 +1503,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     });
     return {
       rows: rows.map((item) => ({ ...item, pct: totalSeconds ? Math.round(item.seconds / totalSeconds * 100) : 0 })),
+      rowLabel: rows.every((item) => item.kind === 'subproject') ? 'subprojects' : rows.every((item) => item.kind === 'project') ? 'projects' : 'study areas',
       totalSeconds,
       segments,
       circumference,
@@ -2287,10 +2294,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               )}
             </div>
             <div className="db-card db-hours-project-card">
-              <div className="db-card-header-flex"><div><h2 className="db-section-title">Hours by Project</h2><span className="db-section-meta">Study time in {rangeLabel.toLowerCase()}</span></div></div>
+              <div className="db-card-header-flex"><div><h2 className="db-section-title">Hours by Subproject</h2><span className="db-section-meta">Study time in {rangeLabel.toLowerCase()}</span></div></div>
               {hoursByProject.rows.length ? <div className="db-hours-project-body">
                 <div className="db-hours-project-donut-shell">
-                  <svg className="db-hours-project-donut" viewBox="0 0 260 260" role="img" aria-label={`Hours by project: ${hoursByProject.rows.map((row) => `${row.name} ${row.pct}%`).join(', ')}`}>
+                  <svg className="db-hours-project-donut" viewBox="0 0 260 260" role="img" aria-label={`Hours by subproject: ${hoursByProject.rows.map((row) => `${row.name} ${row.pct}%`).join(', ')}`}>
                     <defs>
                       <linearGradient id="hours-donut-center-glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--db-glass-goal-bg)" /><stop offset="100%" stopColor="var(--db-card-bg)" /></linearGradient>
                       <filter id="hours-donut-shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur" /><feOffset dy="3" result="offsetBlur" /><feComponentTransfer><feFuncA type="linear" slope=".22" /></feComponentTransfer><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
@@ -2312,11 +2319,18 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                       strokeDashoffset={-segment.offset}
                       transform="rotate(-90 130 130)"
                       filter="url(#hours-donut-shadow)"
+                      tabIndex="0"
+                      aria-label={`${segment.name}: ${fmtDur(segment.seconds)}, ${Math.round(segment.seconds / hoursByProject.totalSeconds * 100)}%`}
+                      onMouseEnter={() => setHoursDonutTooltip(segment)}
+                      onFocus={() => setHoursDonutTooltip(segment)}
+                      onMouseLeave={() => setHoursDonutTooltip(null)}
+                      onBlur={() => setHoursDonutTooltip(null)}
                     ><title>{`${segment.name}: ${fmtDur(segment.seconds)} (${Math.round(segment.seconds / hoursByProject.totalSeconds * 100)}%)`}</title></circle>)}
                     <circle className="db-hours-donut-inner-orbit" cx="130" cy="130" r="72" />
                     <circle cx="130" cy="130" r="68" fill="url(#hours-donut-center-glass)" stroke="var(--db-glass-goal-border)" strokeWidth="1.2" />
                   </svg>
-                  <div className="db-hours-project-total"><span>STUDY TIME</span><strong>{fmtDur(hoursByProject.totalSeconds)}</strong><small>{hoursByProject.rows.length} {hoursByProject.rows.length === 1 ? 'project' : 'projects'}</small></div>
+                  {hoursDonutTooltip && <div className="db-hours-project-tooltip" role="tooltip"><strong>{hoursDonutTooltip.name}</strong><span>{fmtDur(hoursDonutTooltip.seconds)} · {Math.round(hoursDonutTooltip.seconds / hoursByProject.totalSeconds * 100)}%</span></div>}
+                  <div className="db-hours-project-total"><span>STUDY TIME</span><strong>{fmtDur(hoursByProject.totalSeconds)}</strong><small>{hoursByProject.rows.length} {hoursByProject.rows.length === 1 ? hoursByProject.rowLabel.replace(/s$/, '') : hoursByProject.rowLabel}</small></div>
                 </div>
                 <div className="db-hours-project-legend">
                   {hoursByProject.rows.map((row) => <div className="db-hours-project-legend-row" key={row.name} title={`${row.name}: ${fmtDur(row.seconds)}`}>
