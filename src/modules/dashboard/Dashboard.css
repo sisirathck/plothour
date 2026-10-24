@@ -266,6 +266,7 @@
 
 .db-weekly-portfolio-row {
   align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .db-rhythm-row {
@@ -275,6 +276,10 @@
 @media (min-width: 1024px) {
   .db-two-col {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .db-weekly-portfolio-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .db-rhythm-row {
@@ -2508,10 +2513,30 @@
   flex-direction: column;
 }
 
+.db-weekly-portfolio-row > .db-card {
+  min-width: 0;
+  height: 370px;
+  min-height: 370px;
+}
+
 .db-weekly-portfolio-row .db-weekly-bar-chart-stage {
   flex: 1;
   height: auto;
   min-height: 176px;
+}
+
+.db-weekly-portfolio-row .db-card-column > div:first-child {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-weekly-portfolio-row .db-portfolio-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 4px 2px 2px;
 }
 
 .db-weekly-bar-days-footer {

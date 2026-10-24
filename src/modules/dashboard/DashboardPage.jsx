@@ -1082,7 +1082,9 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       const k = dateKey(e.startedAt);
       map.set(k, (map.get(k) || 0) + (e.durationSeconds || 0));
     });
-    const useWeeks = rangeDaysCount > 45;
+    const useYears = dateRange === 'all' && rangeDaysCount > 365 * 5;
+    const useQuarters = dateRange === 'all' && rangeDaysCount > 365 && !useYears;
+    const useWeeks = !useYears && !useQuarters && rangeDaysCount > 45;
     const days = [];
     const dayCount = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
     if (!useWeeks) {
@@ -1093,6 +1095,28 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         const key = dateKey(date);
         const val = map.get(key) || 0;
         days.push({ day: date.toLocaleDateString(undefined, { weekday: 'short' }), dateLabel: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), val, label: val > 0 ? fmtDur(val) : '', active: date.toDateString() === new Date().toDateString(), key });
+      }
+    } else if (useQuarters || useYears) {
+      const cursor = new Date(dateWindow.start.getFullYear(), useYears ? 0 : Math.floor(dateWindow.start.getMonth() / 3) * 3, 1);
+      while (cursor <= dateWindow.end) {
+        const periodStart = new Date(cursor);
+        const periodEnd = useYears
+          ? new Date(periodStart.getFullYear() + 1, 0, 1)
+          : new Date(periodStart.getFullYear(), periodStart.getMonth() + 3, 1);
+        let val = 0;
+        for (let offset = new Date(periodStart); offset < periodEnd && offset <= dateWindow.end; offset.setDate(offset.getDate() + 1)) {
+          val += map.get(dateKey(offset)) || 0;
+        }
+        const quarter = Math.floor(periodStart.getMonth() / 3) + 1;
+        days.push({
+          day: useYears ? `${periodStart.getFullYear()}` : `Q${quarter} '${String(periodStart.getFullYear()).slice(-2)}`,
+          dateLabel: useYears ? `${periodStart.getFullYear()}` : `Q${quarter} ${periodStart.getFullYear()}`,
+          val,
+          label: val > 0 ? fmtDur(val) : '',
+          active: periodStart <= new Date() && periodEnd > new Date(),
+          key: dateKey(periodStart),
+        });
+        cursor.setTime(periodEnd.getTime());
       }
     } else {
       const cursor = new Date(dateWindow.start);
@@ -1127,8 +1151,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       totalWeeklyFmt: fmtDur(totalWeeklySecs),
       peakDayLabel: peakCol.val > 0 ? peakCol.day : '—',
       peakDayFmt: peakCol.val > 0 ? fmtDur(peakCol.val) : '0m',
-      unit: useWeeks ? 'weeks' : 'days',
-      minWidth: Math.max(520, days.length * (useWeeks ? 20 : 14)),
+      unit: useYears ? 'years' : useQuarters ? 'quarters' : useWeeks ? 'weeks' : 'days',
+      minWidth: Math.max(520, days.length * (useYears ? 34 : useQuarters ? 32 : useWeeks ? 20 : 14)),
     };
   }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount, weekStart, dateRange]);
 
@@ -2023,9 +2047,9 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             {/* Weekly Study Bar Chart */}
             <div className="db-card">
               <div className="db-card-header-flex mb-6">
-                <h2 className="db-section-title">Weekly Study</h2>
+                <h2 className="db-section-title">{weekBarData.unit === 'days' ? 'Daily Study' : weekBarData.unit === 'weeks' ? 'Weekly Study' : 'Study Volume'}</h2>
                 <span className="db-section-meta">
-                  {rangeLabel} · {weekBarData.totalWeeklyFmt} total · Peak: {weekBarData.peakDayLabel}{' '}
+                  {rangeLabel} · {weekBarData.totalWeeklyFmt} total · Peak {weekBarData.unit === 'days' ? 'day' : weekBarData.unit === 'weeks' ? 'week' : weekBarData.unit === 'quarters' ? 'quarter' : 'year'}: {weekBarData.peakDayLabel}{' '}
                   ({weekBarData.peakDayFmt})
                 </span>
               </div>
@@ -2037,8 +2061,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                     <div
                       key={i}
                       className="db-weekly-bar-column"
-                      title={`${col.day}: ${col.label || 'No study logged'}`}
-                      aria-label={`${col.day}: ${col.label || 'No study logged'}`}
+                      title={`${col.dateLabel || col.day}: ${col.label || 'No study logged'}`}
+                      aria-label={`${col.dateLabel || col.day}: ${col.label || 'No study logged'}`}
                     >
                       {col.label ? (
                         <span className={`db-weekly-bar-val-text ${col.active ? 'active' : ''}`}>
