@@ -10,6 +10,7 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
   padding: 16px 24px 48px;
   background:
     radial-gradient(ellipse at 12% 0%, rgba(128, 134, 212, 0.1), transparent 38%),

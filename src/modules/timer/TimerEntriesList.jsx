@@ -50,7 +50,7 @@ const durationLabel = (seconds) => {
 };
 
 export const TimerEntriesList = ({ entries, setEntries, projects, selectedDate = null, hideRangeControls = false, onOpenCalendar }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [range, setRange] = useState('today');
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
