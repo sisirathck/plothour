@@ -2253,6 +2253,80 @@
   letter-spacing: -.015em;
 }
 
+.db-range-dropdown { position: relative; }
+
+.db-range-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 166px;
+  min-height: 38px;
+  padding: 0 11px 0 13px;
+  border: 1px solid var(--db-accent-shadow-border);
+  border-radius: 12px;
+  color: var(--db-text);
+  background: var(--db-card-bg);
+  box-shadow: var(--db-subcard-shadow);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.db-range-trigger strong { font-size: 12px; font-weight: 650; }
+.db-range-trigger svg { color: var(--db-muted); transition: transform 150ms ease; }
+.db-range-trigger.active svg { transform: rotate(180deg); }
+.db-range-trigger:hover, .db-range-trigger.active { border-color: var(--db-accent-shadow-border); background-color: var(--db-accent-tint); }
+
+.db-range-trigger:focus-visible {
+  outline: 2px solid var(--sd-coral-primary);
+  outline-offset: 2px;
+}
+
+.db-range-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: 206px;
+  max-height: min(360px, calc(100vh - 120px));
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--db-card-border);
+  border-radius: 14px;
+  background: var(--db-card-bg);
+  box-shadow: 0 16px 38px rgba(18, 22, 54, .18), var(--db-card-shadow);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.db-range-menu button {
+  display: flex;
+  width: 100%;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--db-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 130ms ease, background-color 130ms ease;
+}
+
+.db-range-menu button:hover, .db-range-menu button.active {
+  color: var(--db-text);
+  background: var(--db-accent-tint);
+}
+
+.db-range-menu button.active { font-weight: 700; }
+.db-range-menu-check { color: var(--sd-coral-primary); font-weight: 700; }
+.db-range-menu button:focus-visible { outline: 2px solid var(--sd-coral-primary); outline-offset: -2px; }
+
 .db-range-control-options {
   display: flex;
   flex: 1 1 auto;
@@ -2788,24 +2862,12 @@
   .db-range-control-copy {
     grid-column: 1;
     grid-row: 1;
+    min-width: 0;
     padding-right: 0;
     border-right: 0;
   }
 
-  .db-range-control-options {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 3px;
-    padding: 0;
-  }
-
-  .db-range-control-options button {
-    min-width: 0;
-    padding-inline: 5px;
-    font-size: 10px;
-  }
+  .db-range-trigger { min-width: min(166px, 100%); }
 
   .db-customize-wrap {
     grid-column: 2;

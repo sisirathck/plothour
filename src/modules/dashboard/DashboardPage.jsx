@@ -17,6 +17,7 @@ import {
   Target,
   Trophy,
   Flame,
+  ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { CalendarPage } from '../calendar/CalendarPage';
@@ -608,10 +609,26 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [rangeMenuOpen, setRangeMenuOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [hoursDonutTooltip, setHoursDonutTooltip] = useState(null);
   const weeklyStudyScrollRef = useRef(null);
+  const rangeMenuRef = useRef(null);
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!rangeMenuRef.current?.contains(event.target)) setRangeMenuOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setRangeMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
   useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(id); }, []);
   const [dashboardPreferences, setDashboardPreferences] = useState(() => {
     try {
@@ -1704,14 +1721,18 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         <section className="db-dashboard-controls" style={{ order: 0 }} aria-label="Dashboard display controls">
           <div className="db-range-control-copy">
             <span>STUDY PERIOD</span>
-            <strong>{rangeLabel}</strong>
-          </div>
-          <div className="db-range-control-options" role="group" aria-label="Dashboard date range">
-            {dashboardRangeOptions.map((option) => (
-              <button key={option.id} type="button" className={dateRange === option.id ? 'active' : ''} aria-pressed={dateRange === option.id} onClick={() => setDateRange(option.id)}>
-                {option.label}
+            <div className="db-range-dropdown" ref={rangeMenuRef}>
+              <button type="button" className={`db-range-trigger${rangeMenuOpen ? ' active' : ''}`} aria-label="Dashboard date range" aria-haspopup="listbox" aria-expanded={rangeMenuOpen} onClick={() => setRangeMenuOpen((open) => !open)}>
+                <strong>{rangeLabel}</strong><ChevronDown size={14} aria-hidden="true" />
               </button>
-            ))}
+              {rangeMenuOpen && <div className="db-range-menu" role="listbox" aria-label="Dashboard date range options">
+                {dashboardRangeOptions.map((option) => (
+                  <button key={option.id} type="button" role="option" aria-selected={dateRange === option.id} className={dateRange === option.id ? 'active' : ''} onClick={() => { setDateRange(option.id); setRangeMenuOpen(false); }}>
+                    <span>{option.label}</span>{dateRange === option.id && <span className="db-range-menu-check" aria-hidden="true">✓</span>}
+                  </button>
+                ))}
+              </div>}
+            </div>
           </div>
           {dateRange === 'custom' && (
             <div className="db-custom-date-inputs">

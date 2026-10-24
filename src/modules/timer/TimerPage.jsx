@@ -135,6 +135,8 @@ export const TimerPage = ({ user }) => {
   );
 
   const [comboSearch, setComboSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef(null);
   const [pendingSelection, setPendingSelection] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const [pausedElapsed, setPausedElapsed] = useState(0);
@@ -338,6 +340,14 @@ export const TimerPage = ({ user }) => {
     ).slice(0, 8);
   }, [comboSearch, searchCombos]);
 
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!searchRef.current?.contains(event.target)) setSearchOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, []);
+
   const showSelectionPreview = (projectId, subjectId) => {
     const project = projects.find((item) => item.id === projectId);
     const subject = project?.subjects?.find((item) => item.id === subjectId);
@@ -359,6 +369,7 @@ export const TimerPage = ({ user }) => {
     setSelProj(item.projectId);
     setSelSub(item.subjectId);
     setComboSearch('');
+    setSearchOpen(false);
     if (activeTimer) startTimer(item.projectId, item.subjectId);
     else showSelectionPreview(item.projectId, item.subjectId);
   };
@@ -512,13 +523,15 @@ export const TimerPage = ({ user }) => {
           )}
 
           {/* Search projects and subprojects before choosing a session. */}
-          <div className="timer-combo-search">
+          <div className="timer-combo-search" ref={searchRef}>
             <Search size={17} aria-hidden="true" />
             <input
               type="search"
               value={comboSearch}
-              onChange={(event) => setComboSearch(event.target.value)}
+              onFocus={() => setSearchOpen(true)}
+              onChange={(event) => { setComboSearch(event.target.value); setSearchOpen(true); }}
               onKeyDown={(event) => {
+                if (event.key === 'Escape') setSearchOpen(false);
                 if (event.key === 'Enter' && searchMatches[0]) {
                   event.preventDefault();
                   chooseSearchResult(searchMatches[0]);
@@ -528,7 +541,7 @@ export const TimerPage = ({ user }) => {
               aria-label="Search projects and subjects"
               aria-autocomplete="list"
             />
-            {comboSearch.trim() && (
+            {searchOpen && comboSearch.trim() && (
               <div className="timer-search-results" role="listbox" aria-label="Project and subject results">
                 {searchMatches.length ? searchMatches.map((item) => (
                   <button
