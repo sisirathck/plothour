@@ -1,7 +1,7 @@
 import React from 'react';
 import './SocialAuth.css';
 
-export const SocialAuth = ({ onGoogleClick, isLoading = false, googleAvailable = false, googleButtonReady = false }) => {
+export const SocialAuth = ({ onGoogleClick, isLoading = false, googleAvailable = false, googleButtonReady = false, theme = 'light' }) => {
   return (
     <div className="compact-social-section">
       <div className="compact-divider" role="separator" aria-label="or continue with">
@@ -10,21 +10,24 @@ export const SocialAuth = ({ onGoogleClick, isLoading = false, googleAvailable =
         <span className="divider-line" />
       </div>
 
-      <div
-        id="google-signin-btn-container"
-        className="google-signin-btn-wrapper"
-        data-ready={googleButtonReady ? 'true' : 'false'}
-        aria-hidden={!googleButtonReady}
-      />
+      <div className="google-button-stack" data-theme={theme}>
+        <div
+          id="google-signin-btn-container"
+          className="google-signin-btn-wrapper"
+          data-ready={googleButtonReady ? 'true' : 'false'}
+          aria-hidden={!googleButtonReady}
+        />
 
-      <button
-        type="button"
-        id="google-login-btn"
-        className="compact-google-btn"
-        onClick={onGoogleClick}
-        disabled={isLoading}
-        hidden={googleAvailable && googleButtonReady}
-      >
+        <button
+          type="button"
+          id="google-login-btn"
+          className="compact-google-btn"
+          onClick={onGoogleClick}
+          disabled={isLoading}
+          hidden={googleAvailable && googleButtonReady && theme !== 'dark'}
+          aria-hidden={googleAvailable && googleButtonReady && theme === 'dark'}
+          data-provider-ready={googleAvailable && googleButtonReady ? 'true' : 'false'}
+        >
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
           <path
             fill="#4285F4"
@@ -44,7 +47,8 @@ export const SocialAuth = ({ onGoogleClick, isLoading = false, googleAvailable =
           />
         </svg>
         <span>Continue with Google</span>
-      </button>
+        </button>
+      </div>
     </div>
   );
 };

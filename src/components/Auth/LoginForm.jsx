@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, User } from 'lucide-react';
 import { FormInput } from './FormInput';
 import { NoticeBanner } from './NoticeBanner';
@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import './LoginForm.css';
 
 let googleIdentityScriptPromise;
+let initializedGoogleClientId;
 
 const loadGoogleIdentityScript = () => {
   if (window.google?.accounts?.id) return Promise.resolve();
@@ -83,6 +84,13 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
     }
   }, [onLoginSuccess]);
 
+  const googleCredentialResponseRef = useRef(handleGoogleCredentialResponse);
+  googleCredentialResponseRef.current = handleGoogleCredentialResponse;
+  const stableGoogleCredentialCallback = useCallback(
+    (response) => googleCredentialResponseRef.current(response),
+    []
+  );
+
   // Check server configuration status on mount
   useEffect(() => {
     fetch('/api/auth/status')
@@ -150,29 +158,20 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
 
     const setupGsi = () => {
       if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
-          client_id: serverStatus.googleClientId,
-          callback: handleGoogleCredentialResponse,
-        });
-
-        const btnEl = document.getElementById('google-signin-btn-container');
-        if (theme === 'dark') {
-          if (btnEl) {
-            btnEl.innerHTML = '';
-            delete btnEl.dataset.renderedSignature;
-            btnEl.dataset.ready = 'false';
-          }
-          setGoogleButtonReady(false);
-        } else {
-          renderGoogleBtn();
+        if (initializedGoogleClientId !== serverStatus.googleClientId) {
+          window.google.accounts.id.initialize({
+            client_id: serverStatus.googleClientId,
+            callback: stableGoogleCredentialCallback,
+          });
+          initializedGoogleClientId = serverStatus.googleClientId;
         }
+
+        renderGoogleBtn();
       }
     };
 
     if (window.google?.accounts?.id) setupGsi();
     else loadGoogleIdentityScript().then(setupGsi).catch(() => setGoogleButtonReady(false));
-
-    if (theme === 'dark') return;
 
     const btnEl = document.getElementById('google-signin-btn-container');
     let resizeObserver = null;
@@ -188,7 +187,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         resizeObserver.disconnect();
       }
     };
-  }, [serverStatus.googleClientId, handleGoogleCredentialResponse, isSignUp, theme]);
+  }, [serverStatus.googleClientId, stableGoogleCredentialCallback, isSignUp, theme]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -737,8 +736,9 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         <SocialAuth
           onGoogleClick={handleGoogleLogin}
           isLoading={isLoading}
-          googleAvailable={Boolean(serverStatus.googleClientId) && theme !== 'dark'}
+          googleAvailable={Boolean(serverStatus.googleClientId)}
           googleButtonReady={googleButtonReady}
+          theme={theme}
         />
       )}
 
