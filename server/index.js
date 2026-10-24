@@ -45,6 +45,37 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Public, read-only branding and copy used by the client. Admin writes remain
+// protected by the authenticated /api/admin router.
+app.get('/api/site-config', async (_req, res) => {
+  try {
+    const result = await query('SELECT config FROM site_customization WHERE id = 1');
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(result.rows[0]?.config || { copy: {}, visuals: {} });
+  } catch (error) {
+    if (error.code === '42P01') return res.json({ copy: {}, visuals: {} });
+    console.error('[Site config error]:', error);
+    res.status(500).json({ error: 'Could not load site customization.' });
+  }
+});
+
+app.get('/api/site-assets/:assetId', async (req, res) => {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.assetId)) return res.status(404).end();
+  try {
+    const result = await query('SELECT mime_type, file_data FROM site_assets WHERE id = $1', [req.params.assetId]);
+    const asset = result.rows[0];
+    if (!asset) return res.status(404).end();
+    res.setHeader('Content-Type', asset.mime_type);
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.send(asset.file_data);
+  } catch (error) {
+    if (error.code === '42P01') return res.status(404).end();
+    console.error('[Site asset error]:', error);
+    return res.status(500).end();
+  }
+});
+
 // Authentication routes
 app.use('/api/auth', authRouter);
 
@@ -145,6 +176,11 @@ app.listen(PORT, async () => {
     const adminSchemaPath = path.resolve(__dirname, '../database/006_admin_settings.sql');
     if (fs.existsSync(adminSchemaPath)) {
       await query(fs.readFileSync(adminSchemaPath, 'utf8'));
+    }
+
+    const customizationSchemaPath = path.resolve(__dirname, '../database/007_site_customization.sql');
+    if (fs.existsSync(customizationSchemaPath)) {
+      await query(fs.readFileSync(customizationSchemaPath, 'utf8'));
     }
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);

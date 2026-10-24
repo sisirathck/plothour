@@ -20,6 +20,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { siteAssetUrl, useSiteCustomization } from '../../context/SiteCustomizationContext';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import './Dashboard.css';
@@ -600,6 +601,7 @@ const calcLongestStreak = (entries) => {
 
 export function DashboardPage({ user, onNavigate, standalone = false }) {
   const { theme: currentTheme, toggleTheme } = useTheme();
+  const { config, text } = useSiteCustomization();
   const isDark = currentTheme === 'dark';
 
   const [activeNav, setActiveNav] = useState('Dashboard');
@@ -738,6 +740,11 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     return projectTotal > 0 ? projectTotal : 4;
   }, [projects, preferences.dailyGoalHours]);
 
+  const customHeroIds = config?.visuals?.dashboard?.[isDark ? 'dark' : 'light'] || [];
+  const defaultHeroArts = isDark ? DARK_HERO_ARTS : LIGHT_HERO_ARTS;
+  const heroArts = customHeroIds.length ? customHeroIds.map(siteAssetUrl) : defaultHeroArts;
+  const shuffleHeroArt = config?.visuals?.dashboard?.shuffle !== false;
+
   // Pick a different piece of artwork on each page load.
   const [heroArtIndex, setHeroArtIndex] = useState(() => {
     const totalCount = Math.min(LIGHT_HERO_ARTS.length, DARK_HERO_ARTS.length);
@@ -748,11 +755,11 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
   // Preload all hero artwork for instantaneous, flicker-free switching.
   useEffect(() => {
-    [...LIGHT_HERO_ARTS, ...DARK_HERO_ARTS].forEach((src) => {
+    [...LIGHT_HERO_ARTS, ...DARK_HERO_ARTS, ...(config?.visuals?.dashboard?.light || []).map(siteAssetUrl), ...(config?.visuals?.dashboard?.dark || []).map(siteAssetUrl)].forEach((src) => {
       const img = new Image();
       img.src = src;
     });
-  }, []);
+  }, [config?.visuals?.dashboard]);
 
   // Remember the current image so the next browser refresh picks a different one.
   useEffect(() => {
@@ -761,19 +768,20 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
   // Rotate artwork on a steady 10-minute interval while the dashboard is open.
   useEffect(() => {
-    const totalCount = Math.min(LIGHT_HERO_ARTS.length, DARK_HERO_ARTS.length);
-    if (totalCount <= 1) return undefined;
+    const totalCount = heroArts.length;
+    if (!shuffleHeroArt || totalCount <= 1) {
+      setHeroArtIndex(0);
+      return undefined;
+    }
 
     const timer = window.setInterval(() => {
       setHeroArtIndex((currentIndex) => pickNextHeroIndex(currentIndex, totalCount));
     }, 10 * 60 * 1000);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [heroArts.length, shuffleHeroArt]);
 
-  const currentHeroArt = isDark
-    ? (DARK_HERO_ARTS[heroArtIndex] || DARK_HERO_ARTS[0])
-    : (LIGHT_HERO_ARTS[heroArtIndex] || LIGHT_HERO_ARTS[0]);
+  const currentHeroArt = heroArts[heroArtIndex] || heroArts[0];
 
 
   const [entries, setEntries] = useState(() => {
@@ -1793,7 +1801,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               {/* Frosted Glass Apple Activity Card */}
               <div className="db-hero-goal-glass-card">
                 <div className="db-goal-card-header">
-                  <span className="db-goal-card-title">Daily Goal</span>
+                  <span className="db-goal-card-title">{text('dashboard', 'dailyGoalTitle', 'Daily Goal')}</span>
                   <button
                     onClick={() => onNavigate?.('manage')}
                     className="db-goal-edit-btn"
@@ -1858,31 +1866,31 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             <div className="db-kpi-grid">
               {[
                 {
-                  label: 'TIME TRACKED',
+                  label: text('dashboard', 'timeTrackedLabel', 'TIME TRACKED'),
                   value: rangeEntries.length ? fmtDur(rangeSecs) : '—',
                   sub: rangeGoalSecs > 0 ? `${fmtDur(rangeSecs)} / ${fmtDur(rangeGoalSecs)} goal` : rangeLabel,
                   comparison: kpiComparisons.time,
                 },
                 {
-                  label: 'AVG SESSIONS / DAY',
+                  label: text('dashboard', 'sessionsPerDayLabel', 'AVG SESSIONS / DAY'),
                   value: rangeEntries.length ? averageSessionsPerDay.toFixed(1) : '—',
                   sub: `over ${rangeDaysCount} ${rangeDaysCount === 1 ? 'day' : 'days'}`,
                   comparison: kpiComparisons.sessionsPerDay,
                 },
                 {
-                  label: 'SESSIONS',
+                  label: text('dashboard', 'sessionsLabel', 'SESSIONS'),
                   value: rangeEntries.length || '—',
                   sub: `in ${rangeLabel.toLocaleLowerCase()}`,
                   comparison: kpiComparisons.sessions,
                 },
                 {
-                  label: 'ACTIVE DAYS',
+                  label: text('dashboard', 'activeDaysLabel', 'ACTIVE DAYS'),
                   value: rangeActiveDays || '—',
                   sub: `of ${rangeDaysCount} days · ${rangeActiveDays ? `${fmtDur(averageActiveDaySecs)} avg / active day` : 'no active days'}`,
                   comparison: kpiComparisons.activeDays,
                 },
                 {
-                  label: 'AVG / SESSION',
+                  label: text('dashboard', 'averageSessionLabel', 'AVG / SESSION'),
                   value: rangeEntries.length ? fmtDur(averageSessionSecs) : '—',
                   sub: 'tracked session length',
                   comparison: kpiComparisons.averageSession,
@@ -1894,8 +1902,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                     <button key="calendar-view" type="button" className="db-kpi-card db-kpi-calendar-card" onClick={() => setCalendarOpen(true)}>
                       <span className="db-kpi-calendar-icon"><CalendarDays size={20} /></span>
                       <span className="db-kpi-calendar-copy">
-                        <strong>Calendar View</strong>
-                        <small>Browse study sessions by day</small>
+                        <strong>{text('dashboard', 'calendarButton', 'Calendar View')}</strong>
+                        <small>{text('dashboard', 'calendarDescription', 'Browse study sessions by day')}</small>
                       </span>
                       <ArrowRight size={17} className="db-kpi-calendar-arrow" />
                     </button>
@@ -1927,7 +1935,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           </div>
           <div className="db-weekly-review-card">
             <div className="db-weekly-review-heading">
-              <div><span className="db-review-kicker">{weekStart === 'sunday' ? 'SUNDAY–SATURDAY · THIS WEEK' : 'MONDAY–SUNDAY · THIS WEEK'}</span><h2>Weekly review</h2></div>
+              <div><span className="db-review-kicker">{weekStart === 'sunday' ? 'SUNDAY–SATURDAY · THIS WEEK' : 'MONDAY–SUNDAY · THIS WEEK'}</span><h2>{text('dashboard', 'weeklyReviewTitle', 'Weekly review')}</h2></div>
               <span className={`db-review-delta ${weeklyReview.delta >= 0 ? 'positive' : 'negative'}`}>
                 {weeklyReview.delta > 0 ? '+' : weeklyReview.delta < 0 ? '−' : ''}{fmtDur(Math.abs(weeklyReview.delta))} vs same days last week
               </span>
@@ -2190,7 +2198,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             {/* Weekly Study Bar Chart */}
             <div className="db-card">
               <div className="db-card-header-flex mb-6">
-                <h2 className="db-section-title">{weekBarData.unit === 'days' ? 'Daily Study' : weekBarData.unit === 'weeks' ? 'Weekly Study' : 'Study Volume'}</h2>
+                <h2 className="db-section-title">{weekBarData.unit === 'days' ? text('dashboard', 'dailyStudyTitle', 'Daily Study') : weekBarData.unit === 'weeks' ? text('dashboard', 'weeklyStudyTitle', 'Weekly Study') : text('dashboard', 'studyVolumeTitle', 'Study Volume')}</h2>
                 <span className="db-section-meta">
                   {rangeLabel} · {weekBarData.totalWeeklyFmt} total · Peak {weekBarData.unit === 'days' ? 'day' : weekBarData.unit === 'weeks' ? 'week' : weekBarData.unit === 'quarters' ? 'quarter' : 'year'}: {weekBarData.peakDayLabel}{' '}
                   ({weekBarData.peakDayFmt})

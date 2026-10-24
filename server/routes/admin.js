@@ -10,6 +10,115 @@ import {
 
 export const adminRouter = Router();
 
+const validAssetSlots = new Set(['login', 'dashboard', 'logo']);
+const validThemes = new Set(['light', 'dark']);
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const cleanCustomization = (value) => {
+  const input = value && typeof value === 'object' ? value : {};
+  const copy = {};
+  if (input.copy && typeof input.copy === 'object') {
+    for (const [page, fields] of Object.entries(input.copy)) {
+      if (!['login', 'timer', 'manage', 'compare', 'dashboard'].includes(page) || !fields || typeof fields !== 'object') continue;
+      copy[page] = {};
+      for (const [key, text] of Object.entries(fields)) {
+        if (typeof text === 'string' && text.length <= 240) copy[page][key] = text.trim();
+      }
+    }
+  }
+  const visuals = { login: { light: [], dark: [], shuffle: true }, dashboard: { light: [], dark: [], shuffle: true }, logo: { light: null, dark: null } };
+  for (const slot of ['login', 'dashboard']) {
+    const source = input.visuals?.[slot] || {};
+    for (const theme of validThemes) {
+      const ids = Array.isArray(source[theme]) ? source[theme] : [];
+      visuals[slot][theme] = [...new Set(ids.filter((id) => typeof id === 'string' && uuidPattern.test(id)))].slice(0, 24);
+    }
+    visuals[slot].shuffle = source.shuffle !== false;
+  }
+  for (const theme of validThemes) {
+    const id = input.visuals?.logo?.[theme];
+    visuals.logo[theme] = typeof id === 'string' && uuidPattern.test(id) ? id : null;
+  }
+  return { copy, visuals };
+};
+
+adminRouter.get('/customization', async (_req, res) => {
+  try {
+    const [config, assets] = await Promise.all([
+      query('SELECT config, updated_at FROM site_customization WHERE id = 1'),
+      query('SELECT id, slot, theme, file_name, mime_type, byte_size, created_at FROM site_assets ORDER BY created_at DESC'),
+    ]);
+    return res.json({ config: cleanCustomization(config.rows[0]?.config), updatedAt: config.rows[0]?.updated_at || null, assets: assets.rows });
+  } catch (error) {
+    console.error('[Admin customization load error]:', error);
+    return res.status(500).json({ error: 'Could not load site customization.' });
+  }
+});
+
+adminRouter.put('/customization', async (req, res) => {
+  const config = cleanCustomization(req.body?.config);
+  try {
+    const result = await query(
+      `INSERT INTO site_customization (id, config, updated_at, updated_by)
+       VALUES (1, $1::jsonb, now(), $2)
+       ON CONFLICT (id) DO UPDATE SET config = EXCLUDED.config, updated_at = now(), updated_by = EXCLUDED.updated_by
+       RETURNING config, updated_at`,
+      [JSON.stringify(config), req.userId]
+    );
+    return res.json({ config: result.rows[0].config, updatedAt: result.rows[0].updated_at });
+  } catch (error) {
+    console.error('[Admin customization save error]:', error);
+    return res.status(500).json({ error: 'Could not save site customization.' });
+  }
+});
+
+adminRouter.post('/assets', async (req, res) => {
+  const { slot, theme, fileName, mimeType, data } = req.body || {};
+  if (!validAssetSlots.has(slot) || !validThemes.has(theme)) return res.status(400).json({ error: 'Choose a valid asset type and theme.' });
+  if (typeof fileName !== 'string' || fileName.length > 180 || typeof data !== 'string') return res.status(400).json({ error: 'Choose a valid image file.' });
+  const match = data.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!match || match[1] !== mimeType) return res.status(400).json({ error: 'Upload a PNG, JPG, or WebP image.' });
+  const bytes = Buffer.from(match[2], 'base64');
+  if (!bytes.length || bytes.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Images must be 5 MB or smaller.' });
+  const signatures = {
+    'image/png': bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+    'image/jpeg': bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
+    'image/webp': bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP',
+  };
+  if (!signatures[mimeType]) return res.status(400).json({ error: 'The file content does not match its image type.' });
+  try {
+    const count = await query('SELECT count(*)::int AS count FROM site_assets WHERE slot = $1 AND theme = $2', [slot, theme]);
+    if (count.rows[0].count >= (slot === 'logo' ? 4 : 24)) return res.status(409).json({ error: 'This image collection is full. Remove an image before uploading another.' });
+    const result = await query(
+      `INSERT INTO site_assets (slot, theme, file_name, mime_type, file_data, byte_size, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, slot, theme, file_name, mime_type, byte_size, created_at`,
+      [slot, theme, fileName.split(/[\\/]/).pop().slice(0, 180), mimeType, bytes, bytes.length, req.userId]
+    );
+    return res.status(201).json({ asset: result.rows[0] });
+  } catch (error) {
+    console.error('[Admin asset upload error]:', error);
+    return res.status(500).json({ error: 'Could not save the image.' });
+  }
+});
+
+adminRouter.delete('/assets/:assetId', async (req, res) => {
+  if (!uuidPattern.test(req.params.assetId)) return res.status(400).json({ error: 'Invalid image.' });
+  try {
+    const result = await query('SELECT config FROM site_customization WHERE id = 1');
+    const config = cleanCustomization(result.rows[0]?.config);
+    for (const slot of ['login', 'dashboard']) for (const theme of validThemes) {
+      config.visuals[slot][theme] = config.visuals[slot][theme].filter((id) => id !== req.params.assetId);
+    }
+    for (const theme of validThemes) if (config.visuals.logo[theme] === req.params.assetId) config.visuals.logo[theme] = null;
+    await query('DELETE FROM site_assets WHERE id = $1', [req.params.assetId]);
+    await query('UPDATE site_customization SET config = $1::jsonb, updated_at = now(), updated_by = $2 WHERE id = 1', [JSON.stringify(config), req.userId]);
+    return res.json({ deleted: true, config });
+  } catch (error) {
+    console.error('[Admin asset delete error]:', error);
+    return res.status(500).json({ error: 'Could not remove the image.' });
+  }
+});
+
 adminRouter.use(authenticate);
 adminRouter.use(async (req, res, next) => {
   try {

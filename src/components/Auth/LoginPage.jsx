@@ -3,9 +3,11 @@ import { BackgroundBackdrop } from '../Background/BackgroundBackdrop';
 import { HeaderActions } from '../Header/HeaderActions';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
 import { LoginForm } from './LoginForm';
+import { useSiteCustomization } from '../../context/SiteCustomizationContext';
 import './LoginPage.css';
 
 export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
+  const { text } = useSiteCustomization();
   const [notification, setNotification] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
@@ -36,7 +38,7 @@ export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
       <header className="login-header-bar">
         <div className="login-brand-header">
           <StudyDuelLogo size="large" />
-          <p className="login-brand-tagline">A little progress, every day</p>
+          <p className="login-brand-tagline">{text('login', 'tagline', 'A little progress, every day')}</p>
         </div>
         <HeaderActions onTryDemo={handleTryDemo} />
       </header>

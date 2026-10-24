@@ -10,6 +10,7 @@ import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
+import { useSiteCustomization } from '../../context/SiteCustomizationContext';
 import './Timer.css';
 
 /* ── Storage Keys ───────────────────────────── */
@@ -117,6 +118,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, disabled, accentV
 
 /* ── Main Timer Page ───────────────────────── */
 export const TimerPage = ({ user }) => {
+  const { text } = useSiteCustomization();
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : K_PROJECTS;
   const activeKey = user?.id ? `studyduel_user_${user.id}_active_timer` : K_ACTIVE;
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : K_ENTRIES;
@@ -538,7 +540,7 @@ export const TimerPage = ({ user }) => {
                   chooseSearchResult(searchMatches[0]);
                 }
               }}
-              placeholder="Search projects or subjects to start a session"
+              placeholder={text('timer', 'searchPlaceholder', 'Search projects or subjects to start a session')}
               aria-label="Search projects and subjects"
               aria-autocomplete="list"
             />
@@ -569,13 +571,13 @@ export const TimerPage = ({ user }) => {
           {/* 1. PROJECT & SUBJECT CONFIGURATION (ON TOP) */}
           <div className="timer-primary-selectors">
             <div className="t-section-header">
-              <h2 className="t-section-title">ACTIVE PROJECT & SUBJECT</h2>
-              <span className="t-section-sub">Configure Session</span>
+              <h2 className="t-section-title">{text('timer', 'activeSectionTitle', 'ACTIVE PROJECT & SUBJECT')}</h2>
+              <span className="t-section-sub">{text('timer', 'activeSectionSub', 'Configure Session')}</span>
             </div>
 
             <div className="timer-selects-row">
               <div className="timer-field">
-                <label className="timer-field-label">PROJECT</label>
+                <label className="timer-field-label">{text('timer', 'projectLabel', 'PROJECT')}</label>
                 <CustomSelect
                   value={selProj}
                   onChange={(v) => {
@@ -599,7 +601,7 @@ export const TimerPage = ({ user }) => {
               </div>
 
               <div className="timer-field">
-                <label className="timer-field-label">SUBJECT</label>
+                <label className="timer-field-label">{text('timer', 'subjectLabel', 'SUBJECT')}</label>
                 <CustomSelect
                   value={selSub}
                   onChange={(v) => {
@@ -623,8 +625,8 @@ export const TimerPage = ({ user }) => {
           {/* 2. TOP 5 COMBOS SECTION (BELOW PROJECT/SUBJECT) */}
           <section className="timer-top-combos-section" aria-label="Top 5 Project Combos">
             <div className="t-section-header">
-              <h2 className="t-section-title">TOP FREQUENT COMBOS</h2>
-              <span className="t-section-sub">1-Click Launch</span>
+              <h2 className="t-section-title">{text('timer', 'frequentTitle', 'TOP FREQUENT COMBOS')}</h2>
+              <span className="t-section-sub">{text('timer', 'frequentSub', '1-Click Launch')}</span>
             </div>
 
             <div className="t-combos-grid">
@@ -664,7 +666,7 @@ export const TimerPage = ({ user }) => {
                           title="Stop session"
                         >
                           <Square size={13} fill="currentColor" strokeWidth={0} />
-                          Stop
+                          {text('timer', 'stopButton', 'Stop')}
                         </button>
                       ) : (
                         <button
@@ -674,7 +676,7 @@ export const TimerPage = ({ user }) => {
                           title="Start timer for this combo"
                         >
                           <Play size={12} fill="currentColor" strokeWidth={0} />
-                          Start
+                          {text('timer', 'startButton', 'Start')}
                         </button>
                       )}
                     </div>
@@ -766,7 +768,7 @@ export const TimerPage = ({ user }) => {
                     onClick={stopTimer}
                   >
                     <Square size={16} fill="currentColor" strokeWidth={0} />
-                    Stop & Save
+                    {text('timer', 'stopSaveButton', 'Stop & Save')}
                   </button>
 
                   <button
@@ -775,7 +777,7 @@ export const TimerPage = ({ user }) => {
                     onClick={togglePause}
                   >
                     {isPaused ? <Play size={15} fill="currentColor" /> : <Pause size={15} />}
-                    {isPaused ? 'Resume' : 'Pause'}
+                    {isPaused ? text('timer', 'resumeButton', 'Resume') : text('timer', 'pauseButton', 'Pause')}
                   </button>
                 </div>
               ) : (
@@ -787,7 +789,7 @@ export const TimerPage = ({ user }) => {
                     disabled={!projects.length}
                   >
                     <Play size={16} fill="currentColor" strokeWidth={0} />
-                    Start Session
+                    {text('timer', 'startSessionButton', 'Start Session')}
                   </button>
                 </div>
               )}
@@ -800,7 +802,7 @@ export const TimerPage = ({ user }) => {
                   className="timer-session-note"
                   value={activeTimer.note || ''}
                   onChange={(event) => setActiveTimer((current) => current ? { ...current, note: event.target.value } : current)}
-                  placeholder="Add a note about this session…"
+                  placeholder={text('timer', 'sessionNotePlaceholder', 'Add a note about this session…')}
                   maxLength={240}
                   rows={2}
                   aria-label="Session note to save with this entry"

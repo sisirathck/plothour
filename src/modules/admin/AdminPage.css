@@ -36,6 +36,7 @@
 .admin-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
 .admin-stat-card,
 .admin-settings-card,
+.admin-customization-card,
 .admin-users-card,
 .admin-access-card { background: var(--sd-card-bg); border: 1px solid var(--sd-card-border); border-radius: var(--sd-radius-lg); box-shadow: var(--sd-shadow-sm); }
 .admin-stat-card { min-height: 122px; padding: 18px 20px; display: flex; flex-direction: column; gap: 5px; }
@@ -45,6 +46,51 @@
 .admin-stat-card small { color: var(--sd-text-muted); font-size: 11px; }
 
 .admin-settings-card { min-height: 84px; padding: 17px 20px; margin-bottom: 16px; gap: 18px; }
+.admin-customization-card { overflow: hidden; margin-bottom: 16px; }
+.admin-customization-card > .admin-users-heading { border-bottom: 1px solid var(--sd-card-border); }
+.admin-customization-card > .admin-users-heading h2 { display: flex; align-items: center; gap: 8px; }
+.admin-customization-card > .admin-users-heading h2 svg { color: var(--sd-coral); }
+.admin-customization-section { padding: 19px 20px 21px; border-bottom: 1px solid var(--sd-card-border); }
+.admin-customization-section:last-child { border-bottom: 0; }
+.admin-customization-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.admin-customization-heading > div { display: flex; align-items: center; gap: 11px; }
+.admin-customization-heading h3 { margin: 0 0 3px; font-size: 14px; }
+.admin-customization-heading p { margin: 0; color: var(--sd-text-muted); font-size: 11px; }
+.admin-asset-controls { display: flex; align-items: end; gap: 10px; margin-bottom: 14px; }
+.admin-asset-controls > label:not(.admin-upload-button) { display: grid; gap: 6px; color: var(--sd-text-muted); font-size: 10px; font-weight: 700; }
+.admin-asset-controls select { min-width: 160px; height: 38px; padding: 0 10px; color: var(--sd-text-primary); background: var(--sd-bg-surface); border: 1px solid var(--sd-card-border); border-radius: 10px; font: inherit; font-size: 11px; }
+.admin-upload-button { position: relative; min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; color: var(--sd-button-primary-text, #fff); background: var(--sd-coral); border: 1px solid var(--sd-coral); border-radius: 11px; font-size: 11px; font-weight: 750; cursor: pointer; }
+.admin-upload-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.admin-shuffle-option { width: fit-content; display: flex; align-items: center; gap: 10px; margin: 0 0 13px; cursor: pointer; }
+.admin-shuffle-option > input { position: absolute; opacity: 0; }
+.admin-shuffle-icon { width: 31px; height: 31px; display: grid; place-items: center; color: var(--sd-coral); background: color-mix(in srgb, var(--sd-coral) 12%, transparent); border: 1px solid var(--sd-card-border); border-radius: 10px; }
+.admin-shuffle-option > input:focus-visible + .admin-shuffle-icon { outline: 2px solid var(--sd-coral); outline-offset: 2px; }
+.admin-shuffle-option strong,.admin-shuffle-option small { display: block; }
+.admin-shuffle-option strong { color: var(--sd-text-primary); font-size: 11px; }
+.admin-shuffle-option small { margin-top: 2px; color: var(--sd-text-muted); font-size: 10px; }
+.admin-asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.admin-asset-card { min-width: 0; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 8px; border: 1px solid var(--sd-card-border); border-radius: 13px; background: var(--sd-bg-surface); }
+.admin-asset-card.is-active { border-color: color-mix(in srgb, var(--sd-coral) 56%, var(--sd-card-border)); box-shadow: 0 0 0 2px var(--sd-coral-glow); }
+.admin-asset-preview { position: relative; grid-column: 1 / -1; width: 100%; height: 98px; overflow: hidden; padding: 0; border: 0; border-radius: 8px; background: var(--sd-track-bg); cursor: pointer; }
+.admin-asset-preview img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.admin-asset-card.is-logo .admin-asset-preview img { object-fit: contain; }
+.admin-asset-selected { position: absolute; top: 7px; right: 7px; width: 23px; height: 23px; display: grid; place-items: center; color: white; background: var(--sd-coral); border: 2px solid var(--sd-card-bg); border-radius: 50%; }
+.admin-asset-card > div { min-width: 0; }
+.admin-asset-card > div strong,.admin-asset-card > div small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-asset-card > div strong { color: var(--sd-text-primary); font-size: 10px; }
+.admin-asset-card > div small { margin-top: 3px; color: var(--sd-text-muted); font-size: 9px; }
+.admin-asset-card .admin-icon-action { width: 28px; height: 28px; }
+.admin-assets-empty { grid-column: 1 / -1; min-height: 75px; display: flex; align-items: center; gap: 10px; padding: 14px; color: var(--sd-text-muted); background: var(--sd-bg-surface); border: 1px dashed var(--sd-card-border); border-radius: 12px; font-size: 11px; }
+.admin-assets-empty svg { flex: 0 0 auto; color: var(--sd-coral); }
+.admin-customization-hint { margin: 11px 0 0; color: var(--sd-text-muted); font-size: 10px; line-height: 1.5; }
+.admin-copy-tabs { display: flex; gap: 5px; padding: 4px; margin-bottom: 14px; width: fit-content; max-width: 100%; overflow-x: auto; background: var(--sd-bg-surface); border: 1px solid var(--sd-card-border); border-radius: 12px; }
+.admin-copy-tabs button { flex: 0 0 auto; min-height: 31px; padding: 0 12px; color: var(--sd-text-muted); background: transparent; border: 0; border-radius: 9px; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.admin-copy-tabs button.is-active { color: var(--sd-button-primary-text, #fff); background: var(--sd-coral); box-shadow: 0 3px 10px var(--sd-coral-glow); }
+.admin-copy-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.admin-copy-grid label { display: grid; gap: 6px; color: var(--sd-text-secondary); font-size: 10px; font-weight: 700; }
+.admin-copy-grid input { min-width: 0; height: 38px; padding: 0 10px; color: var(--sd-text-primary); background: var(--sd-bg-surface); border: 1px solid var(--sd-card-border); border-radius: 10px; outline: 0; font: inherit; font-weight: 500; font-size: 11px; }
+.admin-copy-grid input:focus { border-color: var(--sd-coral); box-shadow: 0 0 0 3px var(--sd-coral-glow); }
+.admin-copy-grid input::placeholder { color: var(--sd-text-muted); opacity: .7; }
 .admin-card-copy { gap: 12px; }
 .admin-icon-tile { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; color: var(--sd-coral); background: color-mix(in srgb, var(--sd-coral) 12%, transparent); border-radius: 12px; }
 .admin-card-copy h2,.admin-users-heading h2 { margin: 0 0 4px; font-size: 15px; letter-spacing: -.02em; }
@@ -121,6 +167,13 @@
   .admin-stats-grid { grid-template-columns: 1fr; gap: 9px; }
   .admin-stat-card { min-height: 98px; }
   .admin-settings-card { align-items: flex-start; flex-direction: column; }
+  .admin-customization-card > .admin-users-heading { align-items: flex-start; }
+  .admin-customization-card > .admin-users-heading .admin-primary-button { width: 100%; }
+  .admin-customization-heading { align-items: flex-start; }
+  .admin-asset-controls { align-items: stretch; flex-direction: column; }
+  .admin-asset-controls select { width: 100%; }
+  .admin-upload-button { justify-content: center; }
+  .admin-copy-grid { grid-template-columns: 1fr; }
   .admin-users-heading { align-items: flex-start; flex-direction: column; }
   .admin-users-heading .admin-primary-button { width: 100%; }
   .admin-search-row { padding-right: 14px; padding-left: 14px; }

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import './Manage.css';
 import { formatDisplayDate } from '../../utils/dateFormat';
+import { useSiteCustomization } from '../../context/SiteCustomizationContext';
 
 const initialProjects = [
   {
@@ -238,6 +239,7 @@ const PlanEditor = ({ value, label, onChange }) => {
 };
 
 export const ManagePage = ({ user }) => {
+  const { text } = useSiteCustomization();
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
   const activeTimerKey = user?.id ? `studyduel_user_${user.id}_active_timer` : 'studyduel_demo_active_timer';
@@ -467,8 +469,8 @@ export const ManagePage = ({ user }) => {
       <header className="manage-page-header">
         <div>
           <div className="manage-eyebrow"><FolderKanban size={14} /> WORKSPACE</div>
-          <h1>Project library</h1>
-          <p>Shape your study plan, set targets, and keep completed projects within reach.</p>
+          <h1>{text('manage', 'title', 'Project library')}</h1>
+          <p>{text('manage', 'subtitle', 'Shape your study plan, set targets, and keep completed projects within reach.')}</p>
         </div>
         <div className="manage-header-stats">
           <span><strong>{activeProjects.length}</strong> active</span>
@@ -480,15 +482,15 @@ export const ManagePage = ({ user }) => {
         <div className="manage-library-toolbar">
           <div className="manage-view-tabs" role="tablist" aria-label="Project status">
             <button type="button" role="tab" aria-selected={view === 'active'} className={view === 'active' ? 'selected' : ''} onClick={() => { setView('active'); setSelectedProjectIds([]); setNotice(''); }}>
-              Active <span>{activeProjects.length}</span>
+              {text('manage', 'activeTab', 'Active')} <span>{activeProjects.length}</span>
             </button>
             <button type="button" role="tab" aria-selected={view === 'archived'} className={view === 'archived' ? 'selected' : ''} onClick={() => { setView('archived'); setSelectedProjectIds([]); setNotice(''); }}>
-              <Archive size={14} /> Archived <span>{archivedProjects.length}</span>
+              <Archive size={14} /> {text('manage', 'archivedTab', 'Archived')} <span>{archivedProjects.length}</span>
             </button>
           </div>
           <label className="manage-search">
             <Search size={16} />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a project" aria-label="Find a project" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={text('manage', 'searchPlaceholder', 'Find a project')} aria-label="Find a project" />
           </label>
         </div>
 
@@ -499,8 +501,8 @@ export const ManagePage = ({ user }) => {
         {view === 'active' && (
           <form className="manage-create-project" onSubmit={addProject}>
             <div className="manage-create-icon"><Plus size={18} /></div>
-            <input value={newProject} onChange={(event) => setNewProject(event.target.value)} placeholder="Add a project, e.g. Biology or Thesis" aria-label="New project name" />
-            <button type="submit" disabled={!newProject.trim()}><Plus size={15} /> Create project</button>
+            <input value={newProject} onChange={(event) => setNewProject(event.target.value)} placeholder={text('manage', 'newProjectPlaceholder', 'Add a project, e.g. Biology or Thesis')} aria-label="New project name" />
+            <button type="submit" disabled={!newProject.trim()}><Plus size={15} /> {text('manage', 'createProjectButton', 'Create project')}</button>
           </form>
         )}
         {notice && <p className="manage-notice" role="status">{notice}</p>}

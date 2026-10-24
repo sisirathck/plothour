@@ -8,7 +8,9 @@ const processes = [
     stdio: 'inherit',
     env: process.env,
   }),
-  spawn(process.execPath, ['--watch', '--watch-path=.env', resolve(root, 'server/index.js')], {
+  // Watch the server entry and its imported modules so newly added routes and
+  // API changes are picked up during development (without requiring .env edits).
+  spawn(process.execPath, ['--watch', resolve(root, 'server/index.js')], {
     cwd: root,
     stdio: 'inherit',
     env: process.env,

@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Activity, AlertTriangle, Check, ChevronLeft, ChevronRight, CirclePlus,
-  LockKeyhole, Mail, Search, ShieldCheck, Trash2, Users, X,
+  Image, LockKeyhole, Mail, Search, ShieldCheck, Trash2, Users, X, Shuffle,
 } from 'lucide-react';
+import { SITE_COPY_FIELDS, siteAssetUrl } from '../../context/SiteCustomizationContext';
 import './AdminPage.css';
 
 const PAGE_SIZE = 50;
+const EMPTY_CONFIG = { copy: {}, visuals: { login: { light: [], dark: [], shuffle: true }, dashboard: { light: [], dark: [], shuffle: true }, logo: { light: null, dark: null } } };
 
 async function api(path, options = {}) {
   const response = await fetch(`/api/admin${path}`, {
@@ -42,19 +44,29 @@ export const AdminPage = ({ user }) => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmEmail, setConfirmEmail] = useState('');
   const [createForm, setCreateForm] = useState({ displayName: '', email: '' });
+  const [siteConfig, setSiteConfig] = useState(EMPTY_CONFIG);
+  const [siteAssets, setSiteAssets] = useState([]);
+  const [customizationBusy, setCustomizationBusy] = useState(false);
+  const [customizationSaved, setCustomizationSaved] = useState(false);
+  const [assetSlot, setAssetSlot] = useState('login');
+  const [assetTheme, setAssetTheme] = useState('light');
+  const [copyPage, setCopyPage] = useState('login');
 
   const loadData = useCallback(async () => {
     if (!user?.is_admin) return;
     setBusy(true);
     setError('');
     try {
-      const [dashboard, userList] = await Promise.all([
+      const [dashboard, userList, customization] = await Promise.all([
         api('/overview'),
         api(`/users?limit=${PAGE_SIZE}&offset=${offset}&search=${encodeURIComponent(search)}`),
+        api('/customization'),
       ]);
       setOverview(dashboard);
       setUsers(userList.users);
       setTotal(userList.total);
+      setSiteConfig(customization.config || EMPTY_CONFIG);
+      setSiteAssets(customization.assets || []);
     } catch (loadError) {
       setError(loadError.message);
     } finally {
@@ -121,6 +133,78 @@ export const AdminPage = ({ user }) => {
     } catch (requestError) { setError(requestError.message); }
   };
 
+  const updateSiteConfig = (update) => {
+    setCustomizationSaved(false);
+    setSiteConfig((current) => update(current));
+  };
+
+  const saveCustomization = async () => {
+    setCustomizationBusy(true);
+    setError('');
+    try {
+      const result = await api('/customization', { method: 'PUT', body: JSON.stringify({ config: siteConfig }) });
+      setSiteConfig(result.config || siteConfig);
+      setCustomizationSaved(true);
+      window.dispatchEvent(new Event('studyduel:site-customization-updated'));
+      setNotice('Site branding and copy have been updated.');
+    } catch (requestError) { setError(requestError.message); }
+    finally { setCustomizationBusy(false); }
+  };
+
+  const uploadAsset = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { setError('Choose a PNG, JPG, or WebP image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Images must be 5 MB or smaller.'); return; }
+    setCustomizationBusy(true);
+    setError('');
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Could not read this image file.'));
+        reader.readAsDataURL(file);
+      });
+      const result = await api('/assets', { method: 'POST', body: JSON.stringify({ slot: assetSlot, theme: assetTheme, fileName: file.name, mimeType: file.type, data }) });
+      setSiteAssets((current) => [result.asset, ...current]);
+      setNotice(`${file.name} added to the ${assetSlot} ${assetTheme} collection.`);
+    } catch (requestError) { setError(requestError.message); }
+    finally { setCustomizationBusy(false); }
+  };
+
+  const removeAsset = async (asset) => {
+    setCustomizationBusy(true);
+    setError('');
+    try {
+      const result = await api(`/assets/${encodeURIComponent(asset.id)}`, { method: 'DELETE' });
+      setSiteAssets((current) => current.filter((item) => item.id !== asset.id));
+      setSiteConfig(result.config || siteConfig);
+      window.dispatchEvent(new Event('studyduel:site-customization-updated'));
+      setNotice(`${asset.file_name} removed.`);
+    } catch (requestError) { setError(requestError.message); }
+    finally { setCustomizationBusy(false); }
+  };
+
+  const setAssetActive = (asset) => updateSiteConfig((current) => {
+    const next = {
+      ...current,
+      visuals: {
+        ...current.visuals,
+        [asset.slot]: {
+          ...current.visuals[asset.slot],
+          ...(asset.slot !== 'logo' ? { [asset.theme]: [...(current.visuals[asset.slot][asset.theme] || [])] } : {}),
+        },
+      },
+    };
+    if (asset.slot === 'logo') next.visuals.logo[asset.theme] = next.visuals.logo[asset.theme] === asset.id ? null : asset.id;
+    else {
+      const ids = next.visuals[asset.slot][asset.theme] || [];
+      next.visuals[asset.slot][asset.theme] = ids.includes(asset.id) ? ids.filter((id) => id !== asset.id) : [...ids, asset.id];
+    }
+    return next;
+  });
+
   if (!user?.is_admin) {
     return <main className="admin-page"><section className="admin-access-card"><ShieldCheck size={28} /><h1>Admin access required</h1><p>Sign in with an administrator account to open this area.</p></section></main>;
   }
@@ -155,6 +239,49 @@ export const AdminPage = ({ user }) => {
           className={`admin-switch${overview?.settings?.signups_enabled === false ? '' : ' is-on'}`}
           onClick={() => setSignupState(overview?.settings?.signups_enabled === false)}
         ><span />{overview?.settings?.signups_enabled === false ? 'Paused' : 'Open'}</button>
+      </section>
+
+      <section className="admin-customization-card">
+        <div className="admin-users-heading">
+          <div><h2><Image size={17} /> Site appearance & copy</h2><p>Customize artwork and visible text while keeping the StudyDuel layout and themes.</p></div>
+          <button className="admin-primary-button" type="button" onClick={saveCustomization} disabled={customizationBusy}><Check size={16} /> {customizationBusy ? 'Saving…' : customizationSaved ? 'Saved' : 'Save site changes'}</button>
+        </div>
+
+        <div className="admin-customization-section">
+          <div className="admin-customization-heading"><div><span className="admin-icon-tile"><Image size={17} /></span><div><h3>Images and logo</h3><p>Upload up to 24 images per collection. Use landscape artwork for backgrounds.</p></div></div></div>
+          <div className="admin-asset-controls">
+            <label>Collection<select value={assetSlot} onChange={(event) => setAssetSlot(event.target.value)}><option value="login">Login background</option><option value="dashboard">Dashboard artwork</option><option value="logo">Logo</option></select></label>
+            <label>Theme<select value={assetTheme} onChange={(event) => setAssetTheme(event.target.value)}><option value="light">Light theme</option><option value="dark">Dark theme</option></select></label>
+            <label className="admin-upload-button"><CirclePlus size={15} /> Add image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadAsset} disabled={customizationBusy} /></label>
+          </div>
+          {assetSlot !== 'logo' && <label className="admin-shuffle-option"><input type="checkbox" checked={siteConfig.visuals?.[assetSlot]?.shuffle !== false} onChange={(event) => updateSiteConfig((current) => ({ ...current, visuals: { ...current.visuals, [assetSlot]: { ...current.visuals[assetSlot], shuffle: event.target.checked } } }))} /><span className="admin-shuffle-icon"><Shuffle size={15} /></span><span><strong>Shuffle artwork</strong><small>Choose a random image on each visit{assetSlot === 'dashboard' ? ' and rotate every 10 minutes' : ''}.</small></span></label>}
+          <div className="admin-asset-grid">
+            {siteAssets.filter((asset) => asset.slot === assetSlot && asset.theme === assetTheme).map((asset) => {
+              const active = asset.slot === 'logo'
+                ? siteConfig.visuals?.logo?.[asset.theme] === asset.id
+                : siteConfig.visuals?.[asset.slot]?.[asset.theme]?.includes(asset.id);
+              return <article className={`admin-asset-card${asset.slot === 'logo' ? ' is-logo' : ''}${active ? ' is-active' : ''}`} key={asset.id}>
+                <button type="button" className="admin-asset-preview" onClick={() => setAssetActive(asset)} aria-pressed={active} title={active ? 'Remove from active artwork' : 'Use this image'}>
+                  <img src={siteAssetUrl(asset.id)} alt={asset.file_name} />{active && <span className="admin-asset-selected"><Check size={14} /></span>}
+                </button>
+                <div><strong title={asset.file_name}>{asset.file_name}</strong><small>{Math.max(1, Math.round(asset.byte_size / 1024))} KB · {active ? asset.slot === 'logo' ? 'Current logo' : 'In rotation' : 'Available'}</small></div>
+                <button type="button" className="admin-icon-action is-danger" onClick={() => removeAsset(asset)} aria-label={`Remove ${asset.file_name}`} disabled={customizationBusy}><Trash2 size={15} /></button>
+              </article>;
+            })}
+            {siteAssets.every((asset) => asset.slot !== assetSlot || asset.theme !== assetTheme) && <div className="admin-assets-empty"><Image size={19} /><span>No custom images yet. Built-in artwork remains active until you add images here.</span></div>}
+          </div>
+          <p className="admin-customization-hint">Select thumbnails to add or remove them from the rotation. For logos, selecting one replaces the current logo for that theme. You can drag files into the upload button or choose them from your device.</p>
+        </div>
+
+        <div className="admin-customization-section">
+          <div className="admin-customization-heading"><div><span className="admin-icon-tile"><Mail size={17} /></span><div><h3>Page text</h3><p>Edit key interface copy. Leave a field blank to restore its built-in wording.</p></div></div></div>
+          <div className="admin-copy-tabs" role="tablist" aria-label="Page copy">
+            {['login', 'timer', 'dashboard', 'manage', 'compare'].map((page) => <button key={page} type="button" role="tab" aria-selected={copyPage === page} className={copyPage === page ? 'is-active' : ''} onClick={() => setCopyPage(page)}>{page[0].toUpperCase() + page.slice(1)}</button>)}
+          </div>
+          <div className="admin-copy-grid">
+            {SITE_COPY_FIELDS.filter((field) => field.page === copyPage).map((field) => <label key={`${field.page}.${field.key}`}>{field.label}<input maxLength={240} value={siteConfig.copy?.[field.page]?.[field.key] ?? ''} placeholder={field.fallback} onChange={(event) => updateSiteConfig((current) => ({ ...current, copy: { ...current.copy, [field.page]: { ...current.copy?.[field.page], [field.key]: event.target.value } } }))} /></label>)}
+          </div>
+        </div>
       </section>
 
       <section className="admin-users-card">

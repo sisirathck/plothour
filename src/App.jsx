@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
+import { SiteCustomizationProvider } from './context/SiteCustomizationContext';
 import { LoginPage } from './components/Auth/LoginPage';
 import { connectWorkspaceSync } from './data/workspaceSync';
 import { resetDemoWorkspace } from './data/demoWorkspace';
@@ -128,15 +129,18 @@ function App() {
   if ((isCheckingAuth && (isDirectAppRoute || isDemoMode)) || (user && workspaceReadyForUser !== user.id)) {
     return (
       <ThemeProvider key={themeScopeKey} userId={user?.id} demoMode={isDemoMode}>
+        <SiteCustomizationProvider>
         <div className="app-loading-screen" aria-label="Loading StudyDuel...">
           <div className="app-loading-spinner" />
         </div>
+        </SiteCustomizationProvider>
       </ThemeProvider>
     );
   }
 
   return (
     <ThemeProvider key={themeScopeKey} userId={user?.id} demoMode={isDemoMode}>
+      <SiteCustomizationProvider>
       <div className="app-root">
         {user || isDemoMode ? (
           <Suspense
@@ -166,6 +170,7 @@ function App() {
           />
         )}
       </div>
+      </SiteCustomizationProvider>
     </ThemeProvider>
   );
 }

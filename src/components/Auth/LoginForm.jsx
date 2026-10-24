@@ -4,6 +4,7 @@ import { FormInput } from './FormInput';
 import { NoticeBanner } from './NoticeBanner';
 import { SocialAuth } from './SocialAuth';
 import { useTheme } from '../../context/ThemeContext';
+import { useSiteCustomization } from '../../context/SiteCustomizationContext';
 import './LoginForm.css';
 
 let googleIdentityScriptPromise;
@@ -30,6 +31,7 @@ const loadGoogleIdentityScript = () => {
 
 export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onLogInClick }) => {
   const { theme } = useTheme();
+  const { text } = useSiteCustomization();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -407,8 +409,8 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
               ? 'Reset your password'
               : 'Create new password'
             : isSignUp
-            ? 'Create your account'
-            : 'Welcome back'}
+            ? text('login', 'signUpTitle', 'Create your account')
+            : text('login', 'welcomeTitle', 'Welcome back')}
         </h1>
         <p className="login-subtitle">
           {isForgotPassword
@@ -416,8 +418,8 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
               ? 'Enter your registered email address and we’ll send you a 6-digit code to reset your password.'
               : `Enter the code sent to ${resetEmail || 'your email'} and choose your new password.`
             : isSignUp
-            ? 'Join StudyDuel and keep your progress moving.'
-            : 'Sign in to your dashboard and keep your progress moving.'}
+            ? text('login', 'signUpSubtitle', 'Join StudyDuel and keep your progress moving.')
+            : text('login', 'welcomeSubtitle', 'Sign in to your dashboard and keep your progress moving.')}
         </p>
       </header>
 
@@ -654,7 +656,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
 
         <FormInput
           id="login-email"
-          label="Email"
+          label={text('login', 'emailLabel', 'Email')}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -667,7 +669,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         <div className="password-field-container">
           <FormInput
             id="login-password"
-            label="Password"
+            label={text('login', 'passwordLabel', 'Password')}
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -705,7 +707,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
                   setForgotMessage('');
                 }}
               >
-                Forgot password?
+                {text('login', 'forgotPassword', 'Forgot password?')}
               </button>
             </div>
           )}
@@ -724,7 +726,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
               <span>{isSignUp ? 'Sending code...' : 'Signing in...'}</span>
             </>
           ) : (
-            <span>{isSignUp ? 'Create account' : 'Log in'}</span>
+            <span>{isSignUp ? text('login', 'createAccountButton', 'Create account') : text('login', 'loginButton', 'Log in')}</span>
           )}
         </button>
       </form>
@@ -757,7 +759,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
               }
             }}
           >
-            {isSignUp ? 'Log in' : 'Sign up'}
+            {isSignUp ? 'Log in' : text('login', 'signUpButton', 'Sign up')}
           </button>
         </footer>
       )}
