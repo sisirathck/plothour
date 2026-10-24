@@ -129,6 +129,11 @@ app.listen(PORT, async () => {
     if (fs.existsSync(inviteCodeSchemaPath)) {
       await query(fs.readFileSync(inviteCodeSchemaPath, 'utf8'));
     }
+
+    const emailVerificationSchemaPath = path.resolve(__dirname, '../database/004_email_verification.sql');
+    if (fs.existsSync(emailVerificationSchemaPath)) {
+      await query(fs.readFileSync(emailVerificationSchemaPath, 'utf8'));
+    }
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);
   }

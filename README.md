@@ -4,7 +4,7 @@ StudyDuel is a React and Express study timer with a PostgreSQL-backed authentica
 
 ## Current functionality
 
-- Email and password registration and login, with Argon2id password hashes and JWT sessions in HTTP-only cookies.
+- Email and password registration with emailed verification codes, Argon2id password hashes, and JWT sessions in HTTP-only cookies.
 - Optional Google sign-in when `GOOGLE_CLIENT_ID` is configured.
 - Timer, dashboard, project management, settings, and compare screens.
 - Light and dark themes, timer/session views, dashboard summaries, and browser extension UI.
@@ -70,6 +70,8 @@ Use **Try demo** to explore the sample workspace, or register an account to use 
 | `PORT` | No | Express listen port; defaults to `3001` |
 | `NODE_ENV` | No | Set to `production` in production so session cookies use the `Secure` flag |
 | `GOOGLE_CLIENT_ID` | No | Enables Google sign-in when configured |
+| `RESEND_API_KEY` | Required for password-based registration | API key used to send verification emails through Resend |
+| `EMAIL_FROM` | Required for password-based registration | Verified sender, for example `StudyDuel <verify@example.com>` |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | For Docker Compose | PostgreSQL container setup |
 
 Do not use the development fallback JWT secret in production. Keep `.env` and all credentials out of version control.
@@ -102,7 +104,7 @@ Remove the local database volume and its data (destructive):
 docker compose down -v
 ```
 
-There is currently one SQL schema file and no numbered follow-up migration. Add future migrations as new files and document their application procedure here.
+The server applies the numbered additive SQL migrations on startup. Email verification is enabled only when `RESEND_API_KEY` and a verified `EMAIL_FROM` sender are configured. New password accounts are created after the 6-digit code is verified; existing accounts remain verified. Google sign-in requires a Google-verified email.
 
 ## Production deployment (manual VPS example)
 

@@ -108,6 +108,7 @@ export async function verifyGoogleIdToken(idToken) {
   return {
     sub: payload.sub,
     email: payload.email,
+    emailVerified: payload.email_verified === true,
     displayName: payload.name || payload.email.split('@')[0],
     picture: payload.picture,
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, User } from 'lucide-react';
 import { FormInput } from './FormInput';
 import { NoticeBanner } from './NoticeBanner';
@@ -12,12 +12,38 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationMessage, setVerificationMessage] = useState('');
   const [serverStatus, setServerStatus] = useState({
     checked: false,
     configured: false,
     googleAuth: false,
+    emailVerification: false,
     googleClientId: null,
   });
+
+  const handleGoogleCredentialResponse = useCallback(async (response) => {
+    if (!response.credential) return;
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Google authentication failed');
+      onLoginSuccess?.(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onLoginSuccess]);
 
   // Check server configuration status on mount
   useEffect(() => {
@@ -28,6 +54,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
           checked: true,
           configured: Boolean(data.configured),
           googleAuth: Boolean(data.googleAuth),
+          emailVerification: Boolean(data.emailVerification),
           googleClientId: data.googleClientId,
         });
       })
@@ -36,6 +63,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
           checked: true,
           configured: false,
           googleAuth: false,
+          emailVerification: false,
           googleClientId: null,
         });
       });
@@ -64,32 +92,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         document.body.removeChild(script);
       }
     };
-  }, [serverStatus.googleClientId]);
-
-  const handleGoogleCredentialResponse = async (response) => {
-    if (!response.credential) return;
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: response.credential }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Google authentication failed');
-      }
-
-      onLoginSuccess?.(data.user);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [serverStatus.googleClientId, handleGoogleCredentialResponse]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -128,7 +131,56 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         throw new Error(data.error || (isSignUp ? 'Registration failed.' : 'Login failed.'));
       }
 
+      if (isSignUp && data.verificationRequired) {
+        setVerificationEmail(data.email || email.trim().toLowerCase());
+        setVerificationCode('');
+        setVerificationMessage('We sent a 6-digit verification code to your email. It expires in 10 minutes.');
+        return;
+      }
+
       onLoginSuccess?.(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async (e) => {
+    e.preventDefault();
+    setError('');
+    setVerificationMessage('');
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verificationEmail, code: verificationCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not verify your email.');
+      onLoginSuccess?.(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setError('');
+    setVerificationMessage('');
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verificationEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not resend the code.');
+      setVerificationCode('');
+      setVerificationMessage('A new verification code is on its way.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -162,8 +214,44 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
             : 'Account sign-in is not set up on this server yet. Configure PostgreSQL and AUTH_SECRET to enable accounts.'}
         />
       )}
+      {serverStatus.checked && isSignUp && serverStatus.configured && !serverStatus.emailVerification && (
+        <NoticeBanner message="Email verification is not configured on this server. Add RESEND_API_KEY and EMAIL_FROM before enabling account creation." />
+      )}
 
-      {/* Login Form */}
+      {verificationEmail ? (
+        <form className="login-form" onSubmit={handleVerifyEmail} noValidate>
+          {error && <div className="login-general-error" role="alert">{error}</div>}
+          {verificationMessage && <div className="login-verification-message" role="status">{verificationMessage}</div>}
+          <p className="login-verification-intro">Enter the code we sent to <strong>{verificationEmail}</strong> to activate your account.</p>
+          <FormInput
+            id="signup-verification-code"
+            label="Verification code"
+            type="text"
+            value={verificationCode}
+            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="6-digit code"
+            icon={Mail}
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            required
+          />
+          <button type="submit" className="login-submit-btn" disabled={isLoading || verificationCode.length !== 6}>
+            {isLoading ? <><Loader2 className="btn-spinner" size={16} /><span>Verifying...</span></> : <span>Verify email and create account</span>}
+          </button>
+          <button type="button" className="login-secondary-action" onClick={handleResendVerification} disabled={isLoading}>
+            Resend verification code
+          </button>
+          <button type="button" className="login-secondary-action" onClick={() => { setVerificationEmail(''); setVerificationCode(''); setVerificationMessage(''); setError(''); }}>
+            Use a different email
+          </button>
+          <button type="button" className="login-secondary-action" onClick={() => { setVerificationEmail(''); setVerificationCode(''); setVerificationMessage(''); setError(''); onLogInClick?.(); }}>
+            Back to log in
+          </button>
+        </form>
+      ) : (
+      /* Login or registration form */
       <form className="login-form" onSubmit={handleSubmit} noValidate>
         {error && <div className="login-general-error">{error}</div>}
 
@@ -239,24 +327,25 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
           type="submit"
           id="login-submit-btn"
           className="login-submit-btn"
-          disabled={isLoading}
+          disabled={isLoading || (isSignUp && serverStatus.checked && (!serverStatus.configured || !serverStatus.emailVerification))}
         >
           {isLoading ? (
             <>
               <Loader2 className="btn-spinner" size={16} />
-              <span>Signing in...</span>
+              <span>{isSignUp ? 'Sending code...' : 'Signing in...'}</span>
             </>
           ) : (
             <span>{isSignUp ? 'Create account' : 'Log in'}</span>
           )}
         </button>
       </form>
+      )}
 
       {/* Social Auth Option */}
-      {!isSignUp && <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />}
+      {!isSignUp && !verificationEmail && <SocialAuth onGoogleClick={handleGoogleLogin} isLoading={isLoading} />}
 
       {/* Footer Link */}
-      <footer className="login-card-footer">
+      {!verificationEmail && <footer className="login-card-footer">
         <span className="footer-text">{isSignUp ? 'Already have an account? ' : 'Don’t have an account? '}</span>
         <button
           type="button"
@@ -265,7 +354,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         >
           {isSignUp ? 'Log in' : 'Sign up'}
         </button>
-      </footer>
+      </footer>}
     </div>
   );
 };

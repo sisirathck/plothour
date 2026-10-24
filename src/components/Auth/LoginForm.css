@@ -67,6 +67,37 @@
   font-weight: 500;
 }
 
+.login-verification-message {
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--sd-coral) 28%, transparent);
+  border-radius: var(--sd-radius-sm);
+  background: color-mix(in srgb, var(--sd-coral) 9%, transparent);
+  color: var(--sd-text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.login-verification-intro {
+  margin: 0;
+  color: var(--sd-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-verification-intro strong { color: var(--sd-text-primary); }
+
+.login-secondary-action {
+  align-self: center;
+  padding: 2px 4px;
+  color: var(--sd-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.login-secondary-action:hover:not(:disabled) { color: var(--sd-coral); text-decoration: underline; }
+.login-secondary-action:disabled { opacity: .65; cursor: wait; }
+
 .password-field-container {
   display: flex;
   flex-direction: column;
