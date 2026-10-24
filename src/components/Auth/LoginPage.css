@@ -21,6 +21,37 @@
   flex-shrink: 0;
 }
 
+/* Keep the header controls glassy over the full-bleed login artwork. */
+[data-theme='light'] .login-header-bar .minimal-try-me-btn,
+[data-theme='light'] .login-header-bar .minimal-theme-toggle {
+  background: rgba(251, 250, 255, 0.48) !important;
+  border-color: rgba(91, 96, 164, 0.2);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 3px 12px rgba(49, 43, 93, 0.08);
+}
+
+[data-theme='light'] .login-header-bar .minimal-try-me-btn:hover,
+[data-theme='light'] .login-header-bar .minimal-theme-toggle:hover {
+  background: rgba(251, 250, 255, 0.66) !important;
+  border-color: rgba(91, 96, 164, 0.28);
+}
+
+[data-theme='dark'] .login-header-bar .minimal-try-me-btn,
+[data-theme='dark'] .login-header-bar .minimal-theme-toggle {
+  background: rgba(12, 19, 34, 0.42);
+  border-color: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.16);
+}
+
+[data-theme='dark'] .login-header-bar .minimal-try-me-btn:hover,
+[data-theme='dark'] .login-header-bar .minimal-theme-toggle:hover {
+  background: rgba(12, 19, 34, 0.58);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
 .login-brand-header {
   display: flex;
   flex-direction: column;

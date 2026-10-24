@@ -57,10 +57,20 @@
 }
 
 .studyduel-logo-wrapper.size-large .studyduel-logo-img {
+  width: 240px;
   height: 60px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.studyduel-logo-wrapper.size-large {
+  width: 240px;
+  height: 60px;
+  flex: 0 0 60px;
 }
 
 .studyduel-logo-wrapper.size-large .studyduel-logo-lightmark {
   width: 240px;
   height: 60px;
+  object-position: left center;
 }
