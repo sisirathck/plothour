@@ -8,7 +8,23 @@
   --sd-coral-deep: #E06D53;
   --sd-sage-primary: #5F7F67;
   --sd-sage-glow: rgba(95, 127, 103, 0.15);
+  --sd-scrollbar-thumb: #8574D6;
+  --sd-scrollbar-track: #E7E5EF;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sd-scrollbar-thumb) var(--sd-scrollbar-track);
 }
+
+:root[data-theme='dark'] {
+  --sd-scrollbar-thumb: #E58C59;
+  --sd-scrollbar-track: #252433;
+}
+
+* { scrollbar-width: thin; scrollbar-color: var(--sd-scrollbar-thumb) var(--sd-scrollbar-track); }
+*::-webkit-scrollbar { width: 12px; height: 12px; }
+*::-webkit-scrollbar-track { border-radius: 999px; background: var(--sd-scrollbar-track); }
+*::-webkit-scrollbar-thumb { min-width: 28px; min-height: 28px; border: 3px solid var(--sd-scrollbar-track); border-radius: 999px; background: var(--sd-scrollbar-thumb); }
+*::-webkit-scrollbar-thumb:hover { filter: brightness(.94); }
+*::-webkit-scrollbar-corner { background: var(--sd-scrollbar-track); }
 
 /* ── Theme Root Tokens ─────────────────────────────────────────────────────── */
 .db-apple-root {
@@ -1283,7 +1299,7 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--db-portfolio-accent) 68%, transparent) var(--db-track-bg);
+  scrollbar-color: var(--sd-scrollbar-thumb) var(--sd-scrollbar-track);
 }
 
 .db-chart-scroll::-webkit-scrollbar,
@@ -1291,9 +1307,9 @@
 .db-chart-scroll::-webkit-scrollbar-track,
 .db-weekly-chart-scroll::-webkit-scrollbar-track { border-radius: 99px; background: var(--db-track-bg); }
 .db-chart-scroll::-webkit-scrollbar-thumb,
-.db-weekly-chart-scroll::-webkit-scrollbar-thumb { border: 1px solid var(--db-bg); border-radius: 99px; background: color-mix(in srgb, var(--db-portfolio-accent) 68%, transparent); }
+.db-weekly-chart-scroll::-webkit-scrollbar-thumb { border: 3px solid var(--sd-scrollbar-track); border-radius: 99px; background: var(--sd-scrollbar-thumb); }
 .db-chart-scroll::-webkit-scrollbar-thumb:hover,
-.db-weekly-chart-scroll::-webkit-scrollbar-thumb:hover { background: var(--db-portfolio-accent); }
+.db-weekly-chart-scroll::-webkit-scrollbar-thumb:hover { filter: brightness(.94); }
 
 .db-svg-chart {
   display: block;
@@ -1731,6 +1747,27 @@
   height: 5.5px;
   border-radius: 50%;
 }
+
+.db-apple-root.dark-mode .db-habit-strip-heading { color: #AAB4C7; }
+.db-apple-root.dark-mode .db-habit-legend { color: #B3BDCE; background: transparent; border-color: transparent; }
+.db-apple-root.dark-mode .db-habit-pill.hit-goal {
+  background: rgba(110, 158, 117, .2);
+  border-color: rgba(126, 184, 135, .48);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
+}
+.db-apple-root.dark-mode .db-habit-pill.active-study {
+  background: rgba(242, 139, 114, .16);
+  border-color: rgba(242, 139, 114, .48);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
+}
+.db-apple-root.dark-mode .db-habit-pill.rest-day {
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(255, 255, 255, .13);
+  opacity: 1;
+}
+.db-apple-root.dark-mode .db-habit-pill.rest-day .db-habit-day-num { color: #AAB4C7; }
+.db-apple-root.dark-mode .db-habit-pill.rest-day .db-habit-dot { background: #707B90; }
+.db-apple-root.dark-mode .db-habit-day-num { color: #F0F2F7; }
 
 /* Project Portfolio */
 .db-portfolio-range-pills {
@@ -2517,7 +2554,7 @@
   flex-direction: column;
   overflow-x: auto;
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--db-portfolio-accent) 68%, transparent) var(--db-track-bg);
+  scrollbar-color: var(--sd-scrollbar-thumb) var(--sd-scrollbar-track);
   padding-bottom: 4px;
 }
 
@@ -2569,24 +2606,30 @@
 .db-hours-project-card { height: 370px; min-height: 370px; display: flex; flex-direction: column; }
 .db-project-plans-card > .db-project-plans-list { flex: 1; }
 .db-project-plans-card .db-range-empty { flex: 1; }
-.db-hours-project-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(150px, .9fr) minmax(0, 1fr); align-items: center; gap: 20px; }
-.db-hours-project-donut { width: min(100%, 220px); aspect-ratio: 1; justify-self: center; position: relative; display: grid; place-items: center; border-radius: 50%; }
-.db-hours-project-donut::after { content: ''; position: absolute; inset: 22%; border: 1px solid var(--db-card-border); border-radius: 50%; background: var(--db-card-bg); }
-.db-hours-project-total { position: relative; z-index: 1; display: grid; justify-items: center; gap: 3px; color: var(--db-muted); font-size: 10px; }
-.db-hours-project-total strong { color: var(--db-text); font-size: 16px; }
-.db-hours-project-legend { min-height: 0; max-height: 280px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-.db-hours-project-legend-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; color: var(--db-muted); font-size: 11px; }
-.db-hours-project-name { min-width: 0; display: flex; align-items: center; gap: 7px; color: var(--db-text); }
-.db-hours-project-name i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.db-hours-project-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(160px, .95fr) minmax(0, 1.05fr); align-items: center; gap: 20px; }
+.db-hours-project-donut-shell { width: min(100%, 248px); aspect-ratio: 1; justify-self: center; position: relative; display: grid; place-items: center; border: 1px solid var(--db-card-border); border-radius: 50%; background: radial-gradient(circle at 42% 32%, color-mix(in srgb, var(--db-accent-tint) 55%, transparent), transparent 62%); box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 16px 34px rgba(22,28,52,.12); }
+.db-hours-project-donut { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 10px 15px rgba(18,24,44,.18)); }
+.db-hours-donut-orbit,.db-hours-donut-inner-orbit { fill: none; stroke: var(--db-card-border); stroke-width: 1; opacity: .75; }
+.db-hours-donut-segment { transition: stroke-width .2s ease, filter .2s ease; }
+.db-hours-project-donut-shell:hover .db-hours-donut-segment { stroke-width: 34; }
+.db-hours-project-total { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 4px; pointer-events: none; color: var(--db-muted); }
+.db-hours-project-total > span { color: var(--db-label); font-size: 8px; font-weight: 750; letter-spacing: .14em; }
+.db-hours-project-total strong { color: var(--db-text); font-size: clamp(14px, 1.35vw, 19px); font-weight: 750; letter-spacing: -.035em; font-variant-numeric: tabular-nums; text-shadow: 0 1px 8px color-mix(in srgb, var(--db-card-bg) 75%, transparent); }
+.db-hours-project-total small { font-size: 9px; }
+.db-hours-project-legend { min-height: 0; max-height: 280px; display: flex; flex-direction: column; gap: 7px; overflow-y: auto; padding: 3px; }
+.db-hours-project-legend-row { min-height: 36px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 5px 9px; border: 1px solid var(--db-subcard-border); border-radius: 10px; background: color-mix(in srgb, var(--db-subcard-bg) 70%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.16); color: var(--db-muted); font-size: 10px; }
+.db-hours-project-name { min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--db-text); }
+.db-hours-project-name i { width: 9px; height: 9px; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.42); border-radius: 50%; box-shadow: 0 0 9px color-mix(in srgb, currentColor 35%, transparent); }
 .db-hours-project-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.db-hours-project-legend-row strong { color: var(--db-muted); font-size: 11px; font-weight: 600; }
+.db-hours-project-legend-row strong { color: var(--db-text); font-size: 10px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.db-hours-project-legend-row > small { min-width: 30px; color: var(--db-muted); font-size: 9px; text-align: right; }
 .db-hours-project-empty { flex: 1; display: grid; place-items: center; color: var(--db-muted); font-size: 12px; text-align: center; }
 
 @media (max-width: 760px) {
   .db-project-plans-card,
   .db-hours-project-card { height: 370px; min-height: 370px; }
   .db-hours-project-body { grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr); gap: 14px; }
-  .db-hours-project-donut { width: min(100%, 180px); }
+  .db-hours-project-donut-shell { width: min(100%, 180px); }
 }
 
 .db-project-plan-row {

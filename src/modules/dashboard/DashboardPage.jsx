@@ -1088,7 +1088,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const useWeeks = !useYears && !useQuarters && rangeDaysCount > 45;
     const days = [];
     const dayCount = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
-    if (!useWeeks) {
+    if (!useWeeks && !useQuarters && !useYears) {
       const daysCount = dateRange === 'week' ? 7 : dayCount;
       for (let offset = 0; offset < daysCount; offset++) {
         const date = new Date(dateWindow.start);
@@ -1449,16 +1449,19 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     });
     const rows = [...totals.values()].sort((a, b) => b.seconds - a.seconds);
     const totalSeconds = rows.reduce((sum, item) => sum + item.seconds, 0);
+    const circumference = 2 * Math.PI * 96;
     let offset = 0;
-    const stops = rows.map((item) => {
-      const start = offset;
-      offset += totalSeconds ? item.seconds / totalSeconds * 360 : 0;
-      return `${item.color} ${start}deg ${offset}deg`;
+    const segments = rows.map((item, index) => {
+      const length = totalSeconds ? item.seconds / totalSeconds * circumference : 0;
+      const segment = { ...item, index, offset, length: Math.max(0, length - 4.5) };
+      offset += length;
+      return segment;
     });
     return {
       rows: rows.map((item) => ({ ...item, pct: totalSeconds ? Math.round(item.seconds / totalSeconds * 100) : 0 })),
       totalSeconds,
-      gradient: stops.length ? `conic-gradient(${stops.join(', ')})` : 'var(--db-track-bg)',
+      segments,
+      circumference,
     };
   }, [portfolioStats.list, projects]);
 
@@ -2235,13 +2238,39 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             <div className="db-card db-hours-project-card">
               <div className="db-card-header-flex"><div><h2 className="db-section-title">Hours by Project</h2><span className="db-section-meta">Study time in {rangeLabel.toLowerCase()}</span></div></div>
               {hoursByProject.rows.length ? <div className="db-hours-project-body">
-                <div className="db-hours-project-donut" role="img" aria-label={`Hours by project: ${hoursByProject.rows.map((row) => `${row.name} ${row.pct}%`).join(', ')}`} style={{ background: hoursByProject.gradient }}>
-                  <div className="db-hours-project-total"><strong>{fmtDur(hoursByProject.totalSeconds)}</strong><span>total study</span></div>
+                <div className="db-hours-project-donut-shell">
+                  <svg className="db-hours-project-donut" viewBox="0 0 260 260" role="img" aria-label={`Hours by project: ${hoursByProject.rows.map((row) => `${row.name} ${row.pct}%`).join(', ')}`}>
+                    <defs>
+                      <linearGradient id="hours-donut-center-glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--db-glass-goal-bg)" /><stop offset="100%" stopColor="var(--db-card-bg)" /></linearGradient>
+                      <filter id="hours-donut-shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur" /><feOffset dy="3" result="offsetBlur" /><feComponentTransfer><feFuncA type="linear" slope=".22" /></feComponentTransfer><feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                      {hoursByProject.segments.map((segment) => <linearGradient key={segment.name} id={`hours-project-gradient-${segment.index}`} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={`color-mix(in srgb, ${segment.color} 66%, #161923 34%)`} />
+                        <stop offset="52%" stopColor={segment.color} />
+                        <stop offset="100%" stopColor={`color-mix(in srgb, ${segment.color} 62%, white 38%)`} />
+                      </linearGradient>)}
+                    </defs>
+                    <circle className="db-hours-donut-orbit" cx="130" cy="130" r="114" />
+                    <circle cx="130" cy="130" r="96" fill="none" stroke="var(--db-track-bg)" strokeWidth="31" />
+                    {hoursByProject.segments.map((segment) => <circle
+                      key={segment.name}
+                      className="db-hours-donut-segment"
+                      cx="130" cy="130" r="96" fill="none"
+                      stroke={`url(#hours-project-gradient-${segment.index})`}
+                      strokeWidth="31"
+                      strokeDasharray={`${segment.length} ${hoursByProject.circumference - segment.length}`}
+                      strokeDashoffset={-segment.offset}
+                      transform="rotate(-90 130 130)"
+                      filter="url(#hours-donut-shadow)"
+                    ><title>{`${segment.name}: ${fmtDur(segment.seconds)} (${Math.round(segment.seconds / hoursByProject.totalSeconds * 100)}%)`}</title></circle>)}
+                    <circle className="db-hours-donut-inner-orbit" cx="130" cy="130" r="72" />
+                    <circle cx="130" cy="130" r="68" fill="url(#hours-donut-center-glass)" stroke="var(--db-glass-goal-border)" strokeWidth="1.2" />
+                  </svg>
+                  <div className="db-hours-project-total"><span>STUDY TIME</span><strong>{fmtDur(hoursByProject.totalSeconds)}</strong><small>{hoursByProject.rows.length} {hoursByProject.rows.length === 1 ? 'project' : 'projects'}</small></div>
                 </div>
                 <div className="db-hours-project-legend">
                   {hoursByProject.rows.map((row) => <div className="db-hours-project-legend-row" key={row.name} title={`${row.name}: ${fmtDur(row.seconds)}`}>
                     <span className="db-hours-project-name"><i style={{ backgroundColor: row.color }} /><span>{row.name}</span></span>
-                    <strong>{row.pct}%</strong>
+                    <strong>{fmtDur(row.seconds)}</strong><small>{row.pct}%</small>
                   </div>)}
                 </div>
               </div> : <div className="db-hours-project-empty">No project study time in this date range yet.</div>}
