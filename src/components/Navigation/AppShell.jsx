@@ -1,7 +1,6 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { Bell, LogOut, Settings, X } from 'lucide-react';
+import { Bell, LogOut, Settings, Square, X } from 'lucide-react';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
-import { ThemeToggle } from '../Header/ThemeToggle';
 import { TimerPage } from '../../modules/timer/TimerPage';
 import { DashboardPage } from '../../modules/dashboard/DashboardPage';
 import { ComparePage } from '../../modules/compare/ComparePage';
@@ -33,6 +32,13 @@ const readLocalValue = (key, fallback = null) => {
   } catch {
     return fallback;
   }
+};
+
+const formatRunningTime = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return [hours, minutes, remainder].map((part) => String(part).padStart(2, '0')).join(':');
 };
 
 export const AppShell = ({ user, onLogout }) => {
@@ -90,6 +96,26 @@ export const AppShell = ({ user, onLogout }) => {
       window.removeEventListener('studyduel:timer-storage', syncTimer);
     };
   }, [activeTimerKey]);
+
+  const stopRunningTimer = () => {
+    if (!activeTimer) return;
+    const endedAt = Date.now();
+    const durationSeconds = Math.max(1, Math.floor((endedAt - Number(activeTimer.startedAt)) / 1000));
+    const savedEntries = readLocalValue(entriesKey, []);
+    const completedEntry = {
+      id: crypto.randomUUID(),
+      ...activeTimer,
+      endedAt,
+      durationSeconds,
+    };
+    const nextEntries = [completedEntry, ...(Array.isArray(savedEntries) ? savedEntries : [])];
+    localStorage.setItem(entriesKey, JSON.stringify(nextEntries));
+    localStorage.setItem(activeTimerKey, 'null');
+    setActiveTimer(null);
+    window.dispatchEvent(new CustomEvent('studyduel:timer-storage', {
+      detail: { activeTimerKey, entriesKey },
+    }));
+  };
 
   useEffect(() => {
     const checkReminders = () => {
@@ -268,7 +294,31 @@ export const AppShell = ({ user, onLogout }) => {
 
         {/* Right Action Controls: Theme, Settings, Log out */}
         <div className="nav-right">
-          <ThemeToggle />
+          {activeTimer && currentRoute !== 'timer' && (
+            <div
+              className="running-session-indicator"
+              role="status"
+              aria-label={`Timer running for ${activeTimer.projectName || 'study session'}${activeTimer.subjectName ? `, ${activeTimer.subjectName}` : ''}. Elapsed ${formatRunningTime(Math.max(0, Math.floor((timerNow - activeTimer.startedAt) / 1000)))}`}
+              title={`${activeTimer.projectName || 'Study session'}${activeTimer.subjectName ? ` · ${activeTimer.subjectName}` : ''}`}
+            >
+              <span className="running-session-dot" aria-hidden="true" />
+              <span className="running-session-context">
+                {activeTimer.projectName || 'Study session'}{activeTimer.subjectName ? ` · ${activeTimer.subjectName}` : ''}
+              </span>
+              <time className="running-session-elapsed">
+                {formatRunningTime(Math.max(0, Math.floor((timerNow - activeTimer.startedAt) / 1000)))}
+              </time>
+              <button
+                type="button"
+                className="running-session-stop"
+                onClick={stopRunningTimer}
+                aria-label={`Stop and save ${activeTimer.projectName || 'study'} session`}
+                title="Stop and save session"
+              >
+                <Square size={12} fill="currentColor" strokeWidth={0} />
+              </button>
+            </div>
+          )}
 
           <button
             type="button"

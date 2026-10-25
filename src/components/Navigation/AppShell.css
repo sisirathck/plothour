@@ -120,6 +120,62 @@
   gap: 10px;
 }
 
+.running-session-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: min(245px, 22vw);
+  color: var(--sd-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+
+.running-session-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--sd-coral);
+  box-shadow: 0 0 0 3px var(--sd-coral-glow);
+}
+
+.running-session-context {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.running-session-elapsed {
+  flex: 0 0 auto;
+  color: var(--sd-text-primary);
+  white-space: nowrap;
+}
+
+.running-session-stop {
+  display: inline-grid;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid var(--sd-card-border);
+  border-radius: 50%;
+  color: var(--sd-coral);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.running-session-stop:hover {
+  border-color: var(--sd-coral);
+  background: var(--sd-orange-subtle);
+  transform: scale(1.04);
+}
+
 .dashboard-icon-btn {
   width: 38px;
   height: 38px;
@@ -193,6 +249,7 @@
   .nav-datetime { position: static; order: 2; flex: 1 1 auto; width: auto; text-align: right; font-size: 11px; }
   .dashboard-tabs { position: static; order: 3; width: 100%; overflow-x: auto; transform: none; }
   .dashboard-tab.active::after { bottom: -8px; }
+  .running-session-indicator { max-width: 28vw; }
 }
 
 @media (max-width: 600px) {
@@ -202,6 +259,7 @@
   .nav-datetime { font-size: 10px; letter-spacing: 0; }
   .exit-demo-btn span { display: none; }
   .dashboard-tab { padding: 0 12px; font-size: 13px; }
+  .running-session-indicator { max-width: 34vw; gap: 7px; font-size: 11px; }
 }
 
 .app-reminder-toast {
