@@ -10,7 +10,7 @@ import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
-import { useSiteCustomization } from '../../context/SiteCustomizationContext';
+import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 import './Timer.css';
 
 /* ── Storage Keys ───────────────────────────── */
@@ -118,7 +118,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, disabled, accentV
 
 /* ── Main Timer Page ───────────────────────── */
 export const TimerPage = ({ user }) => {
-  const { text } = useSiteCustomization();
+  const { config, text } = useSiteCustomization();
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : K_PROJECTS;
   const activeKey = user?.id ? `studyduel_user_${user.id}_active_timer` : K_ACTIVE;
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : K_ENTRIES;
@@ -507,7 +507,7 @@ export const TimerPage = ({ user }) => {
   ];
 
   return (
-    <div className="timer-root">
+    <div className="timer-root" style={getSiteFontStyle(config, 'timer')}>
       {/* ── MAIN HOROLOGICAL COMMAND DECK ────────────────── */}
       <section className="timer-deck-card">
         {/* ── LEFT COLUMN: Session Command & Top 5 Combos ── */}

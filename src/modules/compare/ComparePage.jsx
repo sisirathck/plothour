@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users, Share2, ChevronUp, Info, Image as ImageIcon } from 'lucide-react';
 import './Compare.css';
 import { formatDisplayDate } from '../../utils/dateFormat';
-import { useSiteCustomization } from '../../context/SiteCustomizationContext';
+import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 
 const RANGE_OPTIONS = [
   { id: 'today', label: 'Today' }, { id: '7days', label: 'Last 7 days' }, { id: 'week', label: 'This week' },
@@ -55,7 +55,7 @@ async function createRecapImage({ name, period, metrics }) {
     const y = 265 + index * 82;
     return `<g><text x="92" y="${y}" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="24">${escapeSvg(label)}</text><text x="988" y="${y}" fill="${escapeSvg(textColor)}" font-family="Arial,sans-serif" font-size="30" font-weight="700" text-anchor="end">${escapeSvg(value)}</text><line x1="92" y1="${y + 27}" x2="988" y2="${y + 27}" stroke="${escapeSvg(line)}" stroke-width="2" opacity=".72"/></g>`;
   }).join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="${height}" viewBox="0 0 1080 ${height}"><rect width="1080" height="${height}" rx="38" fill="${escapeSvg(background)}"/><rect x="0" y="0" width="1080" height="18" rx="9" fill="${escapeSvg(accent)}"/><text x="92" y="92" fill="${escapeSvg(accent)}" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="4">STUDYDUEL · STUDY RECAP</text><text x="92" y="157" fill="${escapeSvg(textColor)}" font-family="Arial,sans-serif" font-size="42" font-weight="700">${escapeSvg(name)}</text><text x="92" y="202" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="25">${escapeSvg(period)}</text><line x1="92" y1="232" x2="988" y2="232" stroke="${escapeSvg(line)}" stroke-width="2"/>${rows}<text x="92" y="${height - 42}" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="18">A little progress, logged consistently.</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="${height}" viewBox="0 0 1080 ${height}"><rect width="1080" height="${height}" rx="38" fill="${escapeSvg(background)}"/><rect x="0" y="0" width="1080" height="18" rx="9" fill="${escapeSvg(accent)}"/><text x="92" y="92" fill="${escapeSvg(accent)}" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="4">PLOTHOUR · STUDY RECAP</text><text x="92" y="157" fill="${escapeSvg(textColor)}" font-family="Arial,sans-serif" font-size="42" font-weight="700">${escapeSvg(name)}</text><text x="92" y="202" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="25">${escapeSvg(period)}</text><line x1="92" y1="232" x2="988" y2="232" stroke="${escapeSvg(line)}" stroke-width="2"/>${rows}<text x="92" y="${height - 42}" fill="${escapeSvg(muted)}" font-family="Arial,sans-serif" font-size="18">A little progress, logged consistently.</text></svg>`;
   const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
   try {
     const image = new window.Image();
@@ -200,7 +200,7 @@ function ChartGrid({ pad, chartH, max }) {
 function Legend({ profiles }) { return <div className="compare-legend">{profiles.map((p, i) => <span key={p.id}><i style={{ '--profile-color': profileColor(p.id) }} />{p.name}</span>)}</div>; }
 
 export const ComparePage = ({ user, onNavigate }) => {
-  const { text } = useSiteCustomization();
+  const { config, text } = useSiteCustomization();
   const demoMode = !user?.id && localStorage.getItem('studyduel_demo_mode') === 'true';
   const profileId = user?.id ? String(user.id) : demoMode ? 'demo-profile' : '';
   const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : demoMode ? 'studyduel_demo_preferences' : '';
@@ -308,7 +308,7 @@ export const ComparePage = ({ user, onNavigate }) => {
     const details = shareFields.map((field) => values[field]).filter(Boolean);
     const text = `${you.name}'s ${periodLabel.toLowerCase()} study recap\n${details.join('\n')}`;
     try {
-      if (navigator.share) await navigator.share({ title: 'StudyDuel study recap', text });
+      if (navigator.share) await navigator.share({ title: 'PlotHour study recap', text });
       else { await navigator.clipboard.writeText(text); setShareStatus('Recap copied'); }
       setShareOpen(false);
     } catch (error) {
@@ -321,10 +321,10 @@ export const ComparePage = ({ user, onNavigate }) => {
     const optionValues = { time: ['Study time', duration(you.current.seconds)], activeDays: ['Active days', String(you.current.activeDays)], sessions: ['Sessions', String(you.current.sessions)], goal: ['Goal progress', you.current.goalProgressPct == null ? 'No goal set' : `${you.current.goalProgressPct}%`], bestDay: ['Best day', you.current.bestDay ? duration(you.current.bestDay.seconds) : 'No study days'] };
     try {
       const blob = await createRecapImage({ name: you.name, period: periodLabel, metrics: shareFields.map((field) => optionValues[field]).filter(Boolean) });
-      const safeName = you.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'studyduel';
+      const safeName = you.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'plothour';
       const file = new File([blob], `${safeName}-${range}-study-recap.png`, { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ title: 'StudyDuel study recap', files: [file] });
+        await navigator.share({ title: 'PlotHour study recap', files: [file] });
         setShareStatus('Recap image shared');
       } else {
         const imageUrl = URL.createObjectURL(blob);
@@ -343,7 +343,7 @@ export const ComparePage = ({ user, onNavigate }) => {
     }
   };
 
-  return <main className="compare-page" aria-label="Study comparison" style={comparePaletteStyle}>
+  return <main className="compare-page" aria-label="Study comparison" style={{ ...comparePaletteStyle, ...getSiteFontStyle(config, 'compare') }}>
     <div className="compare-topbar"><div className="compare-range-select" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setRangeOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setRangeOpen(false); }}><div className="compare-control-label"><CalendarDays size={14} /> STUDY PERIOD</div><button className="compare-range-trigger" type="button" aria-haspopup="listbox" aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}><span>{RANGE_OPTIONS.find((option) => option.id === range)?.label || 'This week'}</span><ChevronDown size={15} /></button>{rangeOpen && <div className="compare-range-menu" role="listbox" aria-label="Study period">{RANGE_OPTIONS.map((option) => <button type="button" role="option" aria-selected={range === option.id} className={range === option.id ? 'is-selected' : ''} key={option.id} onClick={() => { setRange(option.id); setRangeOpen(false); }}>{option.label}</button>)}</div>}</div><div className="compare-topbar-actions"><button className="compare-manage-button" type="button" onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails}>{showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />} {showDetails ? 'Hide details' : 'More insights'}</button><button className="compare-manage-button" type="button" onClick={() => setShareOpen(true)} disabled={!profiles.some((profile) => profile.id === profileId)}><Share2 size={15} /> {text('compare', 'shareButton', 'Share recap')}</button><button className="compare-manage-button" type="button" onClick={() => setManageViewOpen(true)}><Settings2 size={15} /> Manage view <span>{selectedConnections.length}</span></button></div></div>
     {shareStatus && <p className="compare-share-status" role="status">{shareStatus}</p>}
     {shareOpen && (() => {

@@ -1,14 +1,14 @@
-# StudyDuel Product Guide
+# PlotHour Product Guide
 
 ## Product objective
 
-StudyDuel is a time-tracking and friendly accountability product for people who study or work toward shared goals. It should combine reliable personal time tracking and useful self-insights with opt-in comparisons against friends, similar in spirit to TimeCamp's tracking capabilities and a friendly study duel.
+PlotHour is a time-tracking and friendly accountability product for people who study or work toward shared goals. It should combine reliable personal time tracking and useful self-insights with opt-in comparisons against friends, similar in spirit to TimeCamp's tracking capabilities and a friendly study duel.
 
 The most important product requirement is trustworthy time data. Every timer session and manual entry must be saved in the database and associated with its owner, project hierarchy, start and end times, and relevant dates. Dashboards, streaks, goals, and comparisons must be derived from this saved data rather than from browser-only state or hard-coded examples.
 
 ## Open-source project goals
 
-StudyDuel is intended to be published and maintained as an open-source project. Keep setup understandable for first-time contributors and avoid dependencies on private infrastructure for local development.
+PlotHour is intended to be published and maintained as an open-source project. Keep setup understandable for first-time contributors and avoid dependencies on private infrastructure for local development.
 
 - Document prerequisites, environment configuration, database setup, migrations, development commands, and known limitations in the README.
 - Commit only source, migrations, and safe example configuration. Never commit credentials, OAuth client secrets, production database URLs, personal tracking data, or real user exports.
@@ -151,7 +151,7 @@ Timer API operations should be server-authoritative and transactional. Starting 
 
 ## Product experience and visual direction
 
-- Preserve StudyDuel's existing warm study-art direction, dark navy typography, coral primary action, and light/dark themes.
+- Preserve PlotHour's existing warm study-art direction, dark navy typography, coral primary action, and light/dark themes.
 - Keep the timer's start/stop action unmistakable; secondary controls should not compete with it.
 - Use consistent type scales, spacing, input heights, and corner radii across all four sections.
 - Make charts understandable with labels, date ranges, units, and accessible alternatives to color-only meaning.

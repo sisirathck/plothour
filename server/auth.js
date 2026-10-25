@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import dotenv from 'dotenv';
@@ -49,6 +50,7 @@ export async function verifyPassword(passwordHash, plainPassword) {
 export function createSessionToken(user) {
   return jwt.sign(
     {
+      jti: randomUUID(),
       userId: user.id,
       email: user.email,
       displayName: user.display_name,

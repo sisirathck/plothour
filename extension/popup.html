@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyDuel — Time Tracking</title>
+  <title>PlotHour — Time Tracking</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div id="app" class="sd-app-root">
 
     <!-- ═════════════════════════════════════════════════════
-         HEADER (Consistent StudyDuel Brand Header)
+         HEADER (Consistent PlotHour Brand Header)
          ═════════════════════════════════════════════════════ -->
     <header class="sd-header">
       <div class="sd-header-content">
@@ -18,8 +18,8 @@
         <div class="sd-logo-container" id="header-logo-container">
           <img
             id="sd-logo-img"
-            src="assets/studyduel_logo_dark.png"
-            alt="StudyDuel"
+            src="assets/plothour_logo_dark.png"
+            alt="PlotHour"
             class="sd-logo-img"
             draggable="false"
           />
@@ -44,7 +44,7 @@
             </svg>
           </button>
 
-          <div id="sd-status-pill" class="sd-deck-badge" title="Live Synced with StudyDuel">
+          <div id="sd-status-pill" class="sd-deck-badge" title="Live Synced with PlotHour">
             <span id="sd-status-dot" class="sd-badge-dot live"></span>
             <span id="sd-status-text" class="sd-badge-text">READY</span>
           </div>
@@ -130,7 +130,7 @@
       <!-- Bottom Command Bar -->
       <footer class="sd-footer">
         <div class="sd-footer-row">
-          <!-- Primary StudyDuel Coral Play Action Button -->
+          <!-- Primary PlotHour Coral Play Action Button -->
           <button type="button" id="btn-primary-action" class="sd-btn-primary-play" title="Start Session">
             <svg id="play-icon-svg" class="sd-play-icon" viewBox="0 0 24 24" fill="currentColor">
               <path d="M8 5v14l11-7z"/>
@@ -141,7 +141,7 @@
           </button>
 
           <!-- Go to Timesheet button -->
-          <button type="button" id="btn-go-timesheet" class="sd-btn-timesheet" title="Open StudyDuel Dashboard">
+          <button type="button" id="btn-go-timesheet" class="sd-btn-timesheet" title="Open PlotHour Dashboard">
             <svg class="sd-timesheet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
@@ -162,8 +162,8 @@
                   <span id="popover-initials">SD</span>
                 </div>
                 <div class="sd-popover-meta">
-                  <span id="popover-name" class="sd-popover-name">StudyDuel User</span>
-                  <span id="popover-email" class="sd-popover-email">user@studyduel.local</span>
+                  <span id="popover-name" class="sd-popover-name">PlotHour User</span>
+                  <span id="popover-email" class="sd-popover-email">user@plothour.local</span>
                 </div>
               </div>
               <div class="sd-popover-divider"></div>
@@ -184,7 +184,7 @@
                   <polyline points="15 3 21 3 21 9"/>
                   <line x1="10" y1="14" x2="21" y2="3"/>
                 </svg>
-                <span>Go to StudyDuel Web App</span>
+                <span>Go to PlotHour Web App</span>
               </button>
               <button type="button" id="btn-popover-logout" class="sd-popover-link sd-link-danger">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -279,7 +279,7 @@
          ═════════════════════════════════════════════════════ -->
     <div id="task-picker-modal" class="sd-modal-overlay" style="display: none;">
       <div class="sd-modal-dialog">
-        <!-- Search Bar with StudyDuel Coral Ring -->
+        <!-- Search Bar with PlotHour Coral Ring -->
         <div class="sd-search-head">
           <div class="sd-search-wrapper">
             <svg class="sd-search-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -343,7 +343,7 @@
       <div class="sd-login-body">
         <div class="sd-login-hero">
           <img src="icons/icon48.png" alt="" class="sd-login-logo" />
-          <h2 class="sd-login-title">Sign In to StudyDuel</h2>
+          <h2 class="sd-login-title">Sign In to PlotHour</h2>
           <p class="sd-login-desc">Track study time for projects across all your browser tabs.</p>
         </div>
 
@@ -351,7 +351,7 @@
         <div class="sd-tab-connect-card" id="quick-connect-banner">
           <div class="sd-tab-info">
             <span class="sd-tab-badge">Active Tab Found</span>
-            <span class="sd-tab-text" id="qc-text">StudyDuel is open in your browser</span>
+            <span class="sd-tab-text" id="qc-text">PlotHour is open in your browser</span>
           </div>
           <button type="button" id="btn-quick-connect" class="sd-btn-coral-sm">
             Connect Tab

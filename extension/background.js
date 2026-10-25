@@ -1,5 +1,5 @@
 /**
- * StudyDuel Browser Extension - Background Service Worker
+ * PlotHour Browser Extension - Background Service Worker
  * Compatible with Chrome, Brave, Safari, Edge (Manifest V3)
  */
 
@@ -35,19 +35,19 @@ async function updateBadge() {
       const badgeText = formatBadgeText(elapsedSeconds);
 
       await ext.action.setBadgeText({ text: badgeText });
-      await ext.action.setBadgeBackgroundColor({ color: '#f3957f' }); // StudyDuel Warm Coral
+      await ext.action.setBadgeBackgroundColor({ color: '#f3957f' }); // PlotHour Warm Coral
       if (ext.action.setBadgeTextColor) {
         await ext.action.setBadgeTextColor({ color: '#ffffff' });
       }
       await ext.action.setTitle({
-        title: `StudyDuel: Running on "${active.projectName}${active.subjectName ? ` - ${active.subjectName}` : ''}" (${badgeText})`,
+        title: `PlotHour: Running on "${active.projectName}${active.subjectName ? ` - ${active.subjectName}` : ''}" (${badgeText})`,
       });
     } else {
       await ext.action.setBadgeText({ text: '' });
-      await ext.action.setTitle({ title: 'StudyDuel Time Tracker - Click to start' });
+      await ext.action.setTitle({ title: 'PlotHour Time Tracker - Click to start' });
     }
   } catch (err) {
-    console.error('[StudyDuel BG] Badge update error:', err);
+    console.error('[PlotHour BG] Badge update error:', err);
   }
 }
 
@@ -59,7 +59,7 @@ ext.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// Broadcast state change to all open StudyDuel web tabs
+// Broadcast state change to all open PlotHour web tabs
 async function notifyTabs(message) {
   try {
     const tabs = await ext.tabs.query({
@@ -69,7 +69,7 @@ async function notifyTabs(message) {
       ext.tabs.sendMessage(tab.id, message).catch(() => {});
     }
   } catch (err) {
-    console.warn('[StudyDuel BG] Tab notification warning:', err);
+    console.warn('[PlotHour BG] Tab notification warning:', err);
   }
 }
 

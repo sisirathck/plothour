@@ -1,4 +1,4 @@
--- StudyDuel initial PostgreSQL schema.
+-- PlotHour initial PostgreSQL schema.
 -- All timestamps are stored as timestamptz (UTC instants) and rendered in each
 -- user's configured timezone by the application.
 

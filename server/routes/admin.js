@@ -12,6 +12,8 @@ export const adminRouter = Router();
 
 const validAssetSlots = new Set(['login', 'dashboard', 'logo']);
 const validThemes = new Set(['light', 'dark']);
+const validFontIds = new Set(['nunito', 'quicksand', 'poppins', 'rubik', 'comfortaa', 'inter', 'roboto', 'open-sans', 'source-sans-3', 'ibm-plex-sans', 'noto-sans']);
+const customizablePages = ['login', 'timer', 'dashboard', 'manage', 'compare', 'settings', 'calendar', 'admin'];
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const cleanCustomization = (value) => {
   const input = value && typeof value === 'object' ? value : {};
@@ -38,7 +40,11 @@ const cleanCustomization = (value) => {
     const id = input.visuals?.logo?.[theme];
     visuals.logo[theme] = typeof id === 'string' && uuidPattern.test(id) ? id : null;
   }
-  return { copy, visuals };
+  const fonts = Object.fromEntries(customizablePages.map((page) => [
+    page,
+    validFontIds.has(input.fonts?.[page]) ? input.fonts[page] : 'inter',
+  ]));
+  return { copy, visuals, fonts };
 };
 
 adminRouter.get('/customization', async (_req, res) => {
@@ -163,7 +169,25 @@ adminRouter.get('/users', async (req, res) => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim().slice(0, 120) : '';
   const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
   const offset = Math.max(0, Number.parseInt(req.query.offset, 10) || 0);
+  const status = ['all', 'verified', 'pending'].includes(req.query.status) ? req.query.status : 'all';
+  const loginActivity = ['all', 'has', 'none'].includes(req.query.loginActivity) ? req.query.loginActivity : 'all';
+  const studyActivity = ['all', 'has', 'none'].includes(req.query.studyActivity) ? req.query.studyActivity : 'all';
+  const pageActivity = ['all', 'has', 'none'].includes(req.query.pageActivity) ? req.query.pageActivity : 'all';
+  const validDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) ? value : null;
+  const joinedFrom = validDate(req.query.joinedFrom);
+  const joinedTo = validDate(req.query.joinedTo);
+  const sortColumns = { account: 'lower(u.display_name)', status: 'u.email_verified', logins: 'coalesce(l.login_count, 0)', study: 'coalesce(s.study_seconds, 0)', appTime: 'coalesce(p.app_seconds, 0)', joined: 'u.created_at' };
+  const sortColumn = sortColumns[req.query.sortBy] || sortColumns.joined;
+  const sortDirection = req.query.sortDir === 'asc' ? 'ASC' : 'DESC';
   const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+  const filterParams = [search, pattern, status, loginActivity, studyActivity, pageActivity, joinedFrom, joinedTo];
+  const where = `($1 = '' OR u.email ILIKE $2 ESCAPE '\\' OR u.display_name ILIKE $2 ESCAPE '\\')
+       AND ($3 = 'all' OR ($3 = 'verified' AND u.email_verified) OR ($3 = 'pending' AND NOT u.email_verified))
+       AND ($4 = 'all' OR ($4 = 'has' AND coalesce(l.login_count, 0) > 0) OR ($4 = 'none' AND coalesce(l.login_count, 0) = 0))
+       AND ($5 = 'all' OR ($5 = 'has' AND coalesce(s.session_count, 0) > 0) OR ($5 = 'none' AND coalesce(s.session_count, 0) = 0))
+       AND ($6 = 'all' OR ($6 = 'has' AND coalesce(p.app_seconds, 0) > 0) OR ($6 = 'none' AND coalesce(p.app_seconds, 0) = 0))
+       AND ($7::date IS NULL OR u.created_at >= $7::date)
+       AND ($8::date IS NULL OR u.created_at < $8::date + interval '1 day')`;
   try {
     const result = await query(
       `SELECT u.id, u.email, u.display_name, u.email_verified, u.created_at,
@@ -171,7 +195,11 @@ adminRouter.get('/users', async (req, res) => {
               EXISTS (SELECT 1 FROM oauth_accounts o WHERE o.user_id = u.id AND o.provider = 'google') AS has_google,
               coalesce(s.session_count, 0)::int AS session_count,
               coalesce(s.study_seconds, 0)::bigint AS study_seconds,
-              s.last_studied_at
+              s.last_studied_at,
+              coalesce(l.login_count, 0)::int AS login_count,
+              l.last_login_at,
+              coalesce(p.app_seconds, 0)::bigint AS app_seconds,
+              p.last_page_at
        FROM users u
        LEFT JOIN (
          SELECT user_id, count(*)::int AS session_count,
@@ -179,20 +207,67 @@ adminRouter.get('/users', async (req, res) => {
                 max(ended_at) AS last_studied_at
          FROM time_entries GROUP BY user_id
        ) s ON s.user_id = u.id
-       WHERE ($1 = '' OR u.email ILIKE $2 ESCAPE '\\' OR u.display_name ILIKE $2 ESCAPE '\\')
-       ORDER BY u.created_at DESC, u.email ASC
-       LIMIT $3 OFFSET $4`,
-      [search, pattern, limit, offset]
+       LEFT JOIN (
+         SELECT user_id, count(*)::int AS login_count, max(created_at) AS last_login_at
+         FROM login_sessions GROUP BY user_id
+       ) l ON l.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id, sum(duration_seconds)::bigint AS app_seconds, max(last_seen_at) AS last_page_at
+         FROM user_page_activity GROUP BY user_id
+       ) p ON p.user_id = u.id
+       WHERE ${where}
+       ORDER BY ${sortColumn} ${sortDirection} NULLS LAST, lower(u.email) ASC
+       LIMIT $9 OFFSET $10`,
+      [...filterParams, limit, offset]
     );
     const total = await query(
-      `SELECT count(*)::int AS total FROM users
-       WHERE ($1 = '' OR email ILIKE $2 ESCAPE '\\' OR display_name ILIKE $2 ESCAPE '\\')`,
-      [search, pattern]
+      `SELECT count(*)::int AS total FROM users u
+       LEFT JOIN (SELECT user_id, count(*)::int AS login_count FROM login_sessions GROUP BY user_id) l ON l.user_id = u.id
+       LEFT JOIN (SELECT user_id, count(*)::int AS session_count FROM time_entries GROUP BY user_id) s ON s.user_id = u.id
+       LEFT JOIN (SELECT user_id, sum(duration_seconds)::bigint AS app_seconds FROM user_page_activity GROUP BY user_id) p ON p.user_id = u.id
+       WHERE ${where}`,
+      filterParams
     );
     return res.json({ users: result.rows, total: total.rows[0].total, limit, offset });
   } catch (error) {
     console.error('[Admin users list error]:', error);
     return res.status(500).json({ error: 'Could not load user records.' });
+  }
+});
+
+adminRouter.get('/users/:userId/page-activity', async (req, res) => {
+  if (!uuidPattern.test(req.params.userId)) return res.status(400).json({ error: 'Invalid account.' });
+  try {
+    const result = await query(
+      `SELECT page, sum(duration_seconds)::bigint AS duration_seconds,
+              max(last_seen_at) AS last_seen_at, count(*)::int AS active_days
+       FROM user_page_activity WHERE user_id = $1
+       GROUP BY page ORDER BY sum(duration_seconds) DESC, page ASC`,
+      [req.params.userId]
+    );
+    return res.json({ pages: result.rows });
+  } catch (error) {
+    console.error('[Admin page activity error]:', error);
+    return res.status(500).json({ error: 'Could not load page activity.' });
+  }
+});
+
+adminRouter.get('/users/:userId/login-sessions', async (req, res) => {
+  if (!uuidPattern.test(req.params.userId)) return res.status(400).json({ error: 'Invalid account.' });
+  try {
+    const result = await query(
+      `SELECT id, auth_method, ip_address::text AS ip_address, user_agent, created_at, expires_at, ended_at,
+              CASE WHEN ended_at IS NOT NULL THEN 'ended'
+                   WHEN expires_at <= now() THEN 'expired'
+                   ELSE 'active' END AS status
+       FROM login_sessions WHERE user_id = $1
+       ORDER BY created_at DESC LIMIT 100`,
+      [req.params.userId]
+    );
+    return res.json({ sessions: result.rows });
+  } catch (error) {
+    console.error('[Admin login sessions error]:', error);
+    return res.status(500).json({ error: 'Could not load login history.' });
   }
 });
 

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import './Manage.css';
 import { formatDisplayDate } from '../../utils/dateFormat';
-import { useSiteCustomization } from '../../context/SiteCustomizationContext';
+import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 
 const initialProjects = [
   {
@@ -239,7 +239,7 @@ const PlanEditor = ({ value, label, onChange }) => {
 };
 
 export const ManagePage = ({ user }) => {
-  const { text } = useSiteCustomization();
+  const { config, text } = useSiteCustomization();
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
   const activeTimerKey = user?.id ? `studyduel_user_${user.id}_active_timer` : 'studyduel_demo_active_timer';
@@ -436,7 +436,7 @@ export const ManagePage = ({ user }) => {
   )));
 
   return (
-    <main className="manage-module-container">
+    <main className="manage-module-container" style={getSiteFontStyle(config, 'manage')}>
       {projectPendingDelete && (
         <div
           className="manage-delete-backdrop"

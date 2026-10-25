@@ -1,6 +1,6 @@
 /* ==========================================================================
-   StudyDuel Browser Extension — Official Design System
-   Exact mirror of StudyDuel Web App (Design: Swiss Horology, Warm Coral & Slate)
+   PlotHour Browser Extension — Official Design System
+   Exact mirror of PlotHour Web App (Design: Swiss Horology, Warm Coral & Slate)
    ========================================================================== */
 
 :root {
@@ -210,7 +210,7 @@ body {
   height: 15px;
 }
 
-/* StudyDuel Live Status Pill */
+/* PlotHour Live Status Pill */
 .sd-deck-badge {
   display: inline-flex;
   align-items: center;
@@ -477,7 +477,7 @@ body {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
 }
 
-/* ── Combos Section (Matching StudyDuel TimerPage) ────────── */
+/* ── Combos Section (Matching PlotHour TimerPage) ────────── */
 .sd-combos-section {
   display: flex;
   flex-direction: column;

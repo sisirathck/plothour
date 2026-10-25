@@ -418,7 +418,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
               ? 'Enter your registered email address and we’ll send you a 6-digit code to reset your password.'
               : `Enter the code sent to ${resetEmail || 'your email'} and choose your new password.`
             : isSignUp
-            ? text('login', 'signUpSubtitle', 'Join StudyDuel and keep your progress moving.')
+            ? text('login', 'signUpSubtitle', 'Join PlotHour and keep your progress moving.')
             : text('login', 'welcomeSubtitle', 'Sign in to your dashboard and keep your progress moving.')}
         </p>
       </header>

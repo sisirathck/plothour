@@ -1,6 +1,6 @@
 /**
- * StudyDuel Browser Extension - Content Script
- * Seamless bidirectional sync between the StudyDuel Web App and the Browser Extension
+ * PlotHour Browser Extension - Content Script
+ * Seamless bidirectional sync between the PlotHour Web App and the Browser Extension
  */
 
 const ext = typeof chrome !== 'undefined' ? chrome : browser;
@@ -22,7 +22,7 @@ function readJson(key, fallback = null) {
   }
 }
 
-// Inspect current user & timer state from StudyDuel web app
+// Inspect current user & timer state from PlotHour web app
 async function syncFromPageToExtension() {
   try {
     // Check if web app has an active timer or projects in localStorage
@@ -48,7 +48,7 @@ async function syncFromPageToExtension() {
       userId: foundUserId,
     }).catch(() => {});
   } catch (err) {
-    console.debug('[StudyDuel Extension Content] Sync error:', err);
+    console.debug('[PlotHour Extension Content] Sync error:', err);
   }
 }
 

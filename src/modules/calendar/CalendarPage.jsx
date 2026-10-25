@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X } from 'lucide-react';
 import { TimerEntriesList } from '../timer/TimerEntriesList';
 import { formatDisplayDate } from '../../utils/dateFormat';
+import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 import './CalendarPage.css';
 
 const readLocalValue = (key, fallback) => {
@@ -25,6 +26,7 @@ const formatDuration = (seconds) => {
 };
 
 export const CalendarPage = ({ user, entries: providedEntries, setEntries: setProvidedEntries, projects: providedProjects, onClose }) => {
+  const { config } = useSiteCustomization();
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const [localEntries, setLocalEntries] = useState(() => readLocalValue(entriesKey, []));
@@ -129,7 +131,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   };
 
   const calendarContent = (
-    <div className="calendar-page">
+    <div className="calendar-page" style={getSiteFontStyle(config, 'calendar')}>
       <header className="calendar-page-heading">
         <div>
           <span className="calendar-eyebrow"><CalendarDays size={14} /> CALENDAR</span>

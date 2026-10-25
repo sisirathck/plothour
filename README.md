@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="public/studyduel_logo.png" alt="StudyDuel" width="300" />
+  <img src="public/plothour-logo-light.png" alt="PlotHour" width="300" />
 
-  <h1>StudyDuel</h1>
+  <h1>PlotHour</h1>
   <p><strong>Make study time visible. Build momentum with friends.</strong></p>
   <p>Track focused work across projects and subjects, understand your habits, and compare progress with people you choose.</p>
 
@@ -14,18 +14,18 @@
 
 > **Website:** [study.thoughtpolice.space](https://study.thoughtpolice.space/)
 
-## See StudyDuel
+## See PlotHour
 
 These screenshots show the app in dark mode with sample demo data. The same screens support the light theme.
 
 <table>
   <tr>
-    <td width="50%"><strong>Focus timer</strong><br /><img src="docs/screenshots/timer-demo-dark.png" alt="StudyDuel focus timer showing project search, frequent sessions, and a running-time dial" /></td>
-    <td width="50%"><strong>Progress dashboard</strong><br /><img src="docs/screenshots/dashboard-demo-dark.png" alt="StudyDuel dashboard with weekly progress, study totals, and project portfolio" /></td>
+    <td width="50%"><strong>Focus timer</strong><br /><img src="docs/screenshots/timer-demo-dark.png" alt="PlotHour focus timer showing project search, frequent sessions, and a running-time dial" /></td>
+    <td width="50%"><strong>Progress dashboard</strong><br /><img src="docs/screenshots/dashboard-demo-dark.png" alt="PlotHour dashboard with weekly progress, study totals, and project portfolio" /></td>
   </tr>
   <tr>
-    <td width="50%"><strong>Compare progress</strong><br /><img src="docs/screenshots/compare-demo-dark.png" alt="StudyDuel comparison view with period standings and study-time charts" /></td>
-    <td width="50%"><strong>Project library</strong><br /><img src="docs/screenshots/manage-demo-dark.png" alt="StudyDuel project library with projects, subprojects, and study goals" /></td>
+    <td width="50%"><strong>Compare progress</strong><br /><img src="docs/screenshots/compare-demo-dark.png" alt="PlotHour comparison view with period standings and study-time charts" /></td>
+    <td width="50%"><strong>Project library</strong><br /><img src="docs/screenshots/manage-demo-dark.png" alt="PlotHour project library with projects, subprojects, and study goals" /></td>
   </tr>
 </table>
 
@@ -35,12 +35,12 @@ These additional captures show the light theme. Dashboard, Compare, and Project 
 
 <table>
   <tr>
-    <td width="50%"><strong>Focus timer · light</strong><br /><img src="docs/screenshots/timer-demo-light.png" alt="StudyDuel focus timer in light theme" /></td>
-    <td width="50%"><strong>Progress dashboard · light</strong><br /><img src="docs/screenshots/dashboard-demo-light.png" alt="Middle of the light theme StudyDuel dashboard showing project plans, focus distribution, and study charts" /></td>
+    <td width="50%"><strong>Focus timer · light</strong><br /><img src="docs/screenshots/timer-demo-light.png" alt="PlotHour focus timer in light theme" /></td>
+    <td width="50%"><strong>Progress dashboard · light</strong><br /><img src="docs/screenshots/dashboard-demo-light.png" alt="Middle of the light theme PlotHour dashboard showing project plans, focus distribution, and study charts" /></td>
   </tr>
   <tr>
-    <td width="50%"><strong>Compare progress · light</strong><br /><img src="docs/screenshots/compare-demo-light.png" alt="Middle of the light theme StudyDuel compare page showing study patterns by profile" /></td>
-    <td width="50%"><strong>Project library · light</strong><br /><img src="docs/screenshots/manage-demo-light.png" alt="Middle of the light theme StudyDuel project library showing projects, goals, and subjects" /></td>
+    <td width="50%"><strong>Compare progress · light</strong><br /><img src="docs/screenshots/compare-demo-light.png" alt="Middle of the light theme PlotHour compare page showing study patterns by profile" /></td>
+    <td width="50%"><strong>Project library · light</strong><br /><img src="docs/screenshots/manage-demo-light.png" alt="Middle of the light theme PlotHour project library showing projects, goals, and subjects" /></td>
   </tr>
 </table>
 
@@ -77,7 +77,7 @@ These additional captures show the light theme. Dashboard, Compare, and Project 
 
 ## Data and accounts
 
-StudyDuel has two workspace modes:
+PlotHour has two workspace modes:
 
 - **Demo mode** uses sample profiles and sample study history stored in this browser. It does not connect demo activity to real accounts.
 - **Signed-in mode** uses PostgreSQL for account and connection records. The app keeps an account-scoped working copy in browser storage and syncs it to the server's workspace-state table, so workspace data can be restored after signing in on another browser. Study-partner comparisons are loaded through the API and limited to connected profiles.
@@ -167,7 +167,7 @@ Database schema and migrations are in [`database/`](database/). The numbered mig
 
 ## Deployment and domain
 
-The public StudyDuel website is [study.thoughtpolice.space](https://study.thoughtpolice.space/). This repository does not declare its hosting provider or an automatic deployment workflow. To deploy or update an instance:
+The public PlotHour website is [study.thoughtpolice.space](https://study.thoughtpolice.space/). This repository does not declare its hosting provider or an automatic deployment workflow. To deploy or update an instance:
 
 1. Provision a host, PostgreSQL database, and a domain you control.
 2. Point the domain's DNS records at the host and configure HTTPS.

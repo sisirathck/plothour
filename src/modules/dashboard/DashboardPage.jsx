@@ -20,7 +20,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { siteAssetUrl, useSiteCustomization } from '../../context/SiteCustomizationContext';
+import { getSiteFontStyle, siteAssetUrl, useSiteCustomization } from '../../context/SiteCustomizationContext';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import './Dashboard.css';
@@ -1672,7 +1672,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, [sessionTierStats]);
 
   return (
-    <div className={`db-apple-root ${isDark ? 'dark-mode' : 'light-mode'}`}>
+    <div className={`db-apple-root ${isDark ? 'dark-mode' : 'light-mode'}`} style={getSiteFontStyle(config, 'dashboard')}>
       {/* ================= OPTIONAL FLOATING NAVBAR (When standalone) ================= */}
       {standalone && (
         <header className="db-apple-navbar">

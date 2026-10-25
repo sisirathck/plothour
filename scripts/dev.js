@@ -30,12 +30,12 @@ const stop = (signal = 'SIGTERM', exitCode = 0) => {
 
 for (const child of processes) {
   child.on('error', (error) => {
-    console.error('[StudyDuel dev] Failed to start a service:', error.message);
+    console.error('[PlotHour dev] Failed to start a service:', error.message);
     stop('SIGTERM', 1);
   });
   child.on('exit', (code, signal) => {
     if (!stopping && code !== 0) {
-      console.error(`[StudyDuel dev] A service exited (${signal || code}).`);
+      console.error(`[PlotHour dev] A service exited (${signal || code}).`);
       stop('SIGTERM', code || 1);
     }
   });

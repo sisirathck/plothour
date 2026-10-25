@@ -29,6 +29,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import './Settings.css';
 
@@ -372,6 +373,7 @@ export const playZenBell = () => {
 };
 
 export const SettingsPage = ({ onBack, user }) => {
+  const { config } = useSiteCustomization();
   const preferencesKey = getUserKey(user, 'preferences');
   const entriesKey = getUserKey(user, 'time_entries');
   const friendsKey = getUserKey(user, 'friends');
@@ -620,7 +622,7 @@ export const SettingsPage = ({ onBack, user }) => {
     if (!file) return;
     try {
       const parsed = JSON.parse(await file.text());
-      if (!Array.isArray(parsed)) throw new Error('Choose a StudyDuel JSON export containing a list of sessions.');
+      if (!Array.isArray(parsed)) throw new Error('Choose a PlotHour JSON export containing a list of sessions.');
       const converted = parsed.map((row) => {
         const date = /^\d{4}-\d{2}-\d{2}$/.test(String(row.date || '')) ? new Date(`${row.date}T12:00:00`) : new Date(row.startedAt);
         const durationSeconds = Math.round(Number(row.duration_minutes ?? (Number(row.durationSeconds) / 60)) * 60);
@@ -763,7 +765,7 @@ export const SettingsPage = ({ onBack, user }) => {
       if (!/^DUEL-[0-9A-F]{10}$/.test(cleanCode)) {
         setFriendNotice({
           type: 'error',
-          message: 'This invite code is out of date. Current codes look like DUEL-1A2B3C4D5E; copy the code shown in Settings after refreshing StudyDuel.',
+          message: 'This invite code is out of date. Current codes look like DUEL-1A2B3C4D5E; copy the code shown in Settings after refreshing PlotHour.',
         });
         return;
       }
@@ -795,7 +797,7 @@ export const SettingsPage = ({ onBack, user }) => {
     }
 
     if (friends.some((f) => f.code === cleanCode || f.name.toUpperCase() === cleanCode)) {
-      setFriendNotice({ type: 'error', message: 'This partner is already in your study duel list.' });
+      setFriendNotice({ type: 'error', message: 'This partner is already in your PlotHour partner list.' });
       return;
     }
 
@@ -874,7 +876,7 @@ export const SettingsPage = ({ onBack, user }) => {
   ];
 
   return (
-    <div className="demo-settings-page" aria-label="StudyDuel Settings">
+    <div className="demo-settings-page" aria-label="PlotHour Settings" style={getSiteFontStyle(config, 'settings')}>
       {/* Back navigation */}
       <button type="button" className="settings-back-btn" onClick={onBack}>
         <ArrowLeft size={15} />
@@ -962,7 +964,7 @@ export const SettingsPage = ({ onBack, user }) => {
             <div className="settings-row">
               <div className="settings-row-info">
                 <strong>Display Name</strong>
-                <span>Your public moniker and duelist handle across StudyDuel.</span>
+                <span>Your public moniker and duelist handle across PlotHour.</span>
               </div>
               <input
                 type="text"
@@ -1071,7 +1073,7 @@ export const SettingsPage = ({ onBack, user }) => {
               <div className="settings-row">
                 <div className="settings-row-info">
                   <strong>Sign-in account required</strong>
-                  <span>You are exploring StudyDuel in demo mode. Sign in or register an account to manage your password.</span>
+                  <span>You are exploring PlotHour in demo mode. Sign in or register an account to manage your password.</span>
                 </div>
               </div>
             ) : (
@@ -1293,7 +1295,7 @@ export const SettingsPage = ({ onBack, user }) => {
                 <p>Download your raw study logs formatted for Pandas, Excel spreadsheets, or local JSON backup.</p>
               </div>
               <div className="settings-export-actions">
-                <input ref={importFileRef} type="file" accept="application/json,.json" onChange={previewImport} className="settings-import-file" aria-label="Import StudyDuel JSON study logs" />
+                <input ref={importFileRef} type="file" accept="application/json,.json" onChange={previewImport} className="settings-import-file" aria-label="Import PlotHour JSON study logs" />
                 <button type="button" className="settings-secondary-btn" onClick={() => { setImportError(''); importFileRef.current?.click(); }}><Download size={15} /> Import JSON</button>
                 <button
                   type="button"
@@ -1352,14 +1354,14 @@ export const SettingsPage = ({ onBack, user }) => {
           ========================================================================= */}
       {activeSettingsTab === 'connections' && (
         <div id="panel-connections" role="tabpanel" aria-labelledby="tab-connections">
-          {/* CARD 1: Your StudyDuel Invite Code Card */}
+          {/* CARD 1: Your PlotHour Invite Code Card */}
           <section className="settings-bento-card" aria-labelledby="card-invite-title">
             <div className="settings-card-header">
               <div className="settings-card-title-group">
                 <span className="settings-card-icon">
                   <UserPlus size={17} />
                 </span>
-                <h2 id="card-invite-title">Your StudyDuel Invite Code</h2>
+                <h2 id="card-invite-title">Your PlotHour Invite Code</h2>
               </div>
               <span className="settings-badge-pill">Peer Duels</span>
             </div>

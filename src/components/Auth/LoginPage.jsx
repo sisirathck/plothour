@@ -3,11 +3,11 @@ import { BackgroundBackdrop } from '../Background/BackgroundBackdrop';
 import { HeaderActions } from '../Header/HeaderActions';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
 import { LoginForm } from './LoginForm';
-import { useSiteCustomization } from '../../context/SiteCustomizationContext';
+import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 import './LoginPage.css';
 
 export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
-  const { text } = useSiteCustomization();
+  const { config, text } = useSiteCustomization();
   const [notification, setNotification] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
@@ -30,7 +30,7 @@ export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
   };
 
   return (
-    <div className="login-page-wrapper">
+    <div className="login-page-wrapper" style={getSiteFontStyle(config, 'login')}>
       {/* Dynamic Background Illustration with Cross-fade */}
       <BackgroundBackdrop />
 

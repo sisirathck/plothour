@@ -56,11 +56,11 @@ function isEmailConfigured() {
 }
 
 async function sendVerificationEmail(email, displayName, code) {
-  const from = process.env.EMAIL_FROM || `StudyDuel <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
+  const from = process.env.EMAIL_FROM || `PlotHour <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
   const safeName = escapeHtml(displayName || 'there');
-  const subject = 'Your StudyDuel verification code';
-  const text = `Hi ${displayName || 'there'},\n\nYour StudyDuel verification code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.`;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#20243a"><h1 style="font-size:22px">Verify your email</h1><p>Hi ${safeName}, enter this code in StudyDuel to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#f3f2ff;border-radius:12px;display:inline-block">${code}</p><p>This code expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.</p></div>`;
+  const subject = 'Your PlotHour verification code';
+  const text = `Hi ${displayName || 'there'},\n\nYour PlotHour verification code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#20243a"><h1 style="font-size:22px">Verify your email</h1><p>Hi ${safeName}, enter this code in PlotHour to finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#f3f2ff;border-radius:12px;display:inline-block">${code}</p><p>This code expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.</p></div>`;
 
   // 1. Send via SMTP if configured
   const smtpTransporter = getSmtpTransporter();
@@ -105,11 +105,11 @@ async function sendVerificationEmail(email, displayName, code) {
 }
 
 export async function sendPasswordResetEmail(email, displayName, code) {
-  const from = process.env.EMAIL_FROM || `StudyDuel <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
+  const from = process.env.EMAIL_FROM || `PlotHour <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
   const safeName = escapeHtml(displayName || 'there');
-  const subject = 'Your StudyDuel password reset code';
+  const subject = 'Your PlotHour password reset code';
   const text = `Hi ${displayName || 'there'},\n\nYour password reset code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes.\n\nIf you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.`;
-  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#20243a"><h1 style="font-size:22px">Reset your password</h1><p>Hi ${safeName},</p><p>Enter this 6-digit code in StudyDuel to reset your account password:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#fff1f0;color:#e11d48;border-radius:12px;display:inline-block">${code}</p><p>This code expires in ${verificationCodeLifetimeMinutes} minutes.</p><p style="color:#64748b;font-size:13px">If you did not request a password reset, you can safely ignore this email. Your account password will remain unchanged.</p></div>`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#20243a"><h1 style="font-size:22px">Reset your password</h1><p>Hi ${safeName},</p><p>Enter this 6-digit code in PlotHour to reset your account password:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#fff1f0;color:#e11d48;border-radius:12px;display:inline-block">${code}</p><p>This code expires in ${verificationCodeLifetimeMinutes} minutes.</p><p style="color:#64748b;font-size:13px">If you did not request a password reset, you can safely ignore this email. Your account password will remain unchanged.</p></div>`;
 
   // 1. Send via SMTP if configured
   const smtpTransporter = getSmtpTransporter();
@@ -155,6 +155,18 @@ export async function sendPasswordResetEmail(email, displayName, code) {
 
 export function newVerificationCode() {
   return randomInt(0, 1_000_000).toString().padStart(6, '0');
+}
+
+async function createTrackedLogin(req, res, user, authMethod) {
+  const token = createSessionToken(user);
+  const payload = verifySessionToken(token);
+  await query(
+    `INSERT INTO login_sessions (id, user_id, auth_method, ip_address, user_agent, expires_at)
+     VALUES ($1, $2, $3, $4::inet, $5, to_timestamp($6))`,
+    [payload.jti, user.id, authMethod, req.ip || null, String(req.get('user-agent') || '').slice(0, 1000) || null, payload.exp]
+  );
+  setSessionCookie(res, token);
+  return token;
 }
 
 /**
@@ -343,8 +355,7 @@ authRouter.post('/verify-email', async (req, res) => {
       [email, consumed.rows[0].display_name, consumed.rows[0].password_hash]
     );
     const user = created.rows[0];
-    const token = createSessionToken(user);
-    setSessionCookie(res, token);
+    const token = await createTrackedLogin(req, res, user, 'password_signup');
     return res.status(201).json({ user: { ...user, is_admin: Boolean(isAdminEmail(user.email)) }, token });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'An account with this email address already exists. Please log in.' });
@@ -441,8 +452,7 @@ authRouter.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Verify your email before signing in.' });
     }
 
-    const token = createSessionToken(user);
-    setSessionCookie(res, token);
+    const token = await createTrackedLogin(req, res, user, 'password');
 
     const safeUser = {
       id: user.id,
@@ -683,8 +693,7 @@ authRouter.post('/reset-password', async (req, res) => {
       has_password: true,
       is_admin: Boolean(isAdminEmail(updated.rows[0].email)),
     };
-    const token = createSessionToken(user);
-    setSessionCookie(res, token);
+    const token = await createTrackedLogin(req, res, user, 'password_reset');
 
     return res.json({ success: true, user, token, message: 'Password reset successfully!' });
   } catch (err) {
@@ -816,8 +825,7 @@ authRouter.post('/google', async (req, res) => {
       }
     }
 
-    const token = createSessionToken(user);
-    setSessionCookie(res, token);
+    await createTrackedLogin(req, res, user, 'google');
 
     return res.json({ user: { ...user, is_admin: Boolean(user.email_verified !== false && isAdminEmail(user.email)) } });
   } catch (err) {
@@ -912,7 +920,16 @@ authRouter.patch('/profile', async (req, res) => {
 /**
  * Log out and clear session cookie
  */
-authRouter.post('/logout', (req, res) => {
+authRouter.post('/logout', async (req, res) => {
+  const token = req.cookies?.studyduel_session;
+  const payload = token ? verifySessionToken(token) : null;
+  if (payload?.jti) {
+    try {
+      await query('UPDATE login_sessions SET ended_at = now() WHERE id = $1 AND ended_at IS NULL', [payload.jti]);
+    } catch (error) {
+      console.error('[Login session close error]:', error.message);
+    }
+  }
   clearSessionCookie(res);
   return res.json({ success: true });
 });

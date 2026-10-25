@@ -51,7 +51,7 @@ connectionsRouter.get('/', async (req, res) => {
 connectionsRouter.post('/', async (req, res) => {
   const code = typeof req.body?.code === 'string' ? req.body.code.trim().toUpperCase() : '';
   if (!/^DUEL-[0-9A-F]{10}$/.test(code)) {
-    return res.status(400).json({ error: 'Enter a valid StudyDuel invite code.' });
+    return res.status(400).json({ error: 'Enter a valid PlotHour invite code.' });
   }
   try {
     const match = await query(

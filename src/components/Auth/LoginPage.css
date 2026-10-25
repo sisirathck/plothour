@@ -56,11 +56,14 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 1px;
 }
 
 .login-brand-tagline {
-  padding-left: 2px;
+  width: 160px;
+  padding-left: 0;
+  text-align: center;
+  transform: translate(-6px, 2px);
   color: var(--sd-text-secondary);
   font-family: var(--font-sans);
   font-size: 11.5px;
@@ -157,7 +160,7 @@
     padding: 16px 20px 8px;
   }
   .login-brand-header {
-    gap: 4px;
+    gap: 1px;
   }
   .login-brand-tagline {
     font-size: 10px;

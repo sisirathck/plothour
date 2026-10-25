@@ -188,6 +188,47 @@ export const AppShell = ({ user, onLogout }) => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    let lastTrackedAt = Date.now();
+    let wasVisible = document.visibilityState === 'visible';
+    const reportTime = (countElapsed = wasVisible) => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - lastTrackedAt) / 1000);
+      lastTrackedAt = now;
+      if (!countElapsed || elapsed < 1) return;
+
+      const body = JSON.stringify({ page: currentRoute, durationSeconds: Math.min(elapsed, 30) });
+      fetch('/api/analytics/page-time', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        reportTime(wasVisible);
+        wasVisible = false;
+      } else {
+        lastTrackedAt = Date.now();
+        wasVisible = true;
+      }
+    };
+    const handlePageHide = () => reportTime(wasVisible);
+    const interval = window.setInterval(() => reportTime(wasVisible), 15_000);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      reportTime(wasVisible);
+    };
+  }, [currentRoute, user?.id]);
+
   const navigateTo = (route) => {
     window.history.pushState({}, '', `/${route}`);
     setCurrentRoute(route);
@@ -208,7 +249,7 @@ export const AppShell = ({ user, onLogout }) => {
   return (
     <div className="app-shell-wrapper">
       {/* Persistent Top Navigation Bar */}
-      <nav className="dashboard-nav" aria-label="StudyDuel main navigation">
+      <nav className="dashboard-nav" aria-label="PlotHour main navigation">
         <div className="nav-left">
           <button
             type="button"

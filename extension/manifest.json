@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "StudyDuel — Time Tracking",
+  "name": "PlotHour — Time Tracking",
   "version": "1.0.0",
-  "description": "Log time directly from your browser for projects and tasks with StudyDuel. One-click timer, instant sync, and rich stats.",
+  "description": "Log time directly from your browser for projects and tasks with PlotHour. One-click timer, instant sync, and rich stats.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -17,7 +17,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "StudyDuel Time Tracker"
+    "default_title": "PlotHour Time Tracker"
   },
   "background": {
     "service_worker": "background.js"

@@ -1,6 +1,6 @@
 /**
- * StudyDuel Browser Extension - Popup Logic
- * Aligned with StudyDuel Web App Design System & Data Layer
+ * PlotHour Browser Extension - Popup Logic
+ * Aligned with PlotHour Web App Design System & Data Layer
  */
 
 // Universal Extension API wrapper with standalone preview fallback
@@ -53,7 +53,7 @@ const ext = (typeof chrome !== 'undefined' && chrome.storage)
         },
       };
 
-// Default Sample Projects (from StudyDuel TimerPage)
+// Default Sample Projects (from PlotHour TimerPage)
 const DEFAULT_PROJECTS = [
   {
     id: 'cs',
@@ -113,7 +113,7 @@ const fmtDur = (s) => {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-// StudyDuel Harmonic Sound Synthesizer (528Hz & 1056Hz from TimerPage.jsx)
+// PlotHour Harmonic Sound Synthesizer (528Hz & 1056Hz from TimerPage.jsx)
 function playStudyDuelChime(type = 'start') {
   try {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -194,11 +194,11 @@ function applyTheme(themeName) {
   const moonIcon = document.getElementById('theme-icon-moon');
 
   if (themeName === 'light') {
-    if (logoImg) logoImg.src = 'assets/studyduel_logo.png';
+    if (logoImg) logoImg.src = 'assets/plothour_logo_light.png';
     if (sunIcon) sunIcon.style.display = 'none';
     if (moonIcon) moonIcon.style.display = 'block';
   } else {
-    if (logoImg) logoImg.src = 'assets/studyduel_logo_dark.png';
+    if (logoImg) logoImg.src = 'assets/plothour_logo_dark.png';
     if (sunIcon) sunIcon.style.display = 'block';
     if (moonIcon) moonIcon.style.display = 'none';
   }
@@ -259,7 +259,7 @@ async function init() {
   startClockTick();
 }
 
-// Check for active StudyDuel tabs for 1-click connect
+// Check for active PlotHour tabs for 1-click connect
 async function checkOpenStudyDuelTabs() {
   try {
     const tabs = await ext.tabs.query({ url: ['http://localhost:*/*', 'http://127.0.0.1:*/*'] });
@@ -267,7 +267,7 @@ async function checkOpenStudyDuelTabs() {
     if (tabs.length > 0 && banner) {
       banner.style.display = 'flex';
       const qcText = document.getElementById('qc-text');
-      if (qcText) qcText.textContent = `Open tab found: ${tabs[0].title || 'StudyDuel'}`;
+      if (qcText) qcText.textContent = `Open tab found: ${tabs[0].title || 'PlotHour'}`;
     }
   } catch (err) {}
 }
@@ -342,8 +342,8 @@ function renderMainView() {
     : (state.user?.email ? state.user.email[0].toUpperCase() : 'SD');
   document.getElementById('avatar-initials').textContent = initials;
   document.getElementById('popover-initials').textContent = initials;
-  document.getElementById('popover-name').textContent = state.user?.display_name || 'StudyDuel User';
-  document.getElementById('popover-email').textContent = state.user?.email || 'demo@studyduel.local';
+  document.getElementById('popover-name').textContent = state.user?.display_name || 'PlotHour User';
+  document.getElementById('popover-email').textContent = state.user?.email || 'demo@plothour.local';
 
   // Calculate Today's Time
   const todayStr = new Date().toDateString();
@@ -411,7 +411,7 @@ function renderMainView() {
   renderFrequentCombos();
 }
 
-// Render Top 4 Frequent Combos (Matching StudyDuel TimerPage topCombos)
+// Render Top 4 Frequent Combos (Matching PlotHour TimerPage topCombos)
 function getTopCombos() {
   const counts = new Map();
   const activeProjects = state.projects || [];
@@ -987,7 +987,7 @@ function setupEventListeners() {
     state.user = {
       id: 'demo_user',
       display_name: 'Demo Student',
-      email: 'demo@studyduel.local',
+      email: 'demo@plothour.local',
     };
     state.token = 'demo_token';
     await ext.storage.local.set({
@@ -1003,8 +1003,8 @@ function setupEventListeners() {
   document.getElementById('btn-quick-connect').addEventListener('click', async () => {
     state.user = {
       id: 'web_session_user',
-      display_name: 'StudyDuel User',
-      email: 'account@studyduel.local',
+      display_name: 'PlotHour User',
+      email: 'account@plothour.local',
     };
     await ext.storage.local.set({ studyduel_user: state.user });
     showToast('Connected to open browser session!');

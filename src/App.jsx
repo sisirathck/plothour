@@ -130,7 +130,7 @@ function App() {
     return (
       <ThemeProvider key={themeScopeKey} userId={user?.id} demoMode={isDemoMode}>
         <SiteCustomizationProvider>
-        <div className="app-loading-screen" aria-label="Loading StudyDuel...">
+        <div className="app-loading-screen" aria-label="Loading PlotHour...">
           <div className="app-loading-spinner" />
         </div>
         </SiteCustomizationProvider>

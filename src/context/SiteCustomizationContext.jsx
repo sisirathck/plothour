@@ -5,7 +5,7 @@ export const SITE_COPY_FIELDS = [
   { page: 'login', key: 'welcomeTitle', label: 'Login title', fallback: 'Welcome back' },
   { page: 'login', key: 'welcomeSubtitle', label: 'Login description', fallback: 'Sign in to your dashboard and keep your progress moving.' },
   { page: 'login', key: 'signUpTitle', label: 'Signup title', fallback: 'Create your account' },
-  { page: 'login', key: 'signUpSubtitle', label: 'Signup description', fallback: 'Join StudyDuel and keep your progress moving.' },
+  { page: 'login', key: 'signUpSubtitle', label: 'Signup description', fallback: 'Join PlotHour and keep your progress moving.' },
   { page: 'login', key: 'emailLabel', label: 'Email field label', fallback: 'Email' },
   { page: 'login', key: 'passwordLabel', label: 'Password field label', fallback: 'Password' },
   { page: 'login', key: 'loginButton', label: 'Login button', fallback: 'Log in' },
@@ -52,6 +52,31 @@ export const SITE_COPY_FIELDS = [
 ];
 
 const defaultConfig = { copy: {}, visuals: {} };
+
+export const SITE_FONT_OPTIONS = [
+  { id: 'nunito', name: 'Nunito', family: 'Nunito', group: 'Casual', descriptor: 'Friendly and rounded' },
+  { id: 'quicksand', name: 'Quicksand', family: 'Quicksand', group: 'Casual', descriptor: 'Soft geometric shapes' },
+  { id: 'poppins', name: 'Poppins', family: 'Poppins', group: 'Casual', descriptor: 'Modern and expressive' },
+  { id: 'rubik', name: 'Rubik', family: 'Rubik', group: 'Casual', descriptor: 'Warm, compact forms' },
+  { id: 'comfortaa', name: 'Comfortaa', family: 'Comfortaa', group: 'Casual', descriptor: 'Distinctly rounded' },
+  { id: 'inter', name: 'Inter', family: 'Inter', group: 'Enterprise', descriptor: 'Clear product interface' },
+  { id: 'roboto', name: 'Roboto', family: 'Roboto', group: 'Enterprise', descriptor: 'Neutral and familiar' },
+  { id: 'open-sans', name: 'Open Sans', family: 'Open Sans', group: 'Enterprise', descriptor: 'Highly readable' },
+  { id: 'source-sans-3', name: 'Source Sans 3', family: 'Source Sans 3', group: 'Enterprise', descriptor: 'Polished and practical' },
+  { id: 'ibm-plex-sans', name: 'IBM Plex Sans', family: 'IBM Plex Sans', group: 'Enterprise', descriptor: 'Precise and technical' },
+  { id: 'noto-sans', name: 'Noto Sans', family: 'Noto Sans', group: 'Google Noto', descriptor: 'Broad language coverage' },
+];
+
+const fontById = new Map(SITE_FONT_OPTIONS.map((option) => [option.id, option]));
+export const getSiteFontFamily = (config, page) => {
+  const id = config?.fonts?.[page];
+  return fontById.get(id)?.family || 'Inter';
+};
+export const getSiteFontStyle = (config, page) => {
+  const family = `'${getSiteFontFamily(config, page)}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+  return { '--font-sans': family, fontFamily: family };
+};
+
 const SiteCustomizationContext = createContext({ config: defaultConfig, refresh: () => {}, text: (_page, _key, fallback) => fallback });
 
 export const siteAssetUrl = (assetId) => assetId ? `/api/site-assets/${encodeURIComponent(assetId)}` : '';
@@ -73,6 +98,21 @@ export const SiteCustomizationProvider = ({ children }) => {
     window.addEventListener('studyduel:site-customization-updated', onUpdate);
     return () => window.removeEventListener('studyduel:site-customization-updated', onUpdate);
   }, [refresh]);
+
+  useEffect(() => {
+    const families = [...new Set(Object.keys(config?.fonts || {}).map((page) => getSiteFontFamily(config, page)))];
+    const params = new URLSearchParams();
+    families.forEach((family) => params.append('family', `${family}:wght@400;500;600;700`));
+    params.set('display', 'swap');
+    let stylesheet = document.querySelector('#studyduel-custom-fonts');
+    if (!stylesheet) {
+      stylesheet = document.createElement('link');
+      stylesheet.id = 'studyduel-custom-fonts';
+      stylesheet.rel = 'stylesheet';
+      document.head.appendChild(stylesheet);
+    }
+    stylesheet.href = `https://fonts.googleapis.com/css2?${params.toString()}`;
+  }, [config?.fonts]);
 
   const text = useCallback((page, key, fallback) => {
     const value = config?.copy?.[page]?.[key];
