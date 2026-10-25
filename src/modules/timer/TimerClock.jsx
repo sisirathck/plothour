@@ -322,8 +322,8 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
     }
 
     // 4. Elapsed Dynamic Circular Progress Track
-    if (elapsed > 0) {
-      const maxSeconds = targetSeconds || 3600;
+    if (elapsed > 0 && targetSeconds > 0) {
+      const maxSeconds = targetSeconds;
       const progressFraction = Math.min(1, elapsed / maxSeconds);
       ctx.beginPath();
       ctx.arc(cx, cy, R - 38, -Math.PI / 2, -Math.PI / 2 + progressFraction * Math.PI * 2);

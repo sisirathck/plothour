@@ -514,11 +514,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 100%;
   height: 100%;
-  padding: 32px 30px 26px;
-  gap: 18px;
+  padding: 24px 30px 22px;
+  gap: 11px;
   position: relative;
   z-index: 1;
 }
@@ -533,7 +533,7 @@
   transform: translate(-50%, -58%);
   pointer-events: none;
   color: var(--sd-text-primary);
-  opacity: 0.8;
+  opacity: 0.34;
   z-index: 0;
   transition: opacity 0.8s ease;
 }
@@ -574,8 +574,9 @@
 /* ── Dial Wrapper & Canvases ── */
 .horology-dial-wrapper {
   position: relative;
-  width: 280px;
-  height: 280px;
+  width: 304px;
+  height: 304px;
+  flex: 0 0 304px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -584,7 +585,7 @@
 }
 
 @media (min-width: 1440px) {
-  .horology-dial-wrapper { transform: scale(1.12); }
+  .horology-dial-wrapper { transform: scale(1.06); }
 }
 
 [data-theme='dark'] .horology-dial-wrapper {
@@ -597,6 +598,38 @@
   display: block;
 }
 
+.horology-focus-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+  transform: rotate(-90deg);
+}
+
+.horology-focus-ring-track,
+.horology-focus-ring-progress {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.horology-focus-ring-track {
+  stroke: var(--sd-text-muted);
+  opacity: .14;
+}
+
+.horology-focus-ring-progress {
+  stroke: var(--sd-coral);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 942.48;
+  stroke-dashoffset: calc(942.48 - (942.48 * var(--focus-progress, 0)) / 100);
+  filter: drop-shadow(0 0 4px var(--sd-coral-glow));
+  transition: stroke-dashoffset 500ms ease;
+}
+
 /* ── Idle Wall Clock Display ── */
 .horology-wall-block {
   display: flex;
@@ -604,7 +637,8 @@
   align-items: center;
   gap: 4px;
   z-index: 2;
-  margin-top: -6px;
+  margin-top: -2px;
+  min-height: 44px;
 }
 
 .horology-wall-time {
@@ -629,7 +663,8 @@
   align-items: center;
   gap: 4px;
   z-index: 2;
-  margin-top: -6px;
+  margin-top: -2px;
+  min-height: 44px;
 }
 
 .chrono-status-line {
@@ -795,11 +830,11 @@
 }
 
 .timer-session-note-wrap {
-  width: min(100%, 390px);
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  padding: 13px 15px 14px;
+  gap: 6px;
+  padding: 9px 11px 10px;
   border: 1px solid var(--sd-border-glass);
   border-radius: 15px;
   background: linear-gradient(145deg, color-mix(in srgb, var(--sd-bg-surface) 92%, var(--sd-coral) 8%), var(--sd-bg-subtle));
@@ -831,7 +866,7 @@
 
 .timer-session-note {
   width: 100%;
-  min-height: 54px;
+  min-height: 42px;
   resize: vertical;
   padding: 10px 12px;
   border: 1px solid var(--sd-border-soft);
@@ -848,6 +883,32 @@
 
 .timer-session-note::placeholder { color: var(--sd-text-muted); opacity: .85; }
 .timer-session-note:focus { border-color: var(--sd-coral); box-shadow: 0 0 0 3px var(--sd-coral-glow); background: var(--sd-input-bg); }
+
+.timer-context-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+  width: min(100%, 440px);
+  padding: 12px 14px;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: 16px;
+  color: var(--sd-text-primary);
+  background: color-mix(in srgb, var(--sd-bg-surface) 88%, var(--sd-coral) 12%);
+  box-shadow: 0 8px 22px rgba(20, 24, 44, .045), inset 0 1px 0 rgba(255, 255, 255, .22);
+  z-index: 2;
+}
+
+.timer-context-heading { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.timer-context-kicker { color: var(--sd-text-muted); font-size: 9px; font-weight: 750; letter-spacing: .13em; }
+.timer-context-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; }
+.timer-goal-picker { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--sd-border-glass); border-radius: 999px; background: var(--sd-bg-subtle); }
+.timer-goal-picker button { min-height: 25px; padding: 0 8px; border: 0; border-radius: 999px; color: var(--sd-text-muted); background: transparent; font: inherit; font-size: 9px; font-weight: 650; white-space: nowrap; cursor: pointer; transition: color var(--sd-transition), background var(--sd-transition), box-shadow var(--sd-transition); }
+.timer-goal-picker button.active { color: var(--sd-text-primary); background: var(--sd-card-bg); box-shadow: 0 1px 5px rgba(20, 24, 44, .12); }
+.timer-context-progress-copy { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
+.timer-context-progress { grid-column: 1 / -1; width: 100%; height: 5px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
+.timer-context-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-coral), color-mix(in srgb, var(--sd-coral) 55%, #b7a7ff)); transition: width 500ms ease; }
+.timer-context-card .timer-session-note-wrap { grid-column: 1 / -1; margin-top: 2px; }
 
 /* Chronograph Laps Strip */
 .chronograph-laps-strip {
@@ -887,10 +948,14 @@
   width: 100%;
   border: 1px solid var(--sd-border-glass);
   border-radius: var(--sd-radius-md);
-  background: var(--sd-bg-subtle);
+  background: color-mix(in srgb, var(--sd-bg-subtle) 72%, transparent);
+  opacity: .82;
+  transition: opacity var(--sd-transition), border-color var(--sd-transition), background var(--sd-transition);
   z-index: 2;
   overflow: hidden;
 }
+
+.horology-face-container.mode-stopwatch .horology-metrics-strip { opacity: 1; border-color: color-mix(in srgb, var(--sd-coral) 24%, var(--sd-border-glass)); }
 
 .h-metric {
   flex: 1;
@@ -902,7 +967,7 @@
 }
 
 .h-metric-val {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--sd-text-primary);
@@ -915,6 +980,23 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--sd-text-muted);
+}
+
+@media (max-width: 1080px) {
+  .horology-face-container { height: auto; min-height: 0; padding: 24px 20px; }
+  .horology-dial-wrapper { width: min(304px, 72vw); height: min(304px, 72vw); flex-basis: min(304px, 72vw); }
+  .horology-dial-wrapper .horology-clock-canvas,
+  .horology-dial-wrapper .horology-stopwatch-canvas { max-width: 100%; height: auto !important; }
+  .timer-context-card { width: min(100%, 520px); }
+}
+
+@media (max-width: 560px) {
+  .timer-context-card { grid-template-columns: 1fr; gap: 9px; }
+  .timer-goal-picker { justify-self: start; }
+  .timer-context-heading strong { white-space: normal; }
+  .horology-metrics-strip .h-metric { padding: 9px 2px; }
+  .h-metric-val { font-size: 13px; }
+  .h-metric-lbl { font-size: 8px; }
 }
 
 .h-metric-divider {

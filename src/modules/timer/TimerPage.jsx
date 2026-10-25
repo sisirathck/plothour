@@ -35,6 +35,11 @@ const fmtDur = (s) => {
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
+const TIMER_GOALS = [
+  { id: '25m', label: '25 min', seconds: 25 * 60 },
+  { id: '50m', label: '50 min', seconds: 50 * 60 },
+  { id: 'stopwatch', label: 'Open', seconds: 0 },
+];
 
 /* ── Default Sample Projects ───────────────── */
 const DEFAULT_PROJECTS = [
@@ -129,6 +134,7 @@ export const TimerPage = ({ user }) => {
   const [activeTimer, setActiveTimer] = useState(() => rj(activeKey, null));
   const [entries, setEntries] = useState(() => rj(entriesKey, []));
   const [timerPreferences, setTimerPreferences] = useState(() => rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true }));
+  const [sessionGoalMode, setSessionGoalMode] = useState(() => rj(preferencesKey, { defaultTimerMode: '50m' }).defaultTimerMode || '50m');
 
   const [selProj, setSelProj] = useState(
     () => rj(activeKey, null)?.projectId || rj(projectsKey, user ? [] : DEFAULT_PROJECTS).find((project) => !project.archived)?.id || ''
@@ -171,7 +177,9 @@ export const TimerPage = ({ user }) => {
   useEffect(() => {
     const syncPreferences = (event) => {
       if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
-      setTimerPreferences(rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true }));
+      const nextPreferences = rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true });
+      setTimerPreferences(nextPreferences);
+      setSessionGoalMode((current) => activeTimer ? current : nextPreferences.defaultTimerMode || '50m');
     };
     window.addEventListener('studyduel:preferences-storage', syncPreferences);
     window.addEventListener('storage', syncPreferences);
@@ -179,7 +187,7 @@ export const TimerPage = ({ user }) => {
       window.removeEventListener('studyduel:preferences-storage', syncPreferences);
       window.removeEventListener('storage', syncPreferences);
     };
-  }, [preferencesKey]);
+  }, [preferencesKey, activeTimer]);
 
   useEffect(() => {
     const syncStoppedSession = () => {
@@ -246,8 +254,14 @@ export const TimerPage = ({ user }) => {
     return entries.filter((e) => new Date(e.startedAt).toDateString() === today).length;
   }, [entries]);
 
-  const goalSecs = 4 * 3600;
-  const goalPct = Math.min(100, Math.round((todaySecs / goalSecs) * 100));
+  const dailyGoalSecs = Math.max(1, Number(timerPreferences.dailyGoalHours) || 4) * 3600;
+  const todayProgressSecs = todaySecs + (activeTimer ? elapsed : 0);
+  const goalPct = Math.min(100, Math.round((todayProgressSecs / dailyGoalSecs) * 100));
+  const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || '50m';
+  const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[1];
+  const sessionProgress = sessionGoal.seconds ? Math.min(100, Math.round((elapsed / sessionGoal.seconds) * 100)) : 0;
+  const sessionRemaining = sessionGoal.seconds ? Math.max(0, sessionGoal.seconds - elapsed) : 0;
+  const dailyRemaining = Math.max(0, dailyGoalSecs - todayProgressSecs);
 
   // Top 5 Frequently Used Combos
   const topCombos = useMemo(() => {
@@ -414,7 +428,7 @@ export const TimerPage = ({ user }) => {
       subjectId: sub?.id || '',
       subjectName: sub?.name || '',
       color: sub?.color || proj.color || '#f3957f',
-      mode: timerPreferences.defaultTimerMode || '50m',
+      mode: sessionGoalMode || timerPreferences.defaultTimerMode || '50m',
       startedAt: t,
     });
     setSelProj(proj.id);
@@ -700,7 +714,7 @@ export const TimerPage = ({ user }) => {
                 <StopwatchFace
                   elapsed={elapsed}
                   isRunning={!isPaused}
-                  targetSeconds={null}
+                  targetSeconds={sessionGoal.seconds || null}
                 />
               ) : pendingSelection ? (
                 <div key={pendingSelection.expiresAt} className="horology-selection-preview">
@@ -714,6 +728,22 @@ export const TimerPage = ({ user }) => {
               ) : (
                 <AnalogueClockFace now={now} />
               )}
+              <svg
+                className={`horology-focus-ring${activeTimer && sessionGoal.seconds ? ' is-targeted' : ''}`}
+                viewBox="0 0 320 320"
+                aria-hidden="true"
+              >
+                <circle className="horology-focus-ring-track" cx="160" cy="160" r="150" />
+                {activeTimer && sessionGoal.seconds > 0 && (
+                  <circle
+                    className="horology-focus-ring-progress"
+                    cx="160"
+                    cy="160"
+                    r="150"
+                    style={{ '--focus-progress': sessionProgress }}
+                  />
+                )}
+              </svg>
             </div>
 
             {/* Digital Readout & Status */}
@@ -795,30 +825,73 @@ export const TimerPage = ({ user }) => {
               )}
             </div>
 
-            {activeTimer && (
-              <label className="timer-session-note-wrap">
-                <span>SESSION NOTE</span>
-                <textarea
-                  className="timer-session-note"
-                  value={activeTimer.note || ''}
-                  onChange={(event) => setActiveTimer((current) => current ? { ...current, note: event.target.value } : current)}
-                  placeholder={text('timer', 'sessionNotePlaceholder', 'Add a note about this session…')}
-                  maxLength={240}
-                  rows={2}
-                  aria-label="Session note to save with this entry"
-                />
-              </label>
-            )}
+            <section className={`timer-context-card${activeTimer ? ' is-running' : ''}`} aria-label={activeTimer ? 'Current session details' : 'Next focus details'}>
+              <div className="timer-context-heading">
+                <span className="timer-context-kicker">{activeTimer ? (isPaused ? 'SESSION PAUSED' : 'IN FOCUS') : 'NEXT FOCUS'}</span>
+                {activeTimer ? (
+                  <strong>{sessionGoal.seconds ? `${sessionGoal.label} focus` : 'Open session'}</strong>
+                ) : (
+                  <strong>{sessionProject?.name || 'Choose a project'}{sessionSubject?.name ? ` · ${sessionSubject.name}` : ''}</strong>
+                )}
+              </div>
+
+              <div className="timer-goal-picker" role="group" aria-label="Session focus goal">
+                {TIMER_GOALS.map((goal) => (
+                  <button
+                    key={goal.id}
+                    type="button"
+                    className={sessionMode === goal.id ? 'active' : ''}
+                    aria-pressed={sessionMode === goal.id}
+                    onClick={() => {
+                      if (activeTimer) setActiveTimer((current) => current ? { ...current, mode: goal.id } : current);
+                      else setSessionGoalMode(goal.id);
+                    }}
+                  >
+                    {goal.label}
+                  </button>
+                ))}
+              </div>
+
+              {activeTimer ? (
+                <>
+                  <div className="timer-context-progress-copy">
+                    <span>{sessionGoal.seconds ? (sessionRemaining > 0 ? `${fmtDur(sessionRemaining)} remaining` : 'Focus goal reached') : 'Open-ended focus'}</span>
+                    {sessionGoal.seconds > 0 && <span>{sessionProgress}%</span>}
+                  </div>
+                  {sessionGoal.seconds > 0 && <div className="timer-context-progress"><span style={{ width: `${sessionProgress}%` }} /></div>}
+                  <label className="timer-session-note-wrap">
+                    <span>SESSION NOTE</span>
+                    <textarea
+                      className="timer-session-note"
+                      value={activeTimer.note || ''}
+                      onChange={(event) => setActiveTimer((current) => current ? { ...current, note: event.target.value } : current)}
+                      placeholder={text('timer', 'sessionNotePlaceholder', 'Add a note about this session…')}
+                      maxLength={240}
+                      rows={2}
+                      aria-label="Session note to save with this entry"
+                    />
+                  </label>
+                </>
+              ) : (
+                <>
+                  <div className="timer-context-progress-copy">
+                    <span>{dailyRemaining ? `${fmtDur(dailyRemaining)} to today’s goal` : 'Daily goal complete'}</span>
+                    <span>{goalPct}%</span>
+                  </div>
+                  <div className="timer-context-progress"><span style={{ width: `${goalPct}%` }} /></div>
+                </>
+              )}
+            </section>
 
             {/* Daily Summary Metrics Strip */}
             <div className="horology-metrics-strip">
               <div className="h-metric">
-                <span className="h-metric-val">{fmtDur(todaySecs)}</span>
+                <span className="h-metric-val">{fmtDur(todayProgressSecs)}</span>
                 <span className="h-metric-lbl">TODAY</span>
               </div>
               <div className="h-metric-divider" />
               <div className="h-metric">
-                <span className="h-metric-val">{todaySessionsCount}</span>
+                <span className="h-metric-val">{todaySessionsCount + (activeTimer ? 1 : 0)}</span>
                 <span className="h-metric-lbl">SESSIONS</span>
               </div>
               <div className="h-metric-divider" />
