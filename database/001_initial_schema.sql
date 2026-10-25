@@ -7,6 +7,7 @@ CREATE TABLE users (
   email text NOT NULL,
   display_name text NOT NULL,
   password_hash text,
+  is_admin boolean NOT NULL DEFAULT false,
   timezone text NOT NULL DEFAULT 'UTC',
   week_starts_on smallint NOT NULL DEFAULT 1 CHECK (week_starts_on BETWEEN 0 AND 6),
   created_at timestamptz NOT NULL DEFAULT now(),

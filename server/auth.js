@@ -11,14 +11,6 @@ const COOKIE_NAME = 'studyduel_session';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-export function isAdminEmail(email) {
-  const configured = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
-  return Boolean(email) && configured.includes(String(email).trim().toLowerCase());
-}
-
 /**
  * Hash password using Argon2id (OWASP recommended parameters)
  */

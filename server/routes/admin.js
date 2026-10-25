@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { pool, query } from '../db.js';
 import { authenticate } from '../middleware.js';
-import { isAdminEmail } from '../auth.js';
 import {
   hashVerificationCode,
   newVerificationCode,
@@ -129,11 +128,11 @@ adminRouter.use(authenticate);
 adminRouter.use(async (req, res, next) => {
   try {
     const result = await query(
-      'SELECT email, email_verified FROM users WHERE id = $1',
+      'SELECT email, email_verified, is_admin FROM users WHERE id = $1',
       [req.userId]
     );
     const user = result.rows[0];
-    if (!user || !user.email_verified || !isAdminEmail(user.email)) {
+    if (!user || !user.email_verified || !user.is_admin) {
       return res.status(403).json({ error: 'Administrator access is required.' });
     }
     req.adminEmail = user.email;
@@ -352,7 +351,6 @@ adminRouter.post('/users', async (req, res) => {
   const displayName = typeof req.body?.displayName === 'string' ? req.body.displayName.trim() : '';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
   if (!displayName || displayName.length > 80) return res.status(400).json({ error: 'Name must be between 1 and 80 characters.' });
-  if (isAdminEmail(email)) return res.status(400).json({ error: 'Admin accounts must sign up or sign in through the normal authentication flow.' });
   try {
     const created = await query(
       `INSERT INTO users (email, display_name, password_hash, email_verified)
@@ -397,11 +395,11 @@ adminRouter.post('/users/:userId/send-password-reset', async (req, res) => {
 adminRouter.delete('/users/:userId', async (req, res) => {
   const confirmEmail = typeof req.body?.confirmEmail === 'string' ? req.body.confirmEmail.trim().toLowerCase() : '';
   try {
-    const found = await query('SELECT id, email FROM users WHERE id = $1', [req.params.userId]);
+    const found = await query('SELECT id, email, is_admin FROM users WHERE id = $1', [req.params.userId]);
     const user = found.rows[0];
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.id === req.userId) return res.status(400).json({ error: 'You cannot delete your own administrator account here.' });
-    if (isAdminEmail(user.email)) return res.status(400).json({ error: 'Administrator accounts cannot be deleted from this panel.' });
+    if (user.is_admin) return res.status(400).json({ error: 'Administrator accounts cannot be deleted from this panel.' });
     if (confirmEmail !== user.email.toLowerCase()) {
       return res.status(400).json({ error: 'Enter the user email exactly to confirm deletion.' });
     }

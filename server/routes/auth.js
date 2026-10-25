@@ -10,7 +10,6 @@ import {
   setSessionCookie,
   clearSessionCookie,
   verifyGoogleIdToken,
-  isAdminEmail,
 } from '../auth.js';
 
 export const authRouter = Router();
@@ -351,12 +350,12 @@ authRouter.post('/verify-email', async (req, res) => {
     const created = await query(
       `INSERT INTO users (email, display_name, password_hash, email_verified)
        VALUES ($1, $2, $3, true)
-       RETURNING id, email, display_name, timezone, week_starts_on, created_at`,
+       RETURNING id, email, display_name, timezone, week_starts_on, created_at, is_admin`,
       [email, consumed.rows[0].display_name, consumed.rows[0].password_hash]
     );
     const user = created.rows[0];
     const token = await createTrackedLogin(req, res, user, 'password_signup');
-    return res.status(201).json({ user: { ...user, is_admin: Boolean(isAdminEmail(user.email)) }, token });
+    return res.status(201).json({ user: { ...user, is_admin: Boolean(user.is_admin) }, token });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'An account with this email address already exists. Please log in.' });
     console.error('[Auth Verify Email Error]:', err);
@@ -426,7 +425,7 @@ authRouter.post('/login', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, email, display_name, password_hash, timezone, week_starts_on, email_verified
+      `SELECT id, email, display_name, password_hash, timezone, week_starts_on, email_verified, is_admin
        FROM users
        WHERE lower(email) = lower($1)`,
       [email.trim()]
@@ -461,7 +460,7 @@ authRouter.post('/login', async (req, res) => {
       timezone: user.timezone,
       week_starts_on: user.week_starts_on,
       has_password: Boolean(user.password_hash),
-      is_admin: Boolean(user.email_verified && isAdminEmail(user.email)),
+      is_admin: Boolean(user.email_verified && user.is_admin),
     };
 
     return res.json({ user: safeUser, token });
@@ -680,7 +679,7 @@ authRouter.post('/reset-password', async (req, res) => {
       `UPDATE users
        SET password_hash = $1, email_verified = true, updated_at = now()
        WHERE lower(email) = $2
-       RETURNING id, email, display_name, timezone, week_starts_on, created_at`,
+       RETURNING id, email, display_name, timezone, week_starts_on, created_at, is_admin`,
       [passwordHash, email]
     );
 
@@ -691,7 +690,7 @@ authRouter.post('/reset-password', async (req, res) => {
     const user = {
       ...updated.rows[0],
       has_password: true,
-      is_admin: Boolean(isAdminEmail(updated.rows[0].email)),
+      is_admin: Boolean(updated.rows[0].is_admin),
     };
     const token = await createTrackedLogin(req, res, user, 'password_reset');
 
@@ -786,20 +785,21 @@ authRouter.post('/google', async (req, res) => {
 
     if (existingOauth.rows.length > 0) {
       const userRes = await query(
-        `SELECT id, email, display_name, timezone, week_starts_on FROM users WHERE id = $1`,
+        `SELECT id, email, display_name, timezone, week_starts_on, email_verified, is_admin FROM users WHERE id = $1`,
         [existingOauth.rows[0].user_id]
       );
       user = userRes.rows[0];
     } else {
       // 2. Check if a user with this email already exists
       const existingUser = await query(
-        `SELECT id, email, display_name, timezone, week_starts_on FROM users WHERE lower(email) = lower($1)`,
+        `SELECT id, email, display_name, timezone, week_starts_on, email_verified, is_admin FROM users WHERE lower(email) = lower($1)`,
         [googleUser.email]
       );
 
       if (existingUser.rows.length > 0) {
         user = existingUser.rows[0];
         await query('UPDATE users SET email_verified = true WHERE id = $1', [user.id]);
+        user.email_verified = true;
         // Link OAuth account to existing user
         await query(
           `INSERT INTO oauth_accounts (user_id, provider, provider_subject, email_at_provider)
@@ -812,7 +812,7 @@ authRouter.post('/google', async (req, res) => {
         const newUserRes = await query(
           `INSERT INTO users (email, display_name, password_hash, email_verified)
            VALUES ($1, $2, NULL, true)
-           RETURNING id, email, display_name, timezone, week_starts_on`,
+           RETURNING id, email, display_name, timezone, week_starts_on, email_verified, is_admin`,
           [googleUser.email.toLowerCase(), googleUser.displayName]
         );
         user = newUserRes.rows[0];
@@ -827,7 +827,7 @@ authRouter.post('/google', async (req, res) => {
 
     await createTrackedLogin(req, res, user, 'google');
 
-    return res.json({ user: { ...user, is_admin: Boolean(user.email_verified !== false && isAdminEmail(user.email)) } });
+    return res.json({ user: { ...user, is_admin: Boolean(user.email_verified && user.is_admin) } });
   } catch (err) {
     console.error('[Google Auth Error]:', err);
     return res.status(400).json({ error: err.message || 'Google authentication failed.' });
@@ -852,7 +852,7 @@ authRouter.get('/me', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, email, display_name, timezone, week_starts_on, created_at, email_verified,
+      `SELECT id, email, display_name, timezone, week_starts_on, created_at, email_verified, is_admin,
               (password_hash IS NOT NULL) AS has_password
        FROM users
        WHERE id = $1`,
@@ -869,7 +869,7 @@ authRouter.get('/me', async (req, res) => {
       user: {
         ...row,
         has_password: Boolean(row.has_password),
-        is_admin: Boolean(row.email_verified && isAdminEmail(row.email)),
+        is_admin: Boolean(row.email_verified && row.is_admin),
       },
     });
   } catch (err) {
@@ -906,7 +906,7 @@ authRouter.patch('/profile', async (req, res) => {
       `UPDATE users
        SET display_name = $2, timezone = $3, week_starts_on = $4, updated_at = now()
        WHERE id = $1
-       RETURNING id, email, display_name, timezone, week_starts_on`,
+       RETURNING id, email, display_name, timezone, week_starts_on, is_admin`,
       [payload.userId, displayName, timezone, weekStartsOn]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'User account not found.' });

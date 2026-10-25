@@ -210,6 +210,10 @@ app.listen(PORT, async () => {
     if (fs.existsSync(pageActivitySchemaPath)) {
       await migrationClient.query(fs.readFileSync(pageActivitySchemaPath, 'utf8'));
     }
+    const adminRolesSchemaPath = path.resolve(__dirname, '../database/010_admin_roles.sql');
+    if (fs.existsSync(adminRolesSchemaPath)) {
+      await migrationClient.query(fs.readFileSync(adminRolesSchemaPath, 'utf8'));
+    }
     databaseReady = true;
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);
