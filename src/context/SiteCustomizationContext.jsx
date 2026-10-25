@@ -54,6 +54,7 @@ export const SITE_COPY_FIELDS = [
 const defaultConfig = { copy: {}, visuals: {} };
 
 export const SITE_FONT_OPTIONS = [
+  { id: 'belleza', name: 'Belleza', family: 'Belleza', group: 'Brand', descriptor: 'PlotHour flared serif' },
   { id: 'nunito', name: 'Nunito', family: 'Nunito', group: 'Casual', descriptor: 'Friendly and rounded' },
   { id: 'quicksand', name: 'Quicksand', family: 'Quicksand', group: 'Casual', descriptor: 'Soft geometric shapes' },
   { id: 'poppins', name: 'Poppins', family: 'Poppins', group: 'Casual', descriptor: 'Modern and expressive' },
@@ -70,7 +71,7 @@ export const SITE_FONT_OPTIONS = [
 const fontById = new Map(SITE_FONT_OPTIONS.map((option) => [option.id, option]));
 export const getSiteFontFamily = (config, page) => {
   const id = config?.fonts?.[page];
-  return fontById.get(id)?.family || 'Inter';
+  return fontById.get(id)?.family || 'Belleza';
 };
 export const getSiteFontStyle = (config, page) => {
   const family = `'${getSiteFontFamily(config, page)}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
