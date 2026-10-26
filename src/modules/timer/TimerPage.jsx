@@ -158,6 +158,8 @@ export const TimerPage = ({ user }) => {
   const [timerPreferences, setTimerPreferences] = useState(() => readTimerPreferences(preferencesKey));
   const [sessionGoalMode, setSessionGoalMode] = useState(() => readTimerPreferences(preferencesKey).defaultTimerMode);
   const [studyPanelTab, setStudyPanelTab] = useState('combos');
+  const [keyboardComboIndex, setKeyboardComboIndex] = useState(-1);
+  const comboCardRefs = useRef([]);
 
   const [selProj, setSelProj] = useState(
     () => rj(activeKey, null)?.projectId || rj(projectsKey, user ? [] : DEFAULT_PROJECTS).find((project) => !project.archived)?.id || ''
@@ -492,6 +494,7 @@ export const TimerPage = ({ user }) => {
   // Start Session
   const startTimer = (pId = selProj, sId = selSub) => {
     setPendingSelection(null);
+    setKeyboardComboIndex(-1);
     const proj = projects.find((p) => p.id === pId);
     if (!proj) {
       setNotice('Please select a project to start.');
@@ -529,6 +532,48 @@ export const TimerPage = ({ user }) => {
     setPausedElapsed(0);
     setNotice('');
   };
+  const startTimerRef = useRef(startTimer);
+  startTimerRef.current = startTimer;
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const target = event.target;
+      if (
+        event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+        target?.isContentEditable ||
+        target?.closest?.('input, textarea, select, [contenteditable="true"], .t-select-menu')
+      ) return;
+
+      if (!activeTimer && /^[1-5]$/.test(event.key)) {
+        const index = Number(event.key) - 1;
+        const combo = topCombos[index];
+        if (!combo) return;
+        event.preventDefault();
+        setStudyPanelTab('combos');
+        setKeyboardComboIndex(index);
+        setSelProj(combo.projectId);
+        setSelSub(combo.subjectId || '');
+        return;
+      }
+
+      if (!activeTimer && event.key === 'Enter' && keyboardComboIndex >= 0) {
+        const combo = topCombos[keyboardComboIndex];
+        if (!combo) return;
+        event.preventDefault();
+        event.stopPropagation();
+        startTimerRef.current(combo.projectId, combo.subjectId || '');
+      } else if (event.key === 'Escape' && keyboardComboIndex >= 0) {
+        setKeyboardComboIndex(-1);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [activeTimer, keyboardComboIndex, topCombos]);
+
+  useEffect(() => {
+    if (activeStudyPanelTab !== 'combos' || keyboardComboIndex < 0) return;
+    comboCardRefs.current[keyboardComboIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [activeStudyPanelTab, keyboardComboIndex]);
 
   // Stop Session
   const stopTimer = () => {
@@ -770,7 +815,7 @@ export const TimerPage = ({ user }) => {
                   <small>{todayStudyPlan.length}</small>
                 </button>
               )}
-              {activeStudyPanelTab === 'combos' && <span className="timer-insights-tab-hint">{text('timer', 'frequentSub', '1-Click Launch')}</span>}
+              {activeStudyPanelTab === 'combos' && <span className="timer-insights-tab-hint">1–5 select · Enter start</span>}
             </div>
 
             <div
@@ -791,7 +836,9 @@ export const TimerPage = ({ user }) => {
                 return (
                   <div
                     key={`${combo.projectId}-${combo.subjectId || 'none'}`}
-                    className={`t-combo-card${isComboActive ? ' is-active' : ''}`}
+                    ref={(node) => { comboCardRefs.current[index] = node; }}
+                    className={`t-combo-card${isComboActive ? ' is-active' : ''}${keyboardComboIndex === index ? ' is-keyboard-selected' : ''}`}
+                    aria-keyshortcuts={`${index + 1} Enter`}
                   >
                     <div className="t-combo-info">
                       <div className="t-combo-head">

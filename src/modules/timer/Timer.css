@@ -302,6 +302,7 @@
 @media (min-width: 1081px) {
   .timer-insights-panel { display: flex; flex: 1 1 0; flex-direction: column; min-height: 0; }
   .timer-insights-pane { height: auto; flex: 1 1 0; }
+  .horology-metrics-strip { margin-bottom: 26px; }
 }
 .timer-insights-pane::-webkit-scrollbar { width: 7px; }
 .timer-insights-pane::-webkit-scrollbar-thumb { border-radius: 999px; background: color-mix(in srgb, var(--sd-coral) 28%, transparent); }
@@ -341,6 +342,13 @@
   border-color: var(--sd-coral);
   box-shadow: 0 0 0 1px var(--sd-coral), 0 8px 24px -8px var(--sd-coral-glow);
 }
+
+.t-combo-card.is-keyboard-selected {
+  border-color: #7981cc;
+  background: color-mix(in srgb, #7981cc 9%, var(--sd-bg-subtle));
+  box-shadow: 0 0 0 2px rgba(121, 129, 204, .22), 0 4px 12px rgba(65, 72, 140, .1);
+}
+.t-combo-card.is-keyboard-selected .t-combo-rank { color: #5963b2; opacity: 1; }
 
 .t-combo-info {
   display: flex;
@@ -966,7 +974,7 @@
 }
 .timer-context-card.is-running { width: 100%; max-width: none; padding: 10px 12px; gap: 6px 12px; }
 .timer-context-card.is-running .timer-session-note-wrap { margin-top: 0; padding: 7px 9px; gap: 4px; border-radius: 12px; }
-.timer-context-card.is-running .timer-session-note { min-height: 34px; padding: 7px 10px; }
+.timer-context-card.is-running .timer-session-note { min-height: 72px; padding: 7px 10px; }
 
 .timer-context-heading { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .timer-context-kicker { color: var(--sd-text-muted); font-size: 9px; font-weight: 750; letter-spacing: .13em; }
@@ -1208,6 +1216,12 @@
   padding: 0;
   color: var(--sd-text-primary);
 }
+.entries-panel-heading > .entries-collapse-btn:not(.is-static) { width: auto; min-width: 0; flex: 1 1 auto; }
+.entries-heading-actions { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.entries-expand-toggle { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid transparent; border-radius: 50%; color: var(--sd-text-muted); background: transparent; cursor: pointer; transition: color 160ms ease, background 160ms ease, border-color 160ms ease; }
+.entries-expand-toggle:hover { color: var(--sd-text-primary); background: var(--sd-bg-subtle); border-color: var(--sd-border-glass); }
+.entries-expand-toggle:focus-visible { outline: 2px solid #7981cc; outline-offset: 2px; }
+.entries-heading-actions .entries-calendar-btn { flex: 0 0 auto; }
 
 .entries-collapse-btn.is-static { cursor: default; }
 

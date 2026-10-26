@@ -16,7 +16,6 @@ const navItems = [
   { route: 'dashboard', path: '/dashboard', label: 'Dashboard' },
   { route: 'compare', path: '/compare', label: 'Compare' },
   { route: 'manage', path: '/manage', label: 'Manage' },
-  { route: 'calendar', path: '/calendar', label: 'Calendar' },
 ];
 
 const getRouteFromPath = () => {

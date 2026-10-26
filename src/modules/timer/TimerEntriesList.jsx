@@ -165,20 +165,30 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
             <span className="date-badge">
               {filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}
             </span>
-            <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />
           </button>
+        )}
+        {!hideRangeControls && (
+          <div className="entries-heading-actions">
+            {onOpenCalendar && (
+              <button type="button" className="entries-calendar-btn" onClick={onOpenCalendar} aria-label="Open calendar view">
+                <CalendarDays size={15} /> Calendar view
+              </button>
+            )}
+            <button
+              type="button"
+              className="entries-expand-toggle"
+              onClick={() => setExpanded((current) => !current)}
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? 'Collapse session history' : 'Expand session history'}
+            >
+              <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />
+            </button>
+          </div>
         )}
       </div>
       <div className="entries-expand-region" aria-hidden={!isExpanded}>
         <div className="entries-expand-inner" inert={!isExpanded}>
           <div className="entries-controls">
-            {!hideRangeControls && onOpenCalendar && (
-              <button type="button" className="entries-calendar-btn" onClick={() => {
-                onOpenCalendar();
-              }}>
-                <CalendarDays size={15} /> Calendar view
-              </button>
-            )}
             {/* Segmented Range Buttons */}
             {!hideRangeControls && <div className="entries-range-pills" role="radiogroup" aria-label="Date range">
               {[
