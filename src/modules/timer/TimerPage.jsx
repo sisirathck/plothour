@@ -920,7 +920,7 @@ export const TimerPage = ({ user }) => {
                   </div>
                 )}
                 {todayStudyPlan.length ? todayStudyPlan.map((item) => (
-                  <article className={`timer-study-plan-row${todayStudyPlanSummary.nextFocus === item ? ' is-recommended' : ''}`} key={`${item.projectId}:${item.subjectId}`}>
+                  <article className="timer-study-plan-row" key={`${item.projectId}:${item.subjectId}`}>
                     <div className="timer-study-plan-copy">
                       <strong><span>{item.projectName}</span><i aria-hidden="true">·</i>{item.subjectName || 'General Study'}</strong>
                     </div>

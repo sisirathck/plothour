@@ -45,6 +45,26 @@ const getHourTicks = (seconds) => {
   return Array.from({ length: Math.round(max / step) + 1 }, (_, index) => index * step);
 };
 
+const percentComparison = (current, previous, periodLabel) => {
+  if (previous <= 0) {
+    return {
+      label: current > 0 ? `New · no time ${periodLabel}` : `No change ${periodLabel}`,
+      tone: current > 0 ? 'positive' : 'neutral',
+    };
+  }
+  const change = Math.round(((current - previous) / previous) * 100);
+  return {
+    label: `${change > 0 ? '+' : ''}${change}% ${periodLabel}`,
+    tone: change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral',
+  };
+};
+
+const snapshotPeriodSeconds = (entries, start, end) => entries.reduce((total, entry) => {
+  const startedAt = new Date(entry.startedAt).getTime();
+  if (Number(entry.durationSeconds) <= 0 || !Number.isFinite(startedAt) || startedAt < start.getTime() || startedAt >= end.getTime()) return total;
+  return total + (Number(entry.durationSeconds) || 0);
+}, 0);
+
 const useSvgChartTooltip = () => {
   const [tooltip, setTooltip] = useState(null);
   const show = (event, title, details) => {
@@ -69,100 +89,30 @@ const useSvgChartTooltip = () => {
   return { show, hide, node };
 };
 
-const dailyHoursGroupingOptions = [
-  { id: 'days', label: 'Days' },
-  { id: 'weeks', label: 'Weeks' },
-  { id: 'months', label: 'Months' },
-  { id: 'quarters', label: 'Quarters' },
-  { id: 'years', label: 'Years' },
-  { id: 'all', label: 'All time' },
-];
-
-const DailyHoursGraph = ({ days, title, hasData, onStart, grouping, onGroupingChange }) => {
-  const chartTooltip = useSvgChartTooltip();
-  const chartScrollRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-  useEffect(() => {
-    const node = chartScrollRef.current;
-    if (!node) return undefined;
-    const updateWidth = () => setContainerWidth(Math.floor(node.getBoundingClientRect().width));
-    updateWidth();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [hasData]);
-
-  const width = Math.max(320, containerWidth || days.length * 60);
-  const height = 240;
-  const margin = { top: 8, right: 18, bottom: 24, left: 44 };
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
-  const maxSeconds = Math.max(1800, ...days.map((day) => day.seconds));
-  const hourTicks = getHourTicks(maxSeconds);
-  const maxHours = hourTicks[hourTicks.length - 1];
-  const slotWidth = plotWidth / days.length;
-  const barWidth = Math.max(8, Math.min(44, slotWidth * 0.42));
-
-  return (
-    <div className="db-chart-card db-card db-daily-hours-card db-snapshot-card">
-      <div className="db-chart-heading db-chart-heading-stack">
-        <div>
-          <h3 className="db-section-title">Snapshot</h3>
-          <span className="db-section-meta">{title}</span>
-        </div>
-        <label className="db-daily-group-control">Group by
-          <select value={grouping} onChange={(event) => onGroupingChange(event.target.value)} aria-label="Group daily hours by">
-            {dailyHoursGroupingOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
+const SnapshotPanel = ({ snapshotMetrics }) => (
+  <div className="db-chart-card db-card db-snapshot-card">
+    <div className="db-chart-heading db-chart-heading-stack">
+      <div>
+        <h3 className="db-section-title">Snapshot</h3>
+        <span className="db-section-meta">Weekly and monthly study overview</span>
       </div>
-      {!hasData ? <QuietEmptyState message="No study time for this view yet." onStart={onStart} /> : <div ref={chartScrollRef} className="db-chart-scroll db-daily-chart-scroll">
-        <svg className="db-svg-chart db-daily-chart" style={{ width: '100%', height: `${height}px` }} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Study hours for ${title}`}>
-          {hourTicks.map((value) => {
-            const y = margin.top + plotHeight - (value / maxHours) * plotHeight;
-            return (
-              <g key={value}>
-                <line className="db-chart-grid-line" x1={margin.left} x2={width - margin.right} y1={y} y2={y} />
-                <text className="db-chart-axis-label" x={margin.left - 8} y={y + 4} textAnchor="end">{formatHoursTick(value * 3600)}</text>
-              </g>
-            );
-          })}
-          {days.map((day, index) => {
-            const barHeight = (day.seconds / (maxHours * 3600)) * plotHeight;
-            const x = margin.left + index * slotWidth + (slotWidth - barWidth) / 2;
-            const y = margin.top + plotHeight - barHeight;
-            return (
-              <g key={day.key}>
-                <rect
-                  className="db-chart-bar"
-                  x={x}
-                  y={y}
-                  width={barWidth}
-                  height={Math.max(day.seconds ? 2 : 0, barHeight)}
-                  rx="4"
-                  tabIndex="0"
-                  aria-label={`${day.dateLabel}: ${fmtDur(day.seconds)}, ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`}
-                  onMouseEnter={(event) => chartTooltip.show(event, day.dateLabel, `${fmtDur(day.seconds)} · ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`)}
-                  onMouseMove={(event) => chartTooltip.show(event, day.dateLabel, `${fmtDur(day.seconds)} · ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`)}
-                  onMouseLeave={chartTooltip.hide}
-                  onFocus={(event) => chartTooltip.show(event, day.dateLabel, `${fmtDur(day.seconds)} · ${day.sessions} ${day.sessions === 1 ? 'session' : 'sessions'}`)}
-                  onBlur={chartTooltip.hide}
-                >
-                  <title>{`${day.dateLabel} · ${fmtDur(day.seconds)} · ${day.sessions} sessions`}</title>
-                </rect>
-                {(index === 0 || index % Math.max(1, Math.ceil(days.length / 10)) === 0 || index === days.length - 1) && (
-                <text className="db-chart-axis-label" x={x + barWidth / 2} y={height - 10} textAnchor="middle">{day.axisLabel || day.dayOfMonth}</text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-        {chartTooltip.node}
-      </div>}
     </div>
-  );
-};
+    <div className="db-snapshot-metrics" aria-label="Weekly and monthly study snapshot">
+      {snapshotMetrics.map((metric) => (
+        <article className="db-snapshot-metric" key={metric.label}>
+          <span className="db-snapshot-metric-label">{metric.label}</span>
+          <strong className="db-snapshot-metric-value" title={metric.value}>{metric.value}</strong>
+          {metric.details?.length ? (
+            <div className="db-snapshot-metric-details">
+              {metric.details.map((detail) => <small key={detail.label}><b>{detail.label}:</b> {detail.value}</small>)}
+            </div>
+          ) : metric.detail ? <small className="db-snapshot-metric-detail">{metric.detail}</small> : null}
+          {metric.comparison && <small className={`db-snapshot-metric-change is-${metric.comparison.tone}`}>{metric.comparison.label}</small>}
+        </article>
+      ))}
+    </div>
+  </div>
+);
 
 const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'week' }) => {
   const chartTooltip = useSvgChartTooltip();
@@ -580,7 +530,6 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       return dashboardRangeOptions.some((option) => option.id === saved) ? saved : 'week';
     } catch { return 'week'; }
   });
-  const [dailyHoursGrouping, setDailyHoursGrouping] = useState('days');
   const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -590,12 +539,17 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [hoursDonutTooltip, setHoursDonutTooltip] = useState(null);
   const weeklyStudyScrollRef = useRef(null);
   const rangeMenuRef = useRef(null);
+  const customizerRef = useRef(null);
   useEffect(() => {
     const handlePointerDown = (event) => {
       if (!rangeMenuRef.current?.contains(event.target)) setRangeMenuOpen(false);
+      if (!customizerRef.current?.contains(event.target)) setCustomizerOpen(false);
     };
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setRangeMenuOpen(false);
+      if (event.key === 'Escape') {
+        setRangeMenuOpen(false);
+        setCustomizerOpen(false);
+      }
     };
     document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
@@ -834,6 +788,69 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       progress: targetSeconds ? Math.min(100, Math.round((loggedSeconds / targetSeconds) * 100)) : 0,
     };
   }, [entries, projects, now, preferences.dailyGoalHours]);
+  const snapshotMetrics = useMemo(() => {
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(todayStart);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const weekStartDate = new Date(todayStart);
+    const elapsedDays = getWeekStartOffset(todayStart, weekStart) + 1;
+    weekStartDate.setDate(weekStartDate.getDate() - elapsedDays + 1);
+    const previousWeekStart = new Date(weekStartDate);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+    const previousWeekEnd = new Date(previousWeekStart);
+    previousWeekEnd.setDate(previousWeekEnd.getDate() + elapsedDays);
+    const weekSeconds = snapshotPeriodSeconds(entries, weekStartDate, tomorrow);
+    const previousWeekSeconds = snapshotPeriodSeconds(entries, previousWeekStart, previousWeekEnd);
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthEnd = new Date(previousMonthStart);
+    previousMonthEnd.setDate(Math.min(now.getDate(), new Date(now.getFullYear(), now.getMonth(), 0).getDate()) + 1);
+    const monthSeconds = snapshotPeriodSeconds(entries, monthStart, tomorrow);
+    const previousMonthSeconds = snapshotPeriodSeconds(entries, previousMonthStart, previousMonthEnd);
+
+    const currentWeekEntries = entries.filter((entry) => {
+      const startedAt = new Date(entry.startedAt).getTime();
+      return Number(entry.durationSeconds) > 0 && Number.isFinite(startedAt) && startedAt >= weekStartDate.getTime() && startedAt < tomorrow.getTime();
+    });
+    const previousWeekEntries = entries.filter((entry) => {
+      const startedAt = new Date(entry.startedAt).getTime();
+      return Number(entry.durationSeconds) > 0 && Number.isFinite(startedAt) && startedAt >= previousWeekStart.getTime() && startedAt < previousWeekEnd.getTime();
+    });
+    const averagePerDay = weekSeconds / elapsedDays;
+    const previousAveragePerDay = previousWeekSeconds / elapsedDays;
+    const averageSession = currentWeekEntries.length ? weekSeconds / currentWeekEntries.length : 0;
+    const previousAverageSession = previousWeekEntries.length ? previousWeekSeconds / previousWeekEntries.length : 0;
+
+    const projectTotals = new Map();
+    const subjectTotals = new Map();
+    currentWeekEntries.forEach((entry) => {
+      const seconds = Number(entry.durationSeconds) || 0;
+      const projectName = entry.projectName || 'General Study';
+      projectTotals.set(projectName, (projectTotals.get(projectName) || 0) + seconds);
+      const subjectName = entry.subjectName || 'No subproject';
+      subjectTotals.set(subjectName, (subjectTotals.get(subjectName) || 0) + seconds);
+    });
+    const sortTotals = (totals, order) => Array.from(totals, ([name, seconds]) => ({ name, seconds }))
+      .sort((a, b) => order * (a.seconds - b.seconds) || a.name.localeCompare(b.name));
+    const topProject = sortTotals(projectTotals, -1)[0];
+    const bottomProject = sortTotals(projectTotals, 1)[0];
+    const topSubject = sortTotals(subjectTotals, -1)[0];
+    const bottomSubject = sortTotals(subjectTotals, 1)[0];
+    const rankingDetails = (project, subject) => project ? [
+      { label: 'Project', value: `${project.name} · ${fmtDur(project.seconds)}` },
+      { label: 'Subproject', value: subject ? `${subject.name} · ${fmtDur(subject.seconds)}` : '—' },
+    ] : [{ label: 'Study', value: 'No study logged this week' }];
+
+    return [
+      { label: 'TIME THIS WEEK', value: fmtDur(weekSeconds), comparison: percentComparison(weekSeconds, previousWeekSeconds, 'vs last week') },
+      { label: 'TIME THIS MONTH', value: fmtDur(monthSeconds), comparison: percentComparison(monthSeconds, previousMonthSeconds, 'vs same dates last month') },
+      { label: 'DAILY AVERAGE', value: fmtDur(averagePerDay), detail: 'Week to date · includes today', comparison: percentComparison(averagePerDay, previousAveragePerDay, 'vs same days last week') },
+      { label: 'AVERAGE SESSION', value: averageSession ? fmtDur(averageSession) : '—', detail: `${currentWeekEntries.length} ${currentWeekEntries.length === 1 ? 'session' : 'sessions'} this week`, comparison: averageSession ? percentComparison(averageSession, previousAverageSession, 'vs same days last week') : null },
+      { label: 'MOST STUDIED', value: topProject?.name || '—', details: rankingDetails(topProject, topSubject) },
+      { label: 'LEAST STUDIED', value: bottomProject?.name || '—', details: rankingDetails(bottomProject, bottomSubject) },
+    ];
+  }, [entries, now, weekStart]);
   const rangeTopProject = useMemo(() => {
     const totals = new Map();
     rangeEntries.forEach((entry) => {
@@ -1090,100 +1107,6 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const frame = window.requestAnimationFrame(() => { scroller.scrollLeft = scroller.scrollWidth; });
     return () => window.cancelAnimationFrame(frame);
   }, [dateRange, weekBarData.minWidth]);
-
-  const dailyHoursData = useMemo(() => {
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(currentWeekStart.getDate() - getWeekStartOffset(currentWeekStart, weekStart));
-    const periods = [];
-    let firstDate = null;
-    const monthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
-    const quarterStart = (date) => new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1);
-
-    if (dailyHoursGrouping === 'days') {
-      for (let index = 0; index < 7; index++) {
-        const start = new Date(currentWeekStart);
-        start.setDate(start.getDate() + index);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 1);
-        periods.push({ start, end, key: dateKey(start), dateLabel: formatDisplayDate(start, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }), axisLabel: start.toLocaleDateString(undefined, { weekday: 'short' }) });
-      }
-      firstDate = currentWeekStart;
-    } else if (dailyHoursGrouping === 'weeks') {
-      for (let index = 11; index >= 0; index--) {
-        const start = new Date(currentWeekStart);
-        start.setDate(start.getDate() - index * 7);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 7);
-        periods.push({ start, end, key: dateKey(start), dateLabel: `Week of ${formatDisplayDate(start, { month: 'short', day: 'numeric', year: 'numeric' })}`, axisLabel: formatDisplayDate(start, { month: 'short', day: 'numeric' }) });
-      }
-      firstDate = periods[0]?.start || currentWeekStart;
-    } else if (dailyHoursGrouping === 'months') {
-      for (let index = 11; index >= 0; index--) {
-        const start = monthStart(new Date(today.getFullYear(), today.getMonth() - index, 1));
-        const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
-        periods.push({ start, end, key: `${start.getFullYear()}-${start.getMonth()}`, dateLabel: formatDisplayDate(start, { month: 'long', year: 'numeric' }), axisLabel: start.toLocaleDateString(undefined, { month: 'short' }) });
-      }
-      firstDate = periods[0]?.start || monthStart(today);
-    } else if (dailyHoursGrouping === 'quarters') {
-      for (let index = 7; index >= 0; index--) {
-        const start = quarterStart(new Date(today.getFullYear(), today.getMonth() - index * 3, 1));
-        const end = new Date(start.getFullYear(), start.getMonth() + 3, 1);
-        const quarter = Math.floor(start.getMonth() / 3) + 1;
-        periods.push({ start, end, key: `${start.getFullYear()}-Q${quarter}`, dateLabel: `Q${quarter} ${start.getFullYear()}`, axisLabel: `Q${quarter} '${String(start.getFullYear()).slice(-2)}` });
-      }
-      firstDate = periods[0]?.start || quarterStart(today);
-    } else if (dailyHoursGrouping === 'years') {
-      for (let index = 4; index >= 0; index--) {
-        const year = today.getFullYear() - index;
-        const start = new Date(year, 0, 1);
-        periods.push({ start, end: new Date(year + 1, 0, 1), key: `${year}`, dateLabel: `${year}`, axisLabel: `${year}` });
-      }
-      firstDate = periods[0]?.start || new Date(today.getFullYear(), 0, 1);
-    } else {
-      const timestamps = entries.map((entry) => new Date(entry.startedAt).getTime()).filter(Number.isFinite);
-      const earliest = timestamps.length ? new Date(Math.min(...timestamps)) : new Date(today.getFullYear(), 0, 1);
-      earliest.setHours(0, 0, 0, 0);
-      periods.push({ start: earliest, end: new Date(today.getTime() + 86400000), key: 'all-time', dateLabel: 'All recorded time', axisLabel: 'All time' });
-      firstDate = earliest;
-    }
-
-    const totals = new Map(periods.map((period) => [period.key, { seconds: 0, sessions: 0 }]));
-    const periodForDate = (date) => {
-      if (dailyHoursGrouping === 'days') return dateKey(date);
-      if (dailyHoursGrouping === 'weeks') {
-        const start = new Date(date);
-        start.setHours(0, 0, 0, 0);
-        start.setDate(start.getDate() - getWeekStartOffset(start, weekStart));
-        return dateKey(start);
-      }
-      if (dailyHoursGrouping === 'months') return `${date.getFullYear()}-${date.getMonth()}`;
-      if (dailyHoursGrouping === 'quarters') return `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`;
-      if (dailyHoursGrouping === 'years') return `${date.getFullYear()}`;
-      return 'all-time';
-    };
-    entries.forEach((entry) => {
-      if (!(Number(entry.durationSeconds) > 0) || !entry.startedAt) return;
-      const date = new Date(entry.startedAt);
-      if (!Number.isFinite(date.getTime()) || date < firstDate || date > now) return;
-      const total = totals.get(periodForDate(date));
-      if (!total) return;
-      total.seconds += Number(entry.durationSeconds) || 0;
-      total.sessions += 1;
-    });
-
-    const days = periods.map((period) => ({ ...period, ...(totals.get(period.key) || { seconds: 0, sessions: 0 }) }));
-    const titles = {
-      days: 'Current week · daily totals',
-      weeks: 'Last 12 weeks · weekly totals',
-      months: 'Last 12 months · monthly totals',
-      quarters: 'Last 8 quarters · quarterly totals',
-      years: 'Last 5 years · yearly totals',
-      all: 'All recorded study time',
-    };
-    return { days, title: titles[dailyHoursGrouping] };
-  }, [entries, now, weekStart, dailyHoursGrouping]);
 
   const studyVelocityStats = useMemo(() => {
     const totalDaysCount = Math.max(1, rangeDaysCount);
@@ -1654,7 +1577,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               <small>{todaySnapshot.sessionCount} {todaySnapshot.sessionCount === 1 ? 'session' : 'sessions'}{todaySnapshot.targetSeconds ? ` · ${todaySnapshot.remainingSeconds ? `${fmtDur(todaySnapshot.remainingSeconds)} left` : 'goal met'}` : ''}</small>
             </div>
           </div>
-          <div className="db-customize-wrap">
+          <div className="db-customize-wrap" ref={customizerRef}>
             <button type="button" className={`db-customize-trigger${customizerOpen ? ' active' : ''}`} aria-label="Customize dashboard sections" aria-expanded={customizerOpen} onClick={() => setCustomizerOpen((open) => !open)}>
               <SlidersHorizontal size={16} aria-hidden="true" />
             </button>
@@ -1729,14 +1652,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         </DashboardSection>
 
         <DashboardSection section={dashboardSection('daily')} order={dashboardSectionOrder('daily')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-          <DailyHoursGraph
-            days={dailyHoursData.days}
-            title={dailyHoursData.title}
-            hasData={dailyHoursData.days.some((day) => day.seconds > 0)}
-            onStart={() => onNavigate?.('timer')}
-            grouping={dailyHoursGrouping}
-            onGroupingChange={setDailyHoursGrouping}
-          />
+          <SnapshotPanel snapshotMetrics={snapshotMetrics} />
         </DashboardSection>
 
         <DashboardSection section={dashboardSection('focus')} order={dashboardSectionOrder('focus')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>

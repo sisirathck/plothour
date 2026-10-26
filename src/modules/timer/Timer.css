@@ -1153,7 +1153,6 @@
 .timer-study-plan-start:focus-visible { outline: 2px solid #7981cc; outline-offset: 2px; }
 .timer-study-plan-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 7px 11px; padding: 10px 0; border-bottom: 1px solid var(--sd-border-glass); }
 .timer-study-plan-row:last-child { border-bottom: 0; }
-.timer-study-plan-row.is-recommended { padding-left: 10px; border-left: 2px solid #7981cc; background: linear-gradient(90deg, rgba(121, 129, 204, .045), transparent 45%); }
 .timer-study-plan-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--plan-color, var(--sd-coral)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--plan-color, var(--sd-coral)) 14%, transparent); }
 .timer-study-plan-copy { min-width: 0; display: flex; align-items: center; }
 .timer-study-plan-copy strong { display: flex; min-width: 0; align-items: center; gap: 6px; overflow: hidden; color: var(--sd-text-primary); font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
