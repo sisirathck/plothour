@@ -51,8 +51,8 @@ const durationLabel = (seconds) => {
 };
 
 export const TimerEntriesList = ({ entries, setEntries, projects, user, selectedDate = null, hideRangeControls = false, hideProjectColors = false, onOpenCalendar }) => {
-  const [expanded, setExpanded] = useState(false);
-  const isExpanded = hideRangeControls || expanded;
+  const [expanded, setExpanded] = useState(hideRangeControls);
+  const isExpanded = expanded;
   const [range, setRange] = useState('today');
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
@@ -148,25 +148,17 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
     <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}`} aria-label="Completed time entries">
       {/* Panel Header */}
       <div className="entries-panel-heading">
-        {hideRangeControls ? (
-          <div className="entries-collapse-btn is-static" aria-label="Session history, expanded">
+        <button
+          type="button"
+          className="entries-collapse-btn"
+          onClick={() => setExpanded((current) => !current)}
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? 'Collapse session history' : 'Expand session history'}
+        >
             <span className="entries-heading-title">SESSION HISTORY</span>
             <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
-            <ChevronDown size={16} className="entries-heading-chevron is-open" />
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="entries-collapse-btn"
-            onClick={() => setExpanded((current) => !current)}
-            aria-expanded={expanded}
-          >
-            <span className="entries-heading-title">SESSION HISTORY</span>
-            <span className="date-badge">
-              {filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}
-            </span>
-          </button>
-        )}
+            <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />
+        </button>
         {!hideRangeControls && (
           <div className="entries-heading-actions">
             {onOpenCalendar && (

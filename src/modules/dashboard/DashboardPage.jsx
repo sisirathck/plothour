@@ -573,6 +573,7 @@ const dashboardSectionDefaults = [
   { id: 'heatmap', label: 'Time-of-day heatmap', visible: false, pinned: false, collapsed: false },
   { id: 'calendar', label: 'Activity calendar', visible: false, pinned: false, collapsed: false },
 ];
+const demoDashboardSectionDefaults = dashboardSectionDefaults.map((section) => ({ ...section, visible: true }));
 
 const previousDefaultDashboardSections = [
   { id: 'overview', pinned: true },
@@ -584,30 +585,46 @@ const previousDefaultDashboardSections = [
   { id: 'calendar', pinned: false },
 ];
 const previousCurrentDefaultOrder = ['overview', 'daily', 'focus', 'rhythms', 'projects', 'patterns', 'heatmap', 'calendar'];
+const previousCurrentDefaultVisibility = {
+  overview: true,
+  daily: true,
+  focus: false,
+  rhythms: false,
+  projects: true,
+  patterns: false,
+  heatmap: false,
+  calendar: false,
+};
 
-const getSavedDashboardPreferences = (preferenceKey) => {
+const getSavedDashboardPreferences = (preferenceKey, defaults = dashboardSectionDefaults) => {
   try {
     const saved = JSON.parse(localStorage.getItem(preferenceKey) || 'null');
-    if (!Array.isArray(saved)) return dashboardSectionDefaults;
-    const isUntouchedCurrentDefault = saved.length === dashboardSectionDefaults.length && saved.every((item, index) => {
-      const currentDefault = dashboardSectionDefaults[index];
+    if (!Array.isArray(saved)) return defaults;
+    const isUntouchedCurrentDefault = saved.length === defaults.length && saved.every((item, index) => {
+      const currentDefault = defaults[index];
       return item.id === currentDefault.id && item.visible === currentDefault.visible && item.pinned === currentDefault.pinned && item.collapsed === currentDefault.collapsed;
     });
-    if (isUntouchedCurrentDefault) return dashboardSectionDefaults;
-    const isUntouchedPreviousCurrentDefault = saved.length === dashboardSectionDefaults.length && saved.every((item, index) => {
-      const currentDefault = dashboardSectionDefaults.find((section) => section.id === previousCurrentDefaultOrder[index]);
-      return item.id === previousCurrentDefaultOrder[index] && item.visible === currentDefault.visible && item.pinned === currentDefault.pinned && item.collapsed === currentDefault.collapsed;
+    if (isUntouchedCurrentDefault) return defaults;
+    const isUntouchedPreviousStorageDefault = saved.length === dashboardSectionDefaults.length && saved.every((item, index) => {
+      const previous = dashboardSectionDefaults[index];
+      return item.id === previous.id && item.visible === previous.visible && item.pinned === previous.pinned && item.collapsed === previous.collapsed;
     });
-    if (isUntouchedPreviousCurrentDefault) return dashboardSectionDefaults;
+    if (isUntouchedPreviousStorageDefault) return defaults;
+    const isUntouchedPreviousCurrentDefault = saved.length === previousCurrentDefaultOrder.length && saved.every((item, index) => {
+      const previousId = previousCurrentDefaultOrder[index];
+      const previous = dashboardSectionDefaults.find((section) => section.id === previousId);
+      return item.id === previousId && item.visible === previousCurrentDefaultVisibility[previousId] && item.pinned === previous.pinned && item.collapsed === false;
+    });
+    if (isUntouchedPreviousCurrentDefault) return defaults;
     const isUntouchedOldDefault = saved.length === previousDefaultDashboardSections.length && saved.every((item, index) => {
       const previous = previousDefaultDashboardSections[index];
       return item.id === previous.id && item.visible === true && item.pinned === previous.pinned && item.collapsed === false;
     });
-    if (isUntouchedOldDefault) return dashboardSectionDefaults;
+    if (isUntouchedOldDefault) return defaults;
     const current = new Map(saved.map((item) => [item.id, item]));
-    return dashboardSectionDefaults.map((section) => ({ ...section, ...(current.get(section.id) || {}), label: section.label }));
+    return defaults.map((section) => ({ ...section, ...(current.get(section.id) || {}), label: section.label }));
   } catch {
-    return dashboardSectionDefaults;
+    return defaults;
   }
 };
 
@@ -646,6 +663,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
   const [activeNav, setActiveNav] = useState('Dashboard');
   const preferenceKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences` : 'studyduel_demo_dashboard_preferences';
+  const sectionDefaults = user?.id ? dashboardSectionDefaults : demoDashboardSectionDefaults;
   const [dateRange, setDateRange] = useState(() => {
     try {
       const saved = localStorage.getItem(`${preferenceKey}_range_v2`);
@@ -682,7 +700,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, []);
   useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(id); }, []);
   const [dashboardPreferences, setDashboardPreferences] = useState(() => {
-    return getSavedDashboardPreferences(preferenceKey);
+    return getSavedDashboardPreferences(preferenceKey, sectionDefaults);
   });
   useEffect(() => {
     localStorage.setItem(`${preferenceKey}_range_v2`, dateRange);
@@ -1335,7 +1353,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       peakDayLabel: peakCol.val > 0 ? peakCol.day : '—',
       peakDayFmt: peakCol.val > 0 ? fmtDur(peakCol.val) : '0m',
       unit: useYears ? 'years' : useQuarters ? 'quarters' : useWeeks ? 'weeks' : 'days',
-      minWidth: Math.max(520, days.length * (useYears ? 34 : useQuarters ? 32 : useWeeks ? 20 : 14)),
+      minWidth: Math.max(520, days.length * (useYears ? 34 : useQuarters ? 32 : useWeeks ? 20 : 48) + (!useWeeks && !useQuarters && !useYears ? 4 : 0)),
     };
   }, [rangeEntries, rangeSecs, dateWindow, rangeDaysCount, weekStart, dateRange]);
 
@@ -2140,7 +2158,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
 
               {/* Zero Overlap Bar Chart Container with Headroom */}
               {rangeEntries.length === 0 ? <QuietEmptyState message="No study logged in this date range." onStart={() => onNavigate?.('timer')} /> : <div className="db-weekly-chart-scroll" ref={weeklyStudyScrollRef}>
-                <div className="db-weekly-bar-chart-stage" style={{ minWidth: weekBarData.minWidth }}>
+                <div className={`db-weekly-bar-chart-stage${weekBarData.unit === 'days' ? ' is-daily' : ''}`} style={{ minWidth: weekBarData.minWidth }}>
                   {weekBarData.cols.map((col, i) => (
                     <div
                       key={i}

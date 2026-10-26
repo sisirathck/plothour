@@ -63,40 +63,64 @@ const csvCell = (value) => {
 const DATE_FORMAT_GROUPS = [
   {
     label: 'System',
-    options: [{ value: 'system', label: 'System default', sample: '24 October 2026' }],
+    options: [{ value: 'system', label: 'System default' }],
   },
   {
     label: 'Day first',
     options: [
-      { value: 'dmy-slash', label: 'DD/MM/YYYY', sample: '24/10/2026' },
-      { value: 'dmy-slash-short', label: 'DD/MM/YY', sample: '24/10/26' },
-      { value: 'dmy-dash', label: 'DD-MM-YYYY', sample: '24-10-2026' },
-      { value: 'dmy-dash-short', label: 'DD-MM-YY', sample: '24-10-26' },
-      { value: 'dmy-dot', label: 'DD.MM.YYYY', sample: '24.10.2026' },
-      { value: 'dmy-dot-short', label: 'DD.MM.YY', sample: '24.10.26' },
+      { value: 'dmy-slash', label: 'DD/MM/YYYY' },
+      { value: 'dmy-slash-short', label: 'DD/MM/YY' },
+      { value: 'dmy-dash', label: 'DD-MM-YYYY' },
+      { value: 'dmy-dash-short', label: 'DD-MM-YY' },
+      { value: 'dmy-dot', label: 'DD.MM.YYYY' },
+      { value: 'dmy-dot-short', label: 'DD.MM.YY' },
     ],
   },
   {
     label: 'Month first',
     options: [
-      { value: 'mdy-slash', label: 'MM/DD/YYYY', sample: '10/24/2026' },
-      { value: 'mdy-slash-short', label: 'MM/DD/YY', sample: '10/24/26' },
-      { value: 'mdy-dash', label: 'MM-DD-YYYY', sample: '10-24-2026' },
-      { value: 'mdy-dot', label: 'MM.DD.YYYY', sample: '10.24.2026' },
+      { value: 'mdy-slash', label: 'MM/DD/YYYY' },
+      { value: 'mdy-slash-short', label: 'MM/DD/YY' },
+      { value: 'mdy-dash', label: 'MM-DD-YYYY' },
+      { value: 'mdy-dot', label: 'MM.DD.YYYY' },
     ],
   },
   {
     label: 'Year first',
-    options: [{ value: 'year-month-day', label: 'YYYY-MM-DD', sample: '2026-10-24' }],
+    options: [{ value: 'year-month-day', label: 'YYYY-MM-DD' }],
   },
   {
     label: 'Written',
     options: [
-      { value: 'day-month-year', label: 'Day before month', sample: '24 October 2026' },
-      { value: 'month-day-year', label: 'Month before day', sample: 'October 24, 2026' },
+      { value: 'day-month-year', label: 'Day before month' },
+      { value: 'month-day-year', label: 'Month before day' },
     ],
   },
 ];
+
+const formatDateExample = (format, date) => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear());
+  const monthName = new Intl.DateTimeFormat(undefined, { month: 'long' }).format(date);
+  const numeric = {
+    'dmy-slash': `${day}/${month}/${year}`,
+    'dmy-slash-short': `${day}/${month}/${year.slice(-2)}`,
+    'dmy-dash': `${day}-${month}-${year}`,
+    'dmy-dash-short': `${day}-${month}-${year.slice(-2)}`,
+    'dmy-dot': `${day}.${month}.${year}`,
+    'dmy-dot-short': `${day}.${month}.${year.slice(-2)}`,
+    'mdy-slash': `${month}/${day}/${year}`,
+    'mdy-slash-short': `${month}/${day}/${year.slice(-2)}`,
+    'mdy-dash': `${month}-${day}-${year}`,
+    'mdy-dot': `${month}.${day}.${year}`,
+    'year-month-day': `${year}-${month}-${day}`,
+  };
+  if (numeric[format]) return numeric[format];
+  if (format === 'month-day-year') return `${monthName} ${date.getDate()}, ${year}`;
+  if (format === 'day-month-year') return `${date.getDate()} ${monthName} ${year}`;
+  return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+};
 
 const setSettingsCardMenuOpen = (pickerRef, isOpen) => {
   pickerRef.current?.closest('.settings-bento-card')?.classList.toggle('settings-card-menu-open', isOpen);
@@ -106,11 +130,17 @@ const DateFormatPicker = ({ value, onChange }) => {
   const pickerRef = useRef(null);
   const triggerRef = useRef(null);
   const optionRefs = useRef([]);
+  const [today, setToday] = useState(() => new Date());
   const options = useMemo(() => DATE_FORMAT_GROUPS.flatMap((group) => group.options), []);
   const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(selectedIndex);
   const selected = options[selectedIndex];
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setToday(new Date()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -148,7 +178,7 @@ const DateFormatPicker = ({ value, onChange }) => {
       ref={triggerRef}
       type="button"
       className={`settings-date-format-trigger${open ? ' is-open' : ''}`}
-      aria-label={`Date format: ${selected.label}, ${selected.sample}`}
+      aria-label={`Date format: ${selected.label}, ${formatDateExample(selected.value, today)}`}
       aria-haspopup="listbox"
       aria-expanded={open}
       aria-controls="settings-date-format-options"
@@ -161,7 +191,7 @@ const DateFormatPicker = ({ value, onChange }) => {
         }
       }}
     >
-      <span className="settings-date-format-trigger-copy"><strong>{selected.label}</strong><small>{selected.sample}</small></span>
+      <span className="settings-date-format-trigger-copy"><strong>{selected.label}</strong><small>{formatDateExample(selected.value, today)}</small></span>
       <ChevronDown size={16} aria-hidden="true" />
     </button>
     {open && <div className="settings-date-format-menu" id="settings-date-format-options" role="listbox" aria-label="Date format options">
@@ -185,7 +215,7 @@ const DateFormatPicker = ({ value, onChange }) => {
               if (event.key === 'End') { event.preventDefault(); moveActive(options.length - 1); }
             }}
           >
-            <span className="settings-date-format-option-copy"><strong>{option.label}</strong><small>{option.sample}</small></span>
+            <span className="settings-date-format-option-copy"><strong>{option.label}</strong><small>{formatDateExample(option.value, today)}</small></span>
             {isSelected && <Check size={17} aria-hidden="true" />}
           </button>;
         })}

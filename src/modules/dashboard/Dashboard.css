@@ -1265,11 +1265,17 @@
 
 .db-weekly-bar-column {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   height: 100%;
   justify-content: flex-end;
+}
+
+.db-weekly-bar-chart-stage.is-daily .db-weekly-bar-column {
+  flex: 1 0 0;
+  min-width: 36px;
 }
 
 .db-weekly-bar-val-text {
@@ -2226,11 +2232,15 @@
   align-items: center;
   gap: 14px 22px;
   padding: 10px 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--db-card-border) 70%, var(--db-accent-soft));
-  border-bottom-color: var(--db-divider);
+  border: 1px solid var(--db-divider);
   border-radius: 18px;
   background: color-mix(in srgb, var(--db-card-bg) 36%, transparent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.db-apple-root.dark-mode .db-dashboard-controls {
+  border-color: rgba(147, 154, 164, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 /* Weekly-first overview: one clear total, one pace cue, and only useful context. */

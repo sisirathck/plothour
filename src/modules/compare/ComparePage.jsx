@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users, Share2, ChevronUp, Info, Image as ImageIcon } from 'lucide-react';
 import './Compare.css';
 import { formatDisplayDate } from '../../utils/dateFormat';
@@ -205,6 +206,7 @@ export const ComparePage = ({ user, onNavigate }) => {
   const profileId = user?.id ? String(user.id) : demoMode ? 'demo-profile' : '';
   const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : demoMode ? 'studyduel_demo_preferences' : '';
   const rangeKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences_range_v2` : demoMode ? 'studyduel_demo_dashboard_preferences_range_v2' : '';
+  const detailsKey = user?.id ? `studyduel_user_${user.id}_compare_details` : demoMode ? 'studyduel_demo_compare_details' : '';
   const compareSelectionKey = user?.id ? `studyduel_user_${user.id}_compare_profiles` : demoMode ? 'studyduel_demo_compare_profiles_selected' : '';
   const colorStorageKey = user?.id ? `studyduel_user_${user.id}_compare_profile_colors` : demoMode ? 'studyduel_demo_compare_profile_colors' : '';
   const [connections, setConnections] = useState([]); const [selectedIds, setSelectedIds] = useState(() => {
@@ -217,7 +219,7 @@ export const ComparePage = ({ user, onNavigate }) => {
     } catch { return [profileId]; }
   });
   const [manageViewOpen, setManageViewOpen] = useState(false); const [range, setRange] = useState(() => { const saved = rangeKey ? localStorage.getItem(rangeKey) : null; return RANGE_OPTIONS.some((item) => item.id === saved) ? saved : 'week'; });
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(() => readJson(detailsKey, {})?.expanded === true);
   const [shareStatus, setShareStatus] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
   const [shareFields, setShareFields] = useState(['time', 'activeDays', 'sessions']);
@@ -225,6 +227,32 @@ export const ComparePage = ({ user, onNavigate }) => {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [customStart, setCustomStart] = useState(() => dateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1))); const [customEnd, setCustomEnd] = useState(() => dateKey(new Date()));
   const [connectionError, setConnectionError] = useState(''); const [dataError, setDataError] = useState(''); const [loading, setLoading] = useState(false); const [profiles, setProfiles] = useState([]);
+  useEffect(() => {
+    setShowDetails(readJson(detailsKey, {})?.expanded === true);
+  }, [detailsKey]);
+  const toggleDetails = () => {
+    const expanded = !showDetails;
+    setShowDetails(expanded);
+    if (detailsKey) {
+      try { localStorage.setItem(detailsKey, JSON.stringify({ expanded })); } catch {}
+    }
+  };
+  useEffect(() => {
+    if (!shareOpen && !manageViewOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') {
+        setShareOpen(false);
+        setManageViewOpen(false);
+      }
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [shareOpen, manageViewOpen]);
   useEffect(() => { if (rangeKey) { try { localStorage.setItem(rangeKey, range); } catch {} } }, [rangeKey, range]);
   useEffect(() => { if (compareSelectionKey && selectedIds.length) { try { localStorage.setItem(compareSelectionKey, JSON.stringify(selectedIds)); } catch {} } }, [compareSelectionKey, selectedIds]);
   useEffect(() => { if (colorStorageKey) { try { localStorage.setItem(colorStorageKey, JSON.stringify(colorSelections)); } catch {} } }, [colorStorageKey, colorSelections]);
@@ -344,18 +372,18 @@ export const ComparePage = ({ user, onNavigate }) => {
   };
 
   return <main className="compare-page" aria-label="Study comparison" style={{ ...comparePaletteStyle, ...getSiteFontStyle(config, 'compare') }}>
-    <div className="compare-topbar"><div className="compare-range-select" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setRangeOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setRangeOpen(false); }}><div className="compare-control-label"><CalendarDays size={14} /> STUDY PERIOD</div><button className="compare-range-trigger" type="button" aria-haspopup="listbox" aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}><span>{RANGE_OPTIONS.find((option) => option.id === range)?.label || 'This week'}</span><ChevronDown size={15} /></button>{rangeOpen && <div className="compare-range-menu" role="listbox" aria-label="Study period">{RANGE_OPTIONS.map((option) => <button type="button" role="option" aria-selected={range === option.id} className={range === option.id ? 'is-selected' : ''} key={option.id} onClick={() => { setRange(option.id); setRangeOpen(false); }}>{option.label}</button>)}</div>}</div><div className="compare-topbar-actions"><button className="compare-manage-button" type="button" onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails}>{showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />} {showDetails ? 'Hide details' : 'More insights'}</button><button className="compare-manage-button" type="button" onClick={() => setShareOpen(true)} disabled={!profiles.some((profile) => profile.id === profileId)}><Share2 size={15} /> {text('compare', 'shareButton', 'Share recap')}</button><button className="compare-manage-button" type="button" onClick={() => setManageViewOpen(true)}><Settings2 size={15} /> Manage view <span>{selectedConnections.length}</span></button></div></div>
+    <div className="compare-topbar"><div className="compare-range-select" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setRangeOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setRangeOpen(false); }}><div className="compare-control-label"><CalendarDays size={14} /> STUDY PERIOD</div><button className="compare-range-trigger" type="button" aria-haspopup="listbox" aria-expanded={rangeOpen} onClick={() => setRangeOpen((open) => !open)}><span>{RANGE_OPTIONS.find((option) => option.id === range)?.label || 'This week'}</span><ChevronDown size={15} /></button>{rangeOpen && <div className="compare-range-menu" role="listbox" aria-label="Study period">{RANGE_OPTIONS.map((option) => <button type="button" role="option" aria-selected={range === option.id} className={range === option.id ? 'is-selected' : ''} key={option.id} onClick={() => { setRange(option.id); setRangeOpen(false); }}>{option.label}</button>)}</div>}</div><div className="compare-topbar-actions"><button className="compare-manage-button" type="button" onClick={toggleDetails} aria-expanded={showDetails}>{showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />} {showDetails ? 'Hide details' : 'More insights'}</button><button className="compare-manage-button" type="button" onClick={() => setShareOpen(true)} disabled={!profiles.some((profile) => profile.id === profileId)}><Share2 size={15} /> {text('compare', 'shareButton', 'Share recap')}</button><button className="compare-manage-button" type="button" onClick={() => setManageViewOpen(true)}><Settings2 size={15} /> Manage view <span>{selectedConnections.length}</span></button></div></div>
     {shareStatus && <p className="compare-share-status" role="status">{shareStatus}</p>}
     {shareOpen && (() => {
       const you = profiles.find((profile) => profile.id === profileId);
       if (!you) return null;
       const options = [['time', 'Study time', duration(you.current.seconds)], ['activeDays', 'Active days', String(you.current.activeDays)], ['sessions', 'Sessions', String(you.current.sessions)], ['goal', 'Goal progress', you.current.goalProgressPct == null ? 'No goal set' : `${you.current.goalProgressPct}%`], ['bestDay', 'Best day', you.current.bestDay ? duration(you.current.bestDay.seconds) : 'No study days']];
-      return <div className="compare-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}><section className="compare-share-panel" role="dialog" aria-modal="true" aria-labelledby="compare-share-title">
+      return createPortal(<div className="compare-modal-backdrop" style={comparePaletteStyle} onMouseDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}><section className="compare-share-panel" role="dialog" aria-modal="true" aria-labelledby="compare-share-title">
         <div className="compare-share-heading"><div><span className="compare-eyebrow">STUDY RECAP</span><h2 id="compare-share-title">Choose what to share</h2><p>Only your own summary is included. Preview it before sharing.</p></div><button type="button" aria-label="Close share preview" onClick={() => setShareOpen(false)}>×</button></div>
         <div className="compare-share-options">{options.map(([id, label, value]) => <label key={id}><input type="checkbox" checked={shareFields.includes(id)} onChange={(event) => setShareFields((current) => event.target.checked ? [...current, id] : current.filter((field) => field !== id))} /><span>{label}</span><strong>{value}</strong></label>)}</div>
         <article className="compare-share-preview"><span>{you.name} · {periodLabel}</span>{options.filter(([id]) => shareFields.includes(id)).map(([id, label, value]) => <div key={id}><span>{label}</span><strong>{value}</strong></div>)}</article>
         <div className="compare-share-actions"><button className="compare-manage-button" type="button" onClick={() => setShareOpen(false)}>Cancel</button><button className="compare-manage-button" type="button" disabled={!shareFields.length} onClick={shareRecap}><Share2 size={15} /> {text('compare', 'shareButton', 'Share recap')}</button><button className="compare-manage-button compare-share-image-button" type="button" disabled={!shareFields.length} onClick={shareRecapImage}><ImageIcon size={15} /> Share as image</button></div>
-      </section></div>;
+      </section></div>, document.body);
     })()}
     {(() => {
       const you = profiles.find((profile) => profile.id === profileId);
@@ -368,13 +396,13 @@ export const ComparePage = ({ user, onNavigate }) => {
     })()}
     {range === 'custom' && <div className="compare-custom-range"><label>From<input type="date" value={customStart} max={customEnd} onChange={(e) => setCustomStart(e.target.value)} /></label><label>To<input type="date" value={customEnd} min={customStart} max={dateKey(new Date())} onChange={(e) => setCustomEnd(e.target.value)} /></label></div>}
 
-    {manageViewOpen && <div className="compare-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setManageViewOpen(false); }}><section className="compare-manage-panel" role="dialog" aria-modal="true" aria-labelledby="compare-manage-heading"><div className="compare-manage-panel-heading"><div><span className="compare-eyebrow">COMPARE VIEW</span><h2 id="compare-manage-heading">Choose profiles</h2><p>Select the connected people to include in your comparison.</p></div><button type="button" aria-label="Close manage view" onClick={() => setManageViewOpen(false)}>×</button></div>
+    {manageViewOpen && createPortal(<div className="compare-modal-backdrop" style={comparePaletteStyle} onMouseDown={(e) => { if (e.target === e.currentTarget) setManageViewOpen(false); }}><section className="compare-manage-panel" role="dialog" aria-modal="true" aria-labelledby="compare-manage-heading"><div className="compare-manage-panel-heading"><div><span className="compare-eyebrow">COMPARE VIEW</span><h2 id="compare-manage-heading">Choose profiles</h2><p>Select the connected people to include in your comparison.</p></div><button type="button" aria-label="Close manage view" onClick={() => setManageViewOpen(false)}>×</button></div>
       {!user?.id && !demoMode ? <div className="compare-empty compact"><strong>Sign in to compare account data</strong><span>Comparison uses saved account sessions and connected profiles. Demo history is not used.</span></div> : connectionError ? <p className="compare-inline-error" role="alert">{connectionError}</p> : <div className="compare-manage-list">
         <div className="compare-manage-person is-you"><span className="compare-manage-name"><i className="compare-person-dot" style={{ '--profile-color': profileColor(profileId) }} /><span><strong>{demoMode ? readJson('studyduel_demo_preferences', {}).displayName || 'Alex Morgan' : user.display_name || user.email?.split('@')[0] || 'You'}</strong><small>{demoMode ? 'Demo account · always included' : 'Your account · always included'}</small></span></span><ColorChooser id={profileId} selected={colorSlot(profileId)} onSelect={selectProfileColor} /><button type="button" className="compare-profile-toggle" role="checkbox" aria-label="Your account is always included" aria-checked="true" disabled><Check size={14} strokeWidth={3} aria-hidden="true" /></button></div>
         {connections.map((connection) => <div className="compare-manage-person" key={connection.id}><span className="compare-manage-name"><i className="compare-person-dot" style={{ '--profile-color': profileColor(connection.id) }} /><span><strong>{connection.name}</strong><small>{connection.email || 'Study partner'}</small></span></span><ColorChooser id={connection.id} selected={colorSlot(connection.id)} onSelect={selectProfileColor} /><button type="button" className="compare-profile-toggle" role="checkbox" aria-label={`Include ${connection.name} in comparison`} aria-checked={selectedIds.includes(connection.id)} onClick={() => toggle(connection.id)}><Check size={14} strokeWidth={3} aria-hidden="true" /></button></div>)}
         {!connections.length && <div className="compare-empty compact"><strong>No connected profiles yet</strong><span>Connect study partners in Settings to make them available here.</span>{!demoMode && <button type="button" className="compare-manage-button" onClick={() => { setManageViewOpen(false); try { localStorage.setItem('studyduel_settings_tab', 'connections'); } catch {} onNavigate?.('settings'); }}>Manage connections</button>}</div>}
       </div>}
-      <div className="compare-manage-panel-footer"><span>{selectedConnections.length} {demoMode ? 'sample ' : ''}connected {selectedConnections.length === 1 ? 'profile' : 'profiles'} selected</span><button type="button" onClick={() => setManageViewOpen(false)}>Done</button></div></section></div>}
+      <div className="compare-manage-panel-footer"><span>{selectedConnections.length} {demoMode ? 'sample ' : ''}connected {selectedConnections.length === 1 ? 'profile' : 'profiles'} selected</span><button type="button" onClick={() => setManageViewOpen(false)}>Done</button></div></section></div>, document.body)}
 
     {(connectionError || dataError) && <p className="compare-inline-error" role="alert">{connectionError || dataError}</p>}
     <section className="compare-section-card" aria-labelledby="standings-title"><Heading eyebrow={text('compare', 'periodLabel', 'PERIOD STANDINGS')} title={text('compare', 'periodTitle', 'Period standings')} detail={`${profiles.length} ${profiles.length === 1 ? 'profile' : 'profiles'} · ${periodDescription} · study time`} loading={loading} />
