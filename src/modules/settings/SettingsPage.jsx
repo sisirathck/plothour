@@ -870,6 +870,7 @@ export const SettingsPage = ({ onBack, user }) => {
           const result = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(result.error || 'Could not remove this study partner.');
           setFriends((prev) => prev.filter((friend) => friend.id !== id));
+          window.dispatchEvent(new CustomEvent('studyduel:connection-removed', { detail: { id: String(id) } }));
         })
         .catch((error) => setFriendNotice({ type: 'error', message: error.message }));
       return;
@@ -878,7 +879,12 @@ export const SettingsPage = ({ onBack, user }) => {
     setFriends(updated);
     try {
       localStorage.setItem(friendsKey, JSON.stringify(updated));
+      const compareProfiles = readJson('studyduel_demo_compare_profiles', []).filter((profile) => String(profile.id) !== String(id));
+      const selectedProfiles = readJson('studyduel_demo_compare_profiles_selected', []).filter((profileId) => String(profileId) !== String(id));
+      localStorage.setItem('studyduel_demo_compare_profiles', JSON.stringify(compareProfiles));
+      localStorage.setItem('studyduel_demo_compare_profiles_selected', JSON.stringify(selectedProfiles));
     } catch {}
+    window.dispatchEvent(new CustomEvent('studyduel:connection-removed', { detail: { id: String(id) } }));
   };
 
   const confirmRemoveFriend = () => {

@@ -228,6 +228,22 @@ export const ComparePage = ({ user, onNavigate }) => {
   const [customStart, setCustomStart] = useState(() => dateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1))); const [customEnd, setCustomEnd] = useState(() => dateKey(new Date()));
   const [connectionError, setConnectionError] = useState(''); const [dataError, setDataError] = useState(''); const [loading, setLoading] = useState(false); const [profiles, setProfiles] = useState([]);
   useEffect(() => {
+    const removeDisconnectedProfile = (event) => {
+      const disconnectedId = String(event.detail?.id || '');
+      if (!disconnectedId) return;
+      setConnections((current) => current.filter((connection) => String(connection.id) !== disconnectedId));
+      setSelectedIds((current) => current.filter((id) => String(id) !== disconnectedId));
+      setProfiles((current) => current.filter((profile) => String(profile.id) !== disconnectedId));
+      setColorSelections((current) => {
+        const next = { ...current };
+        delete next[disconnectedId];
+        return next;
+      });
+    };
+    window.addEventListener('studyduel:connection-removed', removeDisconnectedProfile);
+    return () => window.removeEventListener('studyduel:connection-removed', removeDisconnectedProfile);
+  }, []);
+  useEffect(() => {
     setShowDetails(readJson(detailsKey, {})?.expanded === true);
   }, [detailsKey]);
   const toggleDetails = () => {
@@ -267,8 +283,40 @@ export const ComparePage = ({ user, onNavigate }) => {
     }
     if (!profileId) { setConnections([]); setSelectedIds([]); return undefined; }
     let cancelled = false;
-    fetch('/api/connections', { credentials: 'same-origin' }).then(async (r) => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Could not load study partners.'); if (!cancelled) { const next = data.connections || []; setConnections(next); setSelectedIds((current) => [...new Set([profileId, ...current.filter((id) => next.some((c) => c.id === id))])]); setColorSelections((current) => ({ ...current, [profileId]: Number.isInteger(current[profileId]) ? current[profileId] : 0, ...Object.fromEntries(next.map((friend, index) => [friend.id, Number.isInteger(current[friend.id]) ? current[friend.id] : (index + 1) % 12])) })); } }).catch((e) => { if (!cancelled) setConnectionError(e.message); });
+    fetch('/api/connections', { credentials: 'same-origin', cache: 'no-store' }).then(async (r) => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Could not load study partners.'); if (!cancelled) { const next = data.connections || []; const connectedIds = new Set(next.map((connection) => String(connection.id))); setConnections(next); setSelectedIds((current) => [...new Set([profileId, ...current.filter((id) => connectedIds.has(String(id)))])]); setProfiles((current) => current.filter((profile) => String(profile.id) === profileId || connectedIds.has(String(profile.id)))); setColorSelections((current) => ({ ...current, [profileId]: Number.isInteger(current[profileId]) ? current[profileId] : 0, ...Object.fromEntries(next.map((friend, index) => [friend.id, Number.isInteger(current[friend.id]) ? current[friend.id] : (index + 1) % 12])) })); } }).catch((e) => { if (!cancelled) setConnectionError(e.message); });
     return () => { cancelled = true; };
+  }, [profileId, demoMode]);
+  useEffect(() => {
+    if (!profileId) return undefined;
+    let cancelled = false;
+    const syncConnections = async () => {
+      try {
+        const next = demoMode
+          ? readJson('studyduel_demo_friends', [])
+          : await fetch('/api/connections', { credentials: 'same-origin', cache: 'no-store' }).then(async (response) => {
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Could not load study partners.');
+            return data.connections || [];
+          });
+        if (cancelled) return;
+        const connectedIds = new Set(next.map((connection) => String(connection.id)));
+        setConnections(next);
+        setSelectedIds((current) => [...new Set([profileId, ...current.filter((id) => connectedIds.has(String(id)))])]);
+        setProfiles((current) => current.filter((profile) => String(profile.id) === profileId || connectedIds.has(String(profile.id))));
+      } catch (error) {
+        if (!cancelled) setConnectionError(error.message);
+      }
+    };
+    const handleStorage = (event) => {
+      if (demoMode && event.key === 'studyduel_demo_friends') syncConnections();
+    };
+    window.addEventListener('focus', syncConnections);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', syncConnections);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [profileId, demoMode]);
   const weekStartPref = preferencesKey ? (readJson(preferencesKey, {})?.weekStart || 'monday') : 'monday';
   const weekStartsOn = Number.isInteger(user?.week_starts_on) ? user.week_starts_on : Math.max(0, WEEKDAYS.indexOf(weekStartPref));
@@ -283,8 +331,8 @@ export const ComparePage = ({ user, onNavigate }) => {
       const ownerEntries = readJson('studyduel_demo_time_entries', []);
       const ownerPreferences = readJson('studyduel_demo_preferences', {});
       const demoProjects = readJson('studyduel_demo_projects', []);
-      const connectedIds = new Set(connections.map((connection) => connection.id));
-      const sources = [{ id: 'demo-profile', name: ownerPreferences.displayName || 'You', entries: ownerEntries }, ...readJson('studyduel_demo_compare_profiles', []).filter((source) => connectedIds.has(source.id))];
+      const connectedIds = new Set(connections.map((connection) => String(connection.id)));
+      const sources = [{ id: 'demo-profile', name: ownerPreferences.displayName || 'You', entries: ownerEntries }, ...readJson('studyduel_demo_compare_profiles', []).filter((source) => connectedIds.has(String(source.id)))];
       const days = Math.max(1, Math.floor((new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate()) - new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate())) / 86400000) + 1);
       setProfiles(sources.filter((source) => selectedIds.includes(source.id)).map((source) => summarizeLocalProfile(source, period.start, period.end, previous, range, days, demoProjects)));
       setLoading(false); setDataError('');
@@ -293,7 +341,7 @@ export const ComparePage = ({ user, onNavigate }) => {
     let cancelled = false; setLoading(true); setDataError('');
     const days = Math.max(1, Math.floor((new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate()) - new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate())) / 86400000) + 1);
     const params = new URLSearchParams({ profileIds: selectedIds.join(','), from: String(period.start.getTime()), to: String(period.end.getTime()), previousFrom: String(previous.start.getTime()), previousTo: String(previous.end.getTime()), calendarDays: String(days), rangeType: range, weekStartsOn: String(weekStartsOn), recentFrom: String(recentHeadToHeadStart.getTime()), recentTo: String(recentHeadToHeadEnd.getTime()) });
-    fetch(`/api/connections/comparison?${params}`, { credentials: 'same-origin' }).then(async (r) => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Could not load comparison data.'); if (!cancelled) setProfiles(data.profiles || []); }).catch((e) => { if (!cancelled) { setProfiles([]); setDataError(e.message); } }).finally(() => { if (!cancelled) setLoading(false); });
+    fetch(`/api/connections/comparison?${params}`, { credentials: 'same-origin', cache: 'no-store' }).then(async (r) => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Could not load comparison data.'); if (!cancelled) setProfiles(data.profiles || []); }).catch((e) => { if (!cancelled) { setProfiles([]); setDataError(e.message); } }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [profileId, demoMode, connections, selectedIds, period.start.getTime(), period.end.getTime(), previous.start.getTime(), previous.end.getTime(), range, weekStartsOn, recentHeadToHeadStart.getTime(), recentHeadToHeadEnd.getTime()]);
   const ordered = useMemo(() => [...profiles].sort((a, b) => b.current.seconds - a.current.seconds || a.name.localeCompare(b.name)), [profiles]);

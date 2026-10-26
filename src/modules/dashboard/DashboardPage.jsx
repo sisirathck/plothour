@@ -106,6 +106,11 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
   const weekDaysElapsed = weekMetric?.weekDays?.filter((d) => d.isPastOrToday).length || 1;
   const weekDaysTotal = 7;
   const weekDaysRemaining = Math.max(0, weekDaysTotal - weekDaysElapsed);
+  const goalProgressRows = weekMetric?.goalProgressRows || [];
+  const goalsBehindCount = goalProgressRows.filter((goal) => goal.status === 'behind').length;
+  const goalsOnTrackCount = goalProgressRows.filter((goal) => goal.status === 'on-track').length;
+  const goalsMetCount = goalProgressRows.filter((goal) => goal.status === 'met').length;
+  const goalsUpcomingCount = goalProgressRows.filter((goal) => goal.status === 'upcoming').length;
 
   // Insight computation
   let insightText = null;
@@ -152,8 +157,6 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
         {snapshotMetrics.map((metric) => {
           const isWeek = metric.id === 'time-week';
           const isMonth = metric.id === 'time-month';
-          const isMost = metric.id === 'most-studied';
-          const isLeast = metric.id === 'least-studied';
 
           // Compact comparison: only show percentage number, no label text
           let compactDelta = null;
@@ -162,6 +165,11 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
             if (raw) {
               compactDelta = { value: raw[1] + '%', tone: metric.comparison.tone };
             }
+          }
+          let sessionDelta = null;
+          if (metric.sessionComparison && metric.sessionComparison.tone !== 'neutral') {
+            const raw = metric.sessionComparison.label.match(/([+-]?\d+)%/);
+            if (raw) sessionDelta = { value: `${raw[1]}%`, tone: metric.sessionComparison.tone };
           }
 
           return (
@@ -204,33 +212,57 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
                 </div>
               )}
 
-              {(metric.id === 'daily-avg' || metric.id === 'avg-session') && (
+              {metric.id === 'daily-avg' && (
                 <small className="db-snap-detail">{metric.detail}</small>
               )}
 
-              {(isMost || isLeast) && (
-                <div className="db-snap-focus">
-                  <div className="db-snap-bar">
-                    <div
-                      className={`db-snap-bar-fill${isMost ? ' is-primary' : ' is-secondary'}`}
-                      style={{ width: `${Math.max(4, metric.sharePct || (metric.isSingleProject ? 100 : 0))}%` }}
-                    />
+              {metric.id === 'daily-avg' && (
+                <div className="db-snap-session-summary">
+                  <div className="db-snap-session-heading">
+                    <span className="db-snap-session-label">AVERAGE SESSION</span>
+                    <strong>{metric.averageSessionValue}</strong>
+                    {metric.averageSessionTier && <span className="db-snap-badge">{metric.averageSessionTier}</span>}
+                    {sessionDelta && (
+                      <span className={`db-snap-delta db-snap-delta--${sessionDelta.tone}`}>
+                        {sessionDelta.tone === 'positive' ? '↑' : '↓'} {sessionDelta.value}
+                      </span>
+                    )}
                   </div>
-                  <div className="db-snap-kv">
-                    <span className="db-snap-kv-key">Project</span>
-                    <span className="db-snap-kv-val">{metric.projectName || '—'} · {metric.durationLabel || '—'}</span>
-                  </div>
-                  {metric.subName && (
-                    <div className="db-snap-kv">
-                      <span className="db-snap-kv-key">Subject</span>
-                      <span className="db-snap-kv-val">{metric.subName} · {metric.subprojectDurationLabel || '—'}</span>
-                    </div>
-                  )}
+                  <small>{metric.sessionCount} {metric.sessionCount === 1 ? 'session' : 'sessions'} this week</small>
                 </div>
               )}
             </article>
           );
         })}
+        <article className="db-snap-card db-snap-goal-card">
+          <div className="db-snap-card-top">
+            <span className="db-snap-label">PROJECT GOAL PACE</span>
+            <span className={`db-snap-goal-summary${goalsBehindCount ? ' is-behind' : ''}`}>
+              {goalProgressRows.length ? [
+                goalsBehindCount ? `${goalsBehindCount} behind` : '',
+                goalsOnTrackCount ? `${goalsOnTrackCount} on pace` : '',
+                goalsMetCount ? `${goalsMetCount} met` : '',
+                goalsUpcomingCount ? `${goalsUpcomingCount} upcoming` : '',
+              ].filter(Boolean).join(' · ') : 'No recurring goals set'}
+            </span>
+          </div>
+          {goalProgressRows.length ? (
+            <div className="db-snap-goal-list">
+              {goalProgressRows.map((goal) => (
+                <div className={`db-snap-goal-row is-${goal.status}`} key={goal.id}>
+                  <div className="db-snap-goal-row-heading">
+                    <strong title={`${goal.projectName} · ${goal.subjectName}`}>{goal.projectName} <span>·</span> {goal.subjectName}</strong>
+                    <span className={`db-snap-goal-status is-${goal.status}`}>{goal.statusLabel}</span>
+                  </div>
+                  <div className="db-snap-goal-track"><span style={{ width: `${goal.progress}%` }} /></div>
+                  <div className="db-snap-goal-row-meta"><span>{fmtDur(goal.loggedSeconds)} of {fmtDur(goal.targetSeconds)} this week</span><span>{goal.statusDetail}</span></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="db-snap-goal-empty">Add daily or weekly goals to subprojects in Manage to see whether each plan is on pace.</p>
+          )}
+        </article>
       </div>
     </div>
   );
@@ -962,30 +994,6 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     const averageSession = currentWeekEntries.length ? weekSeconds / currentWeekEntries.length : 0;
     const previousAverageSession = previousWeekEntries.length ? previousWeekSeconds / previousWeekEntries.length : 0;
 
-    const projectTotals = new Map();
-    const subjectTotals = new Map();
-    currentWeekEntries.forEach((entry) => {
-      const seconds = Number(entry.durationSeconds) || 0;
-      const projectName = entry.projectName || 'General Study';
-      projectTotals.set(projectName, (projectTotals.get(projectName) || 0) + seconds);
-      const subjectName = entry.subjectName || 'No subproject';
-      subjectTotals.set(subjectName, (subjectTotals.get(subjectName) || 0) + seconds);
-    });
-    const sortTotals = (totals, order) => Array.from(totals, ([name, seconds]) => ({ name, seconds }))
-      .sort((a, b) => order * (a.seconds - b.seconds) || a.name.localeCompare(b.name));
-    const topProject = sortTotals(projectTotals, -1)[0];
-    const bottomProject = sortTotals(projectTotals, 1)[0];
-    const topSubject = sortTotals(subjectTotals, -1)[0];
-    const bottomSubject = sortTotals(subjectTotals, 1)[0];
-    const rankingDetails = (project, subject) => project ? [
-      { label: 'Project', value: `${project.name} · ${fmtDur(project.seconds)}` },
-      { label: 'Subproject', value: subject ? `${subject.name} · ${fmtDur(subject.seconds)}` : '—' },
-    ] : [{ label: 'Study', value: 'No study logged this week' }];
-
-    const isSingleProject = projectTotals.size <= 1;
-    const topProjectShare = weekSeconds > 0 && topProject ? Math.min(100, Math.round((topProject.seconds / weekSeconds) * 100)) : 0;
-    const bottomProjectShare = weekSeconds > 0 && bottomProject ? Math.min(100, Math.round((bottomProject.seconds / weekSeconds) * 100)) : 0;
-
     const weekDays = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStartDate);
       d.setDate(d.getDate() + i);
@@ -1007,6 +1015,46 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         isPastOrToday,
       };
     });
+    const goalProgressRows = projects.filter((project) => !project.archived).flatMap((project) => (project.subjects || []).map((subject) => {
+      const goals = subject.goals || {};
+      const selectedDays = Array.isArray(subject.studyDays)
+        ? subject.studyDays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+        : [];
+      const plannedDays = selectedDays.length ? selectedDays : [0, 1, 2, 3, 4, 5, 6];
+      const weeklyHours = Number(goals.weekly) || (Number(goals.daily) * plannedDays.length) || (Number(goals.monthly) / 4.35) || 0;
+      if (weeklyHours <= 0) return null;
+      const targetSeconds = weeklyHours * 3600;
+      const elapsedPlannedDays = weekDays.filter((day) => day.isPastOrToday && plannedDays.includes(new Date(`${day.key}T12:00:00`).getDay())).length;
+      const expectedSeconds = targetSeconds * elapsedPlannedDays / plannedDays.length;
+      const loggedSeconds = currentWeekEntries.filter((entry) => {
+        const projectMatches = entry.projectId
+          ? String(entry.projectId) === String(project.id)
+          : entry.projectName === project.name;
+        const subjectMatches = entry.subjectId
+          ? String(entry.subjectId) === String(subject.id)
+          : entry.subjectName === subject.name;
+        return projectMatches && subjectMatches;
+      }).reduce((total, entry) => total + (Number(entry.durationSeconds) || 0), 0);
+      const status = loggedSeconds >= targetSeconds ? 'met' : elapsedPlannedDays === 0 ? 'upcoming' : loggedSeconds >= expectedSeconds ? 'on-track' : 'behind';
+      const statusDetail = status === 'met'
+        ? 'Weekly goal met'
+        : status === 'upcoming'
+          ? 'Next planned day ahead'
+          : status === 'behind'
+            ? `${fmtDur(expectedSeconds - loggedSeconds)} behind pace`
+            : 'On pace';
+      return {
+        id: `${project.id}-${subject.id}`,
+        projectName: project.name,
+        subjectName: subject.name,
+        loggedSeconds,
+        targetSeconds,
+        progress: Math.min(100, Math.round((loggedSeconds / targetSeconds) * 100)),
+        status,
+        statusLabel: status === 'met' ? 'Goal met' : status === 'upcoming' ? 'Upcoming' : status === 'behind' ? 'Behind' : 'On pace',
+        statusDetail,
+      };
+    })).filter(Boolean).sort((a, b) => Number(b.status === 'behind') - Number(a.status === 'behind') || a.progress - b.progress || a.projectName.localeCompare(b.projectName));
     const activeDaysCount = weekDays.filter((d) => d.active).length;
 
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -1032,6 +1080,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         weekDays,
         activeDaysCount,
         weeklyPlannedSeconds,
+        goalProgressRows,
         detail: weeklyPlannedSeconds > 0
           ? `${fmtDur(weekSeconds)} of ${fmtDur(weeklyPlannedSeconds)} goal (${Math.round((weekSeconds / weeklyPlannedSeconds) * 100)}%)`
           : `${activeDaysCount} of 7 days active this week`,
@@ -1057,53 +1106,12 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         detail: 'Week to date · includes today',
         subDetail: `${elapsedDays} ${elapsedDays === 1 ? 'day' : 'days'} elapsed`,
         comparison: percentComparison(averagePerDay, previousAveragePerDay, 'vs same days last week'),
+        averageSessionValue: averageSession ? fmtDur(averageSession) : '—',
+        averageSessionTier: averageSession > 0 ? sessionTierLabel : null,
+        sessionCount: currentWeekEntries.length,
+        sessionComparison: averageSession ? percentComparison(averageSession, previousAverageSession, 'vs same days last week') : null,
         iconType: 'activity',
         accent: 'amber',
-      },
-      {
-        id: 'avg-session',
-        label: 'AVERAGE SESSION',
-        value: averageSession ? fmtDur(averageSession) : '—',
-        detail: `${currentWeekEntries.length} ${currentWeekEntries.length === 1 ? 'session' : 'sessions'} this week`,
-        subDetail: averageSession > 0 ? sessionTierLabel : null,
-        comparison: averageSession ? percentComparison(averageSession, previousAverageSession, 'vs same days last week') : null,
-        iconType: 'timer',
-        accent: 'teal',
-      },
-      {
-        id: 'most-studied',
-        label: 'MOST STUDIED',
-        value: topProject?.name || '—',
-        subName: topSubject?.name && topSubject.name !== 'No subproject' ? topSubject.name : null,
-        sharePct: topProjectShare,
-        projectName: topProject?.name,
-        projectSeconds: topProject?.seconds || 0,
-        durationLabel: topProject ? fmtDur(topProject.seconds) : null,
-        subjectSeconds: topSubject?.seconds || 0,
-        subprojectDurationLabel: topSubject && topSubject.seconds ? fmtDur(topSubject.seconds) : null,
-        details: rankingDetails(topProject, topSubject),
-        detail: topProject ? `${topProject.name} · ${fmtDur(topProject.seconds)}` : null,
-        iconType: 'trophy',
-        accent: 'gold',
-      },
-      {
-        id: 'least-studied',
-        label: 'LEAST STUDIED',
-        value: bottomProject?.name || '—',
-        subName: bottomSubject?.name && bottomSubject.name !== 'No subproject' ? bottomSubject.name : null,
-        isSingleProject,
-        sharePct: bottomProjectShare,
-        projectName: bottomProject?.name,
-        projectSeconds: bottomProject?.seconds || 0,
-        durationLabel: bottomProject ? fmtDur(bottomProject.seconds) : null,
-        subjectSeconds: bottomSubject?.seconds || 0,
-        subprojectDurationLabel: bottomSubject && bottomSubject.seconds ? fmtDur(bottomSubject.seconds) : null,
-        details: rankingDetails(bottomProject, bottomSubject),
-        detail: isSingleProject
-          ? (topProject ? `Solo focus · 100% volume in ${topProject.name}` : 'No study logged this week')
-          : (bottomProject ? `${bottomProject.name} · ${fmtDur(bottomProject.seconds)}` : null),
-        iconType: 'compass',
-        accent: 'rose',
       },
     ];
   }, [entries, now, weekStart, projects]);

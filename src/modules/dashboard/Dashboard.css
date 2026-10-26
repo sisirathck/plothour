@@ -2511,6 +2511,23 @@
   transition: border-color 160ms ease;
 }
 
+.db-snap-goal-card { grid-column: 1 / -1; min-height: 0; }
+.db-snap-goal-summary { color: var(--db-label); font-size: 10px; font-weight: 650; }
+.db-snap-goal-summary.is-behind { color: var(--db-warn, #e5a277); }
+.db-snap-goal-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 255px), 1fr)); gap: 8px; }
+.db-snap-goal-row { min-width: 0; padding: 9px 10px; border: 1px solid var(--db-subcard-border, rgba(120,125,165,.13)); border-radius: 10px; background: color-mix(in srgb, var(--db-subcard-bg, rgba(255,255,255,.035)) 72%, transparent); }
+.db-snap-goal-row-heading,.db-snap-goal-row-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.db-snap-goal-row-heading strong { overflow: hidden; color: var(--db-text); font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.db-snap-goal-row-heading strong span { color: var(--db-label); font-weight: 450; }
+.db-snap-goal-status { flex: 0 0 auto; color: var(--db-label); font-size: 9px; font-weight: 700; }
+.db-snap-goal-status.is-behind { color: var(--db-warn, #e5a277); }
+.db-snap-goal-status.is-met,.db-snap-goal-status.is-on-track { color: var(--db-accent, #70c7b0); }
+.db-snap-goal-track { height: 5px; margin: 7px 0 5px; overflow: hidden; border-radius: 999px; background: var(--db-track-bg, rgba(120,125,165,.13)); }
+.db-snap-goal-track > span { display: block; height: 100%; border-radius: inherit; background: var(--db-accent, #70c7b0); transition: width 240ms ease; }
+.db-snap-goal-row.is-behind .db-snap-goal-track > span { background: var(--db-warn, #e5a277); }
+.db-snap-goal-row-meta { color: var(--db-label); font-size: 9px; }
+.db-snap-goal-empty { margin: 0; color: var(--db-label); font-size: 11px; }
+
 .db-snap-card:hover {
   border-color: rgba(120,125,165,0.24);
 }
@@ -2594,6 +2611,42 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.db-snap-session-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--db-subcard-border, rgba(120,125,165,0.13));
+}
+.db-snap-session-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 7px;
+  min-width: 0;
+}
+.db-snap-session-label {
+  color: var(--db-label);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+.db-snap-session-heading strong {
+  color: var(--db-text);
+  font-size: 13px;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+}
+.db-snap-session-heading .db-snap-badge { font-size: 9px; }
+.db-snap-session-heading .db-snap-delta { margin-left: auto; font-size: 9px; }
+.db-snap-session-summary > small {
+  color: var(--db-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+.db-apple-root.dark-mode .db-snap-session-summary { border-top-color: rgba(255,255,255,0.08); }
 
 /* Weekday activity strip */
 .db-snap-days {

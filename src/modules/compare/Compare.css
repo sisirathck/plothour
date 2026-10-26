@@ -254,8 +254,8 @@
 .compare-manage-panel-heading { display:flex; justify-content:space-between; gap:18px; padding:26px 28px 22px; border-bottom:1px solid var(--compare-line); }
 .compare-manage-panel-heading h2 { margin:7px 0 6px; font-size:24px; letter-spacing:-.035em; }
 .compare-manage-panel-heading p { margin:0; color:var(--compare-muted); font-size:13px; }
-.compare-manage-panel-heading > button { display:grid; width:38px; height:38px; flex:0 0 38px; place-items:center; border:1px solid var(--compare-line); border-radius:50%; background:var(--sd-bg-subtle); color:var(--compare-text); font-size:24px; cursor:pointer; transition:transform .16s ease,background .16s ease,border-color .16s ease; }
-.compare-manage-panel-heading > button:hover { transform:rotate(90deg); border-color:var(--compare-accent); background:var(--compare-accent-soft); }
+.compare-manage-panel-heading > button { display:grid; width:38px; height:38px; flex:0 0 38px; place-items:center; border:1px solid var(--compare-line); border-radius:50%; background:var(--sd-bg-subtle); color:var(--compare-text); font-size:24px; cursor:pointer; transition:transform .16s ease,color .16s ease,background .16s ease,border-color .16s ease; }
+.compare-manage-panel-heading > button:hover { transform:scale(1.04); border-color:var(--compare-accent); background:var(--compare-accent-soft); color:var(--compare-accent); }
 .compare-manage-list { display:flex; flex-direction:column; gap:10px; overflow:auto; padding:20px 28px; }
 .compare-manage-person { display:flex; min-height:68px; align-items:center; justify-content:space-between; gap:14px; padding:12px 16px; border:1px solid rgba(128,134,212,.17); border-radius:17px; background:rgba(255,255,255,.84); box-shadow:0 5px 18px rgba(71,69,132,.07),inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer; transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease; }
 .compare-manage-person.is-you { background:linear-gradient(110deg,rgba(255,255,255,.93),rgba(244,243,255,.9)); }
@@ -373,7 +373,9 @@
 .compare-share-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding-bottom:15px; border-bottom:1px solid var(--compare-line); }
 .compare-share-heading h2 { margin:6px 0 4px; font-size:20px; letter-spacing:-.03em; }
 .compare-share-heading p { margin:0; color:var(--compare-muted); font-size:11px; }
-.compare-share-heading > button { display:grid; width:34px; height:34px; place-items:center; border:1px solid var(--compare-line); border-radius:50%; background:var(--sd-bg-subtle); color:var(--compare-text); font-size:20px; cursor:pointer; }
+.compare-share-heading > button { display:grid; width:34px; height:34px; place-items:center; border:1px solid var(--compare-line); border-radius:50%; background:var(--sd-bg-subtle); color:var(--compare-text); font-size:20px; cursor:pointer; transition:transform .16s ease,color .16s ease,background .16s ease,border-color .16s ease; }
+.compare-share-heading > button:hover { transform:scale(1.04); border-color:var(--compare-accent); background:var(--compare-accent-soft); color:var(--compare-accent); }
+.compare-manage-panel-heading > button:active,.compare-share-heading > button:active { transform:scale(.96); }
 .compare-share-options { display:grid; gap:6px; margin:14px 0; }
 .compare-share-options label { display:flex; align-items:center; gap:9px; min-height:39px; padding:7px 10px; border:1px solid var(--compare-line); border-radius:10px; background:var(--sd-bg-subtle); color:var(--compare-text); font-size:11px; cursor:pointer; }
 .compare-share-options input { accent-color:var(--compare-accent); }
