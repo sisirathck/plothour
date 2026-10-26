@@ -35,24 +35,24 @@ export const BackgroundBackdrop = () => {
 
   return (
     <div className="studyduel-backdrop-root" aria-hidden="true">
-      {/* Light theme illustration */}
+      {/* Light theme background */}
       {loadedThemes.has('light') && (
         <div
-          className={`backdrop-layer light-layer ${theme === 'light' ? 'active' : ''}`}
-          style={{ backgroundImage: `url('${customSelection.light ? siteAssetUrl(customSelection.light) : '/login_whitetheme.webp'}')` }}
+          className={`backdrop-layer light-layer${customSelection.light ? ' has-custom-background' : ''} ${theme === 'light' ? 'active' : ''}`}
+          style={customSelection.light ? { backgroundImage: `url('${siteAssetUrl(customSelection.light)}')` } : undefined}
         />
       )}
 
-      {/* Dark theme illustration */}
+      {/* Dark theme background */}
       {loadedThemes.has('dark') && (
         <div
-          className={`backdrop-layer dark-layer ${theme === 'dark' ? 'active' : ''}`}
-          style={{ backgroundImage: `url('${customSelection.dark ? siteAssetUrl(customSelection.dark) : '/login_darktheme.webp'}')` }}
+          className={`backdrop-layer dark-layer${customSelection.dark ? ' has-custom-background' : ''} ${theme === 'dark' ? 'active' : ''}`}
+          style={customSelection.dark ? { backgroundImage: `url('${siteAssetUrl(customSelection.dark)}')` } : undefined}
         />
       )}
 
-      {/* Ambient gradient overlay for enhanced readability on the left */}
-      <div className="backdrop-gradient-scrim" />
+      {/* Keep administrator-uploaded imagery readable behind the auth panel. */}
+      {customSelection[theme] && <div className="backdrop-gradient-scrim" />}
 
       {/* Subtle vignette around edges */}
       <div className="backdrop-vignette" />

@@ -31,7 +31,7 @@ export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
 
   return (
     <div className="login-page-wrapper" style={getSiteFontStyle(config, 'login')}>
-      {/* Dynamic Background Illustration with Cross-fade */}
+      {/* Theme-aware minimal background with cross-fade */}
       <BackgroundBackdrop />
 
       {/* Top Header Bar: Brand Logo & Tagline on Left, Try Demo & Theme Toggle on Right */}
@@ -63,7 +63,7 @@ export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
           </div>
         </div>
 
-        {/* Right pane keeps the desk & girl illustration fully visible */}
+        {/* Empty desktop pane preserves the login composition's breathing room. */}
         <div className="login-right-pane" aria-hidden="true" />
       </main>
     </div>

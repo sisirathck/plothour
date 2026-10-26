@@ -24,6 +24,58 @@
   transform: scale(1.01);
 }
 
+.backdrop-layer:not(.has-custom-background)::before,
+.backdrop-layer:not(.has-custom-background)::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+
+.backdrop-layer.light-layer:not(.has-custom-background) {
+  --login-orbit: rgba(87, 98, 153, .12);
+  --login-orbit-highlight: rgba(105, 123, 190, .21);
+  background-color: #f3f5fa;
+  background-image:
+    radial-gradient(ellipse at 78% 44%, rgba(128, 134, 212, .11), transparent 38%),
+    radial-gradient(ellipse at 92% 87%, rgba(112, 199, 176, .09), transparent 32%),
+    linear-gradient(118deg, #f8f9fc 0%, #f1f3f8 56%, #e9edf4 100%);
+}
+
+.backdrop-layer.dark-layer:not(.has-custom-background) {
+  --login-orbit: rgba(176, 191, 205, .09);
+  --login-orbit-highlight: rgba(112, 199, 176, .2);
+  background-color: #0c1016;
+  background-image:
+    radial-gradient(ellipse at 78% 44%, rgba(112, 199, 176, .13), transparent 39%),
+    radial-gradient(ellipse at 94% 8%, rgba(89, 113, 132, .1), transparent 35%),
+    linear-gradient(118deg, #0c1016 0%, #111720 57%, #0b0e13 100%);
+}
+
+.backdrop-layer:not(.has-custom-background)::before {
+  top: 50%;
+  right: -6%;
+  width: min(64vw, 790px);
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  opacity: .78;
+  background:
+    radial-gradient(circle, transparent 0 43.8%, var(--login-orbit) 44% 44.12%, transparent 44.3%),
+    radial-gradient(circle, transparent 0 62.8%, var(--login-orbit) 63% 63.12%, transparent 63.3%),
+    radial-gradient(circle, transparent 0 78.8%, var(--login-orbit) 79% 79.12%, transparent 79.3%),
+    conic-gradient(from 206deg at 50% 50%, transparent 0deg 88deg, var(--login-orbit-highlight) 88.5deg 89.2deg, transparent 90deg 231deg, var(--login-orbit) 231.5deg 232deg, transparent 233deg 360deg);
+  mask-image: radial-gradient(circle, #000 34%, rgba(0,0,0,.82) 60%, transparent 78%);
+}
+
+.backdrop-layer:not(.has-custom-background)::after {
+  top: 50%;
+  right: 0;
+  width: 55%;
+  height: 1px;
+  opacity: .65;
+  background: linear-gradient(90deg, transparent, var(--login-orbit-highlight), transparent);
+}
+
 .backdrop-layer.active {
   opacity: 1;
   transform: scale(1);
@@ -44,4 +96,18 @@
   .backdrop-layer {
     background-position: 70% center;
   }
+}
+
+@media (max-width: 600px) {
+  .backdrop-layer:not(.has-custom-background)::before {
+    top: 47%;
+    right: -170px;
+    width: 410px;
+    opacity: .45;
+  }
+  .backdrop-layer:not(.has-custom-background)::after { width: 70%; opacity: .42; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop-layer { transition: none; transform: none; }
 }
