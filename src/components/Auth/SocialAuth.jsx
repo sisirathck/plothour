@@ -24,8 +24,6 @@ export const SocialAuth = ({ onGoogleClick, isLoading = false, googleAvailable =
           className="compact-google-btn"
           onClick={onGoogleClick}
           disabled={isLoading}
-          hidden={googleAvailable && googleButtonReady && theme !== 'dark'}
-          aria-hidden={googleAvailable && googleButtonReady && theme === 'dark'}
           data-provider-ready={googleAvailable && googleButtonReady ? 'true' : 'false'}
         >
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">

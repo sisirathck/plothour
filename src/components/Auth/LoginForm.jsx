@@ -133,7 +133,7 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
         368
       );
       const targetWidth = Math.min(400, Math.max(200, measuredWidth || 368));
-      const signature = `${targetWidth}:${theme}:${serverStatus.googleClientId}`;
+      const signature = `${targetWidth}:${serverStatus.googleClientId}`;
 
       if (btnEl.dataset.renderedSignature === signature && btnEl.querySelector('[role="button"]')) {
         setGoogleButtonReady(true);
@@ -144,12 +144,12 @@ export const LoginForm = ({ isSignUp = false, onLoginSuccess, onSignUpClick, onL
       setGoogleButtonReady(false);
       btnEl.innerHTML = '';
       window.google.accounts.id.renderButton(btnEl, {
-        theme: theme === 'dark' ? 'filled_black' : 'outline',
+        theme: 'outline',
         size: 'large',
         type: 'standard',
         text: 'continue_with',
         shape: 'pill',
-        logo_alignment: 'center',
+        logo_alignment: 'left',
         width: targetWidth,
       });
       btnEl.dataset.renderedSignature = signature;
