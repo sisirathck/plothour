@@ -88,7 +88,8 @@ export const AnalogueClockFace = ({ now }) => {
     ctx.scale(dpr, dpr);
 
     const isDark = theme === 'dark';
-    const accentColor = isDark ? '#e58e54' : '#8086d4';
+    const darkAccent = getComputedStyle(document.documentElement).getPropertyValue('--sd-accent-progress').trim() || '#70c7b0';
+    const accentColor = isDark ? darkAccent : '#8086d4';
     const cx = S / 2;
     const cy = S / 2;
     const R = S / 2 - 12;
@@ -103,8 +104,8 @@ export const AnalogueClockFace = ({ now }) => {
     if (isDark) {
       // Obsidian titanium gradient
       const dialGrad = ctx.createRadialGradient(cx, cy - 20, 10, cx, cy, R);
-      dialGrad.addColorStop(0, '#1c2433');
-      dialGrad.addColorStop(0.68, '#10141c');
+      dialGrad.addColorStop(0, '#22262b');
+      dialGrad.addColorStop(0.68, '#131619');
       dialGrad.addColorStop(1, '#0b0d12');
       ctx.fillStyle = dialGrad;
       ctx.fill();
@@ -249,7 +250,8 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
     ctx.scale(dpr, dpr);
 
     const isDark = theme === 'dark';
-    const accentColor = isDark ? '#e58e54' : '#8086d4';
+    const darkAccent = getComputedStyle(document.documentElement).getPropertyValue('--sd-accent-progress').trim() || '#70c7b0';
+    const accentColor = isDark ? darkAccent : '#8086d4';
     const cx = S / 2;
     const cy = S / 2;
     const R = S / 2 - 12;

@@ -67,6 +67,25 @@ const studyWeekdays = [
   { label: 'Fri', value: 5 },
   { label: 'Sat', value: 6 },
 ];
+const WEEKS_PER_MONTH = 365.25 / 7 / 12;
+const MAX_MONTHLY_GOAL_HOURS = Math.floor(168 * WEEKS_PER_MONTH * 100) / 100;
+const roundGoalHours = (value) => Math.round((Number(value) || 0) * 100) / 100;
+
+const deriveStudyGoals = (basis, rawValue, studyDays) => {
+  const dayCount = studyDays?.length || studyWeekdays.length;
+  const max = basis === 'daily' ? 24 : basis === 'weekly' ? 168 : MAX_MONTHLY_GOAL_HOURS;
+  const source = rawValue === '' ? 0 : Math.max(0, Math.min(max, Number(rawValue) || 0));
+  const daily = basis === 'daily' ? source : basis === 'weekly' ? source / dayCount : source / WEEKS_PER_MONTH / dayCount;
+  const weekly = basis === 'daily' ? source * dayCount : basis === 'weekly' ? source : source / WEEKS_PER_MONTH;
+  const monthly = basis === 'monthly' ? source : weekly * WEEKS_PER_MONTH;
+
+  return {
+    daily: basis === 'daily' && rawValue === '' ? '' : roundGoalHours(daily),
+    weekly: basis === 'weekly' && rawValue === '' ? '' : roundGoalHours(weekly),
+    monthly: basis === 'monthly' && rawValue === '' ? '' : roundGoalHours(monthly),
+    basis,
+  };
+};
 
 const getRandomProjectColor = (exclude = []) => {
   const excluded = new Set(exclude.filter(Boolean).map((color) => color.toLowerCase()));
@@ -214,7 +233,7 @@ const ColorPicker = ({ value, label, onChange }) => {
   );
 };
 
-const PlanEditor = ({ value, label, onChange }) => {
+const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
   const [milestoneTitle, setMilestoneTitle] = useState('');
   const milestones = Array.isArray(value?.milestones) ? value.milestones : [];
   const addMilestone = (event) => {
@@ -225,13 +244,39 @@ const PlanEditor = ({ value, label, onChange }) => {
     setMilestoneTitle('');
   };
   const updateMilestone = (id, changes) => onChange({ milestones: milestones.map((milestone) => milestone.id === id ? { ...milestone, ...changes } : milestone) });
+  const setGoal = (period, rawValue) => onChange({
+    goals: deriveStudyGoals(period, rawValue, value?.studyDays),
+  });
+  const setStudyDays = (days) => {
+    const currentGoals = value?.goals || {};
+    const basis = ['daily', 'weekly', 'monthly'].includes(currentGoals.basis)
+      ? currentGoals.basis
+      : Number(currentGoals.daily) > 0 ? 'daily' : Number(currentGoals.weekly) > 0 ? 'weekly' : 'monthly';
+    const source = currentGoals[basis] ?? 0;
+    onChange({ studyDays: days, goals: deriveStudyGoals(basis, source, days) });
+  };
 
   return (
     <div className="manage-plan-editor" aria-label={`${label} plan`}>
       <label><span>Total time estimate</span><div className="manage-plan-number"><input type="number" min="0" step="0.25" value={value?.estimateHours ?? ''} placeholder="e.g. 40" onChange={(event) => onChange({ estimateHours: event.target.value === '' ? '' : Math.max(0, Number(event.target.value) || 0) })} /><span>hours</span></div></label>
       <label><span>Target date</span><input type="date" value={value?.deadline || ''} onChange={(event) => onChange({ deadline: event.target.value })} /></label>
+      {showStudyGoals && <section className="manage-plan-study-goals" aria-label={`${label} recurring study goals`}>
+        <div className="manage-plan-study-goals-heading"><strong>Recurring study goals</strong><span>Edit any period; the other two recalculate using planned days. A month is about 4.35 weeks.</span></div>
+        <div className="manage-plan-study-goal-fields">
+          {['daily', 'weekly', 'monthly'].map((period) => (
+            <label className="manage-plan-study-goal" key={period}>
+              <span>{period[0].toUpperCase() + period.slice(1)}</span>
+              <div className="manage-plan-number"><input type="number" min="0" max={period === 'daily' ? 24 : period === 'weekly' ? 168 : MAX_MONTHLY_GOAL_HOURS} step="0.01" value={value?.goals?.[period] ?? 0} onChange={(event) => setGoal(period, event.target.value)} aria-label={`${period} study goal for ${label}`} /><span>hours</span></div>
+            </label>
+          ))}
+        </div>
+        <div className="manage-plan-study-days">
+          <StudyDaysEditor label={label} value={value?.studyDays} onChange={setStudyDays} />
+        </div>
+      </section>}
       <div className="manage-milestone-editor">
         <span className="manage-plan-label">Milestones</span>
+        <p className="manage-milestone-help">Break the estimate into small checkpoints. Mark them complete as you work; the Dashboard shows completed versus total.</p>
         {milestones.map((milestone) => (
           <label className="manage-milestone-row" key={milestone.id}>
             <input type="checkbox" checked={Boolean(milestone.completed)} onChange={(event) => updateMilestone(milestone.id, { completed: event.target.checked })} />
@@ -258,7 +303,7 @@ const StudyDaysEditor = ({ label, value = [], onChange }) => {
     <div className="manage-study-days-editor" aria-label={`Study days for ${label}`}>
       <div className="manage-study-days-copy">
         <strong>Planned study days</strong>
-        <span>Daily goal applies on these days. Otherwise, weekly goal is split across them.</span>
+        <span>Daily goals apply on selected days; weekly goals are split across them. With none selected, goals use all seven days.</span>
         <small className="manage-study-days-state" aria-live="polite">
           {selectedDays.length ? `${selectedDays.length} ${selectedDays.length === 1 ? 'day' : 'days'} selected` : 'No days selected'}
         </small>
@@ -430,23 +475,6 @@ export const ManagePage = ({ user }) => {
     };
   }));
 
-  const setSubjectGoal = (projectId, subjectId, period, rawValue) => {
-    const max = period === 'daily' ? 24 : period === 'weekly' ? 168 : 744;
-    const value = rawValue === '' ? 0 : Math.max(0, Math.min(max, Number(rawValue) || 0));
-    setProjects((items) => items.map((project) => project.id !== projectId ? project : {
-      ...project,
-      subjects: project.subjects.map((subject) => subject.id !== subjectId ? subject : {
-        ...subject,
-        goals: { daily: 0, weekly: 0, monthly: 0, ...subject.goals, [period]: value },
-      }),
-    }));
-  };
-
-  const setSubjectStudyDays = (projectId, subjectId, days) => setProjects((items) => items.map((project) => project.id !== projectId ? project : {
-    ...project,
-    subjects: (project.subjects || []).map((subject) => subject.id !== subjectId ? subject : { ...subject, studyDays: days }),
-  }));
-
   const isManageEditorOpen = (type, projectId, subjectId = null) => openManageEditor?.type === type
     && openManageEditor.projectId === projectId
     && (subjectId === null || openManageEditor.subjectId === subjectId);
@@ -574,8 +602,6 @@ export const ManagePage = ({ user }) => {
               const totals = projectGoalTotals(project);
               const stats = getProjectStats(project, entries);
               const subjects = project.subjects || [];
-              const isEditingProjectGoals = isManageEditorOpen('project-goals', project.id);
-              const isProjectPlanOpen = isManageEditorOpen('project-plan', project.id);
               const subjectTotals = new Map();
               stats.entries.forEach((entry) => {
                 const key = entry.subjectId || entry.subjectName || '__unassigned';
@@ -615,7 +641,7 @@ export const ManagePage = ({ user }) => {
                       <button type="button" title="Move up" aria-label={`Move ${project.name} up`} onClick={() => reorderProject(project.id, -1)}><ArrowUp size={14} /></button>
                       <button type="button" title="Move down" aria-label={`Move ${project.name} down`} onClick={() => reorderProject(project.id, 1)}><ArrowDown size={14} /></button>
                       <button type="button" title={collapsedProjectIds.includes(project.id) ? 'Show details' : 'Hide details'} aria-label={`${collapsedProjectIds.includes(project.id) ? 'Show' : 'Hide'} details for ${project.name}`} aria-expanded={!collapsedProjectIds.includes(project.id)} onClick={() => setCollapsedProjectIds((current) => current.includes(project.id) ? current.filter((id) => id !== project.id) : [...current, project.id])}><ChevronDown size={15} className={collapsedProjectIds.includes(project.id) ? '' : 'is-open'} /></button>
-                      {!project.archived && <button type="button" title="Rename project" aria-label={`Rename ${project.name}`} onClick={() => beginRename('project', project.id, project.name)}><Pencil size={15} /></button>}
+                      {!project.archived && <button type="button" title={editing?.type === 'project' && editing.id === project.id ? 'Cancel rename' : 'Rename project'} aria-label={editing?.type === 'project' && editing.id === project.id ? `Cancel rename for ${project.name}` : `Rename ${project.name}`} aria-pressed={editing?.type === 'project' && editing.id === project.id} onClick={() => editing?.type === 'project' && editing.id === project.id ? setEditing(null) : beginRename('project', project.id, project.name)}><Pencil size={15} /></button>}
                       <button type="button" title={project.archived ? 'Restore project' : 'Archive project'} aria-label={`${project.archived ? 'Restore' : 'Archive'} ${project.name}`} onClick={() => toggleArchive(project)}>
                         {project.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                       </button>
@@ -649,20 +675,9 @@ export const ManagePage = ({ user }) => {
                         <strong>{formatGoalHours(totals.daily)} <small>/ day</small></strong>
                         <strong>{formatGoalHours(totals.weekly)} <small>/ week</small></strong>
                         <strong>{formatGoalHours(totals.monthly)} <small>/ month</small></strong>
-                        <button type="button" className="manage-inline-toggle" aria-expanded={isEditingProjectGoals} onClick={() => toggleManageEditor('project-goals', project.id)}>
-                          <Pencil size={13} /> {isEditingProjectGoals ? 'Done' : 'Edit goals'}
-                        </button>
-                        <button type="button" className="manage-inline-toggle" aria-expanded={isProjectPlanOpen} onClick={() => toggleManageEditor('project-plan', project.id)}>
-                          Plan <ChevronDown size={14} className={isProjectPlanOpen ? 'is-open' : ''} />
-                        </button>
                       </div>
-                      {isProjectPlanOpen && <PlanEditor
-                        value={project}
-                        label={project.name}
-                        onChange={(changes) => setProjects((items) => items.map((item) => item.id === project.id ? { ...item, ...changes } : item))}
-                      />}
-                      <div className={`manage-subprojects${isEditingProjectGoals ? ' is-editing-goals' : ''}`}>
-                        <div className="manage-subproject-table-head"><span>Subproject</span>{isEditingProjectGoals && <><span>Daily</span><span>Weekly</span><span>Monthly</span></>}<span aria-label="Actions" /></div>
+                      <div className="manage-subprojects">
+                        <div className="manage-subproject-table-head"><span>Subproject</span><span aria-label="Actions" /></div>
                         {subjects.map((subject) => (
                           <div className="manage-subproject-row" key={subject.id}>
                             <span className="manage-subproject-name">
@@ -675,20 +690,12 @@ export const ManagePage = ({ user }) => {
                                 </form>
                               ) : <span>{subject.name}</span>}
                             </span>
-                            {isEditingProjectGoals && ['daily', 'weekly', 'monthly'].map((period) => (
-                              <label className="manage-goal-input-wrap" key={period}>
-                                <input type="number" min="0" max={period === 'daily' ? 24 : period === 'weekly' ? 168 : 744} step="0.25" value={subject.goals?.[period] ?? 0} onChange={(event) => setSubjectGoal(project.id, subject.id, period, event.target.value)} aria-label={`${period} goal hours for ${subject.name}`} />
-                                <span>h</span>
-                              </label>
-                            ))}
                             <div className="manage-card-actions compact">
-                              <button type="button" title={isManageEditorOpen('subject-days', project.id, subject.id) ? 'Hide study days' : 'Choose study days'} aria-label={`${isManageEditorOpen('subject-days', project.id, subject.id) ? 'Hide' : 'Choose'} study days for ${subject.name}`} aria-expanded={isManageEditorOpen('subject-days', project.id, subject.id)} onClick={() => toggleManageEditor('subject-days', project.id, subject.id)}><CalendarDays size={14} /></button>
                               <button type="button" title={isManageEditorOpen('subject-plan', project.id, subject.id) ? 'Hide plan' : 'Edit estimate, deadline, and milestones'} aria-label={`${isManageEditorOpen('subject-plan', project.id, subject.id) ? 'Hide' : 'Edit'} plan for ${subject.name}`} aria-expanded={isManageEditorOpen('subject-plan', project.id, subject.id)} onClick={() => toggleManageEditor('subject-plan', project.id, subject.id)}><Target size={14} /></button>
-                              <button type="button" title="Rename subproject" aria-label={`Rename ${subject.name}`} onClick={() => beginRename('subject', subject.id, subject.name)}><Pencil size={14} /></button>
+                              <button type="button" title={editing?.type === 'subject' && editing.id === subject.id ? 'Cancel rename' : 'Rename subproject'} aria-label={editing?.type === 'subject' && editing.id === subject.id ? `Cancel rename for ${subject.name}` : `Rename ${subject.name}`} aria-pressed={editing?.type === 'subject' && editing.id === subject.id} onClick={() => editing?.type === 'subject' && editing.id === subject.id ? setEditing(null) : beginRename('subject', subject.id, subject.name)}><Pencil size={14} /></button>
                               <button type="button" title="Delete subproject" aria-label={`Delete ${subject.name}`} onClick={() => deleteSubject(project.id, subject.id)}><Trash2 size={14} /></button>
                             </div>
-                            {isManageEditorOpen('subject-days', project.id, subject.id) && <div className="manage-subproject-study-days"><StudyDaysEditor label={subject.name} value={subject.studyDays} onChange={(days) => setSubjectStudyDays(project.id, subject.id, days)} /></div>}
-                            {isManageEditorOpen('subject-plan', project.id, subject.id) && <div className="manage-subproject-plan"><PlanEditor value={subject} label={subject.name} onChange={(changes) => setProjects((items) => items.map((item) => item.id !== project.id ? item : { ...item, subjects: item.subjects.map((child) => child.id === subject.id ? { ...child, ...changes } : child) }))} /></div>}
+                            {isManageEditorOpen('subject-plan', project.id, subject.id) && <div className="manage-subproject-plan"><PlanEditor value={subject} label={subject.name} showStudyGoals onChange={(changes) => setProjects((items) => items.map((item) => item.id !== project.id ? item : { ...item, subjects: item.subjects.map((child) => child.id === subject.id ? { ...child, ...changes } : child) }))} /></div>}
                           </div>
                         ))}
                         {!subjects.length && <p className="manage-no-subprojects">Add a subproject to define goals for this project.</p>}

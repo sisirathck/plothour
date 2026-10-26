@@ -31,11 +31,11 @@
 }
 
 [data-theme='dark'] {
-  --sd-amber-500: var(--sd-accent-warm, #dba16f);
-  --sd-amber-600: #c58b59;
-  --sd-amber-400: #e4b183;
-  --sd-amber-subtle: rgba(219, 161, 111, 0.12);
-  --sd-amber-glow: rgba(219, 161, 111, 0.22);
+  --sd-amber-500: var(--sd-accent-progress, #70c7b0);
+  --sd-amber-600: #54a991;
+  --sd-amber-400: #84d8c0;
+  --sd-amber-subtle: var(--sd-accent-progress-subtle);
+  --sd-amber-glow: var(--sd-accent-progress-glow);
   --sd-settings-canvas: var(--sd-bg-base);
   --sd-settings-card-bg: var(--sd-bg-surface);
   --sd-settings-card-border: var(--sd-border-glass);

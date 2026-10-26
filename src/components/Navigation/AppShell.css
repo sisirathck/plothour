@@ -21,8 +21,8 @@
 
 :root[data-theme='dark'] .app-shell-wrapper {
   background:
-    radial-gradient(ellipse at 12% 0%, rgba(137, 149, 237, 0.065), transparent 40%),
-    radial-gradient(ellipse at 92% 8%, rgba(219, 161, 111, 0.028), transparent 36%),
+    radial-gradient(ellipse at 12% 0%, rgba(112, 199, 176, 0.045), transparent 40%),
+    radial-gradient(ellipse at 92% 8%, rgba(112, 199, 176, 0.025), transparent 36%),
     var(--sd-bg-base);
 }
 
@@ -143,6 +143,12 @@
 .nav-study-streak svg { color: #d27a43; fill: color-mix(in srgb, #d27a43 16%, transparent); }
 .nav-study-streak strong { font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .nav-study-streak span { color: var(--sd-text-muted); font-size: 10px; font-weight: 600; }
+
+:root[data-theme='dark'] .nav-study-streak {
+  border-color: rgba(112, 199, 176, .22);
+  background: color-mix(in srgb, var(--sd-accent-progress) 8%, var(--sd-bg-surface));
+}
+:root[data-theme='dark'] .nav-study-streak svg { color: var(--sd-accent-progress); fill: var(--sd-accent-progress-subtle); }
 
 .running-session-indicator {
   display: inline-flex;

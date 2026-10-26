@@ -47,16 +47,30 @@ const fmtDur = (s) => {
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
+const WEEKS_PER_MONTH = 365.25 / 7 / 12;
+const STUDY_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const getSubjectStudySchedule = (subject) => {
-  const dailyGoalHours = Number(subject?.goals?.daily) || 0;
-  const weeklyGoalHours = Number(subject?.goals?.weekly) || 0;
-  const studyDays = Array.isArray(subject?.studyDays)
+  const goals = subject?.goals || {};
+  const dailyGoalHours = Number(goals.daily) || 0;
+  const weeklyGoalHours = Number(goals.weekly) || 0;
+  const monthlyGoalHours = Number(goals.monthly) || 0;
+  const configuredDays = Array.isArray(subject?.studyDays)
     ? subject.studyDays.filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
-    : dailyGoalHours > 0 ? ALL_STUDY_DAYS : [];
-  const targetHours = dailyGoalHours > 0
+    : [];
+  const studyDays = configuredDays.length
+    ? configuredDays
+    : dailyGoalHours > 0 || weeklyGoalHours > 0 || monthlyGoalHours > 0 ? ALL_STUDY_DAYS : [];
+  const basis = ['daily', 'weekly', 'monthly'].includes(goals.basis)
+    ? goals.basis
+    : dailyGoalHours > 0 ? 'daily' : weeklyGoalHours > 0 ? 'weekly' : 'monthly';
+  const dayCount = studyDays.length || ALL_STUDY_DAYS.length;
+  const targetHours = basis === 'daily'
     ? dailyGoalHours
-    : weeklyGoalHours > 0 && studyDays.length ? weeklyGoalHours / studyDays.length : 0;
-  return { studyDays, targetHours };
+    : basis === 'weekly'
+      ? weeklyGoalHours / dayCount
+      : monthlyGoalHours / WEEKS_PER_MONTH / dayCount;
+  const goalDaysLabel = studyDays.map((day) => STUDY_DAY_LABELS[day]).join(', ');
+  return { studyDays, targetHours, goalBasis: basis, goalDaysLabel };
 };
 const TIMER_GOALS = [
   { id: '25m', label: '25 min', seconds: 25 * 60 },
@@ -303,7 +317,7 @@ export const TimerPage = ({ user }) => {
   const focusGoalRemaining = Math.max(0, focusGoalSecs - focusTodaySecs);
 
   const hasStudyGoals = useMemo(() => activeProjects.some((project) => (project.subjects || []).some((subject) => (
-    (Number(subject.goals?.daily) || 0) > 0 || (Number(subject.goals?.weekly) || 0) > 0
+    (Number(subject.goals?.daily) || 0) > 0 || (Number(subject.goals?.weekly) || 0) > 0 || (Number(subject.goals?.monthly) || 0) > 0
   ))), [activeProjects]);
   const activeStudyPanelTab = hasStudyGoals && studyPanelTab === 'plan' ? 'plan' : 'combos';
 
@@ -312,7 +326,7 @@ export const TimerPage = ({ user }) => {
     const todayKey = now.toDateString();
     const scheduled = [];
     activeProjects.forEach((project) => (project.subjects || []).forEach((subject) => {
-      const { studyDays, targetHours } = getSubjectStudySchedule(subject);
+      const { studyDays, targetHours, goalBasis, goalDaysLabel } = getSubjectStudySchedule(subject);
       if (!studyDays.includes(day) || !studyDays.length) return;
 
       const targetSeconds = targetHours * 3600;
@@ -332,6 +346,8 @@ export const TimerPage = ({ user }) => {
         subjectId: subject.id,
         subjectName: subject.name,
         color: subject.color || project.color,
+        goalBasis,
+        goalDaysLabel,
         targetSeconds,
         completedSeconds: totalSeconds,
         remainingSeconds: Math.max(0, targetSeconds - totalSeconds),
@@ -887,12 +903,13 @@ export const TimerPage = ({ user }) => {
                 {todayStudyPlan.length > 0 && (
                   <div className="timer-study-plan-overview">
                     <div className="timer-study-plan-total">
-                      <span className="timer-study-plan-overview-label">TOTAL DAILY GOALS</span>
+                      <span className="timer-study-plan-overview-label">TODAY’S PLANNED GOALS</span>
                       <strong>{fmtDur(todayStudyPlanSummary.completedSeconds)} <small>of {fmtDur(todayStudyPlanSummary.targetSeconds)}</small></strong>
                       <div className="timer-study-plan-total-track" role="progressbar" aria-label="Total daily study goals" aria-valuemin={0} aria-valuemax={100} aria-valuenow={todayStudyPlanSummary.progress}>
                         <span style={{ width: `${todayStudyPlanSummary.progress}%` }} />
                       </div>
                       <span className="timer-study-plan-total-percent">{todayStudyPlanSummary.progress}% complete</span>
+                      <small className="timer-study-plan-summary-note">Goals and study days come from Manage. Logged time counts here when the subject is planned for today.</small>
                     </div>
                     <div className="timer-study-plan-recommendation">
                       <span className="timer-study-plan-overview-label"><Target size={12} /> FOCUS NEXT</span>
@@ -923,6 +940,7 @@ export const TimerPage = ({ user }) => {
                   <article className="timer-study-plan-row" key={`${item.projectId}:${item.subjectId}`}>
                     <div className="timer-study-plan-copy">
                       <strong><span>{item.projectName}</span><i aria-hidden="true">·</i>{item.subjectName || 'General Study'}</strong>
+                      <small>{`${item.goalBasis[0].toUpperCase()}${item.goalBasis.slice(1)} goal · ${item.goalDaysLabel || 'all days'}`}</small>
                     </div>
                     <div className="timer-study-plan-progress-copy">
                       <span>{fmtDur(item.completedSeconds)} / {fmtDur(item.targetSeconds)}</span>
@@ -959,6 +977,7 @@ export const TimerPage = ({ user }) => {
 
             {/* Central Dial: Swiss Analogue Clock -> High-Precision Chronograph */}
             <div className="horology-dial-wrapper">
+              <div className="horology-dial-mode" key={activeTimer ? 'stopwatch' : pendingSelection ? 'preview' : 'clock'}>
               {activeTimer ? (
                 <StopwatchFace
                   elapsed={elapsed}
@@ -977,6 +996,7 @@ export const TimerPage = ({ user }) => {
               ) : (
                 <AnalogueClockFace now={now} />
               )}
+              </div>
               <svg
                 className={`horology-focus-ring${activeTimer && sessionGoal.seconds ? ' is-targeted' : ''}`}
                 viewBox="0 0 320 320"

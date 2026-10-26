@@ -74,39 +74,42 @@
 
 /* Dark Mode Tokens */
 .db-apple-root.dark-mode {
-  --sd-coral-primary: #A99AFF;
-  --sd-coral-deep: #8E7BE8;
-  --db-popover-bg: #242536;
-  --db-bg: #11121B;
-  --db-text: #F4F1FF;
-  --db-accent-soft: #B9ADFF;
-  --db-portfolio-accent: #A99AFF;
-  --db-accent-glow: rgba(169, 154, 255, 0.28);
-  --db-accent-shadow-strong: rgba(169, 154, 255, 0.34);
-  --db-accent-shadow-border: rgba(169, 154, 255, 0.30);
-  --db-accent-tint: rgba(169, 154, 255, 0.13);
-  --db-card-bg: linear-gradient(150deg, rgba(36, 37, 54, 0.96), rgba(27, 28, 43, 0.96));
-  --db-card-border: rgba(211, 204, 255, 0.13);
-  --db-card-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(236, 232, 255, 0.07);
-  --db-subcard-bg: rgba(25, 26, 41, 0.84);
-  --db-subcard-border: rgba(211, 204, 255, 0.10);
-  --db-subcard-shadow: inset 0 1px 0 rgba(236, 232, 255, 0.035);
-  --db-muted: #AAA7C0;
-  --db-label: #A09DB6;
-  --db-pill-bg: #191A29;
-  --db-pill-active-bg: linear-gradient(to bottom, #34334B, #2B2A40);
-  --db-pill-active-text: #F4F1FF;
-  --db-empty-cell: #292A3B;
-  --db-divider: rgba(211, 204, 255, 0.10);
-  --db-track-bg: #292A3B;
+  --db-progress-accent: #70C7B0;
+  --db-progress-accent-strong: #84D8C0;
+  --db-progress-accent-glow: rgba(112, 199, 176, 0.22);
+  --sd-coral-primary: #70C7B0;
+  --sd-coral-deep: #54A991;
+  --db-popover-bg: #1B202A;
+  --db-bg: #0B0D12;
+  --db-text: #F2F4F7;
+  --db-accent-soft: #84D8C0;
+  --db-portfolio-accent: #70C7B0;
+  --db-accent-glow: rgba(112, 199, 176, 0.22);
+  --db-accent-shadow-strong: rgba(112, 199, 176, 0.28);
+  --db-accent-shadow-border: rgba(112, 199, 176, 0.3);
+  --db-accent-tint: rgba(112, 199, 176, 0.11);
+  --db-card-bg: linear-gradient(150deg, rgba(29, 34, 43, 0.98), rgba(20, 24, 31, 0.98));
+  --db-card-border: rgba(205, 214, 232, 0.09);
+  --db-card-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  --db-subcard-bg: rgba(24, 29, 37, 0.9);
+  --db-subcard-border: rgba(205, 214, 232, 0.075);
+  --db-subcard-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  --db-muted: #B8BFCC;
+  --db-label: #929BAA;
+  --db-pill-bg: #171C25;
+  --db-pill-active-bg: #252B34;
+  --db-pill-active-text: #F2F4F7;
+  --db-empty-cell: #222833;
+  --db-divider: rgba(205, 214, 232, 0.075);
+  --db-track-bg: #222833;
   --sd-scrollbar-thumb: var(--sd-coral-primary);
   --sd-scrollbar-track: var(--db-track-bg);
-  --db-glass-goal-bg: rgba(27, 28, 43, 0.92);
-  --db-glass-goal-border: rgba(211, 204, 255, 0.17);
-  --db-glass-goal-shadow: 0 12px 32px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(236, 232, 255, 0.08);
-  --db-glass-scrim: linear-gradient(to right, rgba(17, 18, 27, 0.72) 0%, rgba(17, 18, 27, 0.28) 50%, transparent 100%);
-  --db-sage-text: #79D8B5;
-  --db-sage-bar: linear-gradient(to right, #58C9A1, #8AE1C2);
+  --db-glass-goal-bg: rgba(24, 29, 37, 0.92);
+  --db-glass-goal-border: rgba(205, 214, 232, 0.1);
+  --db-glass-goal-shadow: 0 12px 32px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --db-glass-scrim: linear-gradient(to right, rgba(11, 13, 18, 0.78) 0%, rgba(11, 13, 18, 0.32) 50%, transparent 100%);
+  --db-sage-text: #84D8C0;
+  --db-sage-bar: linear-gradient(to right, #54A991, #84D8C0);
   background-color: var(--db-bg);
   color: var(--db-text);
 }
@@ -668,8 +671,8 @@
 }
 
 .dark-mode .db-kpi-calendar-card {
-  background: linear-gradient(145deg, rgba(39, 47, 67, 0.94), rgba(20, 26, 39, 0.94));
-  border-color: rgba(242, 139, 114, 0.22);
+  background: linear-gradient(145deg, rgba(35, 43, 43, 0.96), rgba(20, 26, 25, 0.96));
+  border-color: rgba(112, 199, 176, 0.2);
 }
 
 .db-kpi-calendar-icon {
@@ -2349,6 +2352,9 @@
   background: linear-gradient(100deg, var(--db-accent-tint), transparent 58%), var(--db-card-bg);
   box-shadow: var(--db-card-shadow);
 }
+.db-apple-root.dark-mode .db-today-inline {
+  background: #171C25;
+}
 .db-today-inline-date,
 .db-today-inline-main,
 .db-today-inline-meta { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
@@ -2368,8 +2374,8 @@
   background: linear-gradient(135deg, rgba(121, 129, 204, 0.105), rgba(121, 129, 204, 0.035) 68%), var(--db-card-bg);
 }
 .db-apple-root.dark-mode .db-chart-card.db-snapshot-card {
-  border-color: color-mix(in srgb, #9ba3ed 18%, var(--db-card-border));
-  background: linear-gradient(135deg, rgba(121, 129, 204, 0.16), rgba(121, 129, 204, 0.055) 68%), var(--db-card-bg);
+  border-color: var(--db-card-border);
+  background: #171C25;
 }
 .db-snapshot-metrics {
   display: grid;
@@ -3120,3 +3126,35 @@
 .db-goal-tune-suggestion button { flex:0 0 auto; display:inline-flex; align-items:center; gap:5px; padding:6px 8px; border:0; border-radius:8px; background:color-mix(in srgb,var(--sd-coral) 12%,transparent); color:var(--sd-coral); font:inherit; font-weight:750; cursor:pointer; }
 @media (max-width:650px) { .db-goal-tune-suggestion { align-items:flex-start; flex-wrap:wrap; } .db-goal-tune-suggestion button { margin-left:22px; } }
 .db-weekly-trend-explainer { margin:6px 0 0; color:var(--sd-text-muted); font-size:10px; line-height:1.45; }
+
+/* Dark mode: mint is reserved for measurable progress and the currently active study state. */
+.db-apple-root.dark-mode .db-weekly-goal-percent,
+.db-apple-root.dark-mode .db-today-inline-meta strong {
+  color: var(--db-progress-accent);
+}
+
+.db-apple-root.dark-mode .db-weekly-goal-track > span,
+.db-apple-root.dark-mode .db-today-inline-track > span,
+.db-apple-root.dark-mode .db-project-plan-track > span {
+  background: linear-gradient(90deg, var(--db-progress-accent), var(--db-progress-accent-strong));
+}
+
+.db-apple-root.dark-mode .db-power-fill.active,
+.db-apple-root.dark-mode .db-weekly-bar-element.active {
+  background: linear-gradient( to top, #54a991, var(--db-progress-accent-strong));
+  box-shadow: 0 4px 12px var(--db-progress-accent-glow);
+}
+
+.db-apple-root.dark-mode .db-circadian-card.active-slot {
+  border-color: color-mix(in srgb, var(--db-progress-accent) 52%, transparent);
+  box-shadow: var(--db-subcard-shadow), inset 0 1px 0 var(--db-progress-accent-glow);
+}
+
+.db-apple-root.dark-mode .db-habit-pill.active-study {
+  background: var(--db-progress-accent-glow);
+  border-color: color-mix(in srgb, var(--db-progress-accent) 54%, transparent);
+}
+
+.db-apple-root.dark-mode .db-habit-pill.active-study .db-habit-dot {
+  background: var(--db-progress-accent-strong);
+}

@@ -89,17 +89,20 @@
    -------------------------------------------------------------------------- */
 [data-theme='dark'] {
   color-scheme: dark;
-  /* Obsidian surfaces, periwinkle controls, and a restrained warm-metal accent. */
-  --sd-coral: #8995ed;
-  --sd-coral-hover: #9aa4f7;
-  --sd-coral-active: #7380dc;
-  --sd-coral-glow: rgba(137, 149, 237, 0.2);
-  --sd-accent-warm: #dba16f;
+  /* Neutral obsidian surfaces with mint-teal as the sole brand accent. */
+  --sd-coral: #70c7b0;
+  --sd-coral-hover: #84d8c0;
+  --sd-coral-active: #54a991;
+  --sd-coral-glow: rgba(112, 199, 176, 0.22);
+  --sd-accent-progress: var(--sd-coral);
+  --sd-accent-progress-strong: var(--sd-coral-hover);
+  --sd-accent-progress-glow: var(--sd-coral-glow);
+  --sd-accent-progress-subtle: rgba(112, 199, 176, 0.11);
   --sd-orange: var(--sd-coral);
   --sd-orange-hover: var(--sd-coral-hover);
   --sd-orange-active: var(--sd-coral-active);
   --sd-orange-glow: var(--sd-coral-glow);
-  --sd-orange-subtle: rgba(137, 149, 237, 0.11);
+  --sd-orange-subtle: rgba(112, 199, 176, 0.11);
   --sd-bg-base: #0b0d12;
   --sd-popover-bg: #1b202a;
   --sd-card-bg: #181d27;
@@ -119,15 +122,15 @@
   --sd-text-muted: #929baa;
   --sd-input-bg: #141923;
   --sd-input-border: rgba(205, 214, 232, 0.1);
-  --sd-input-border-focus: #8995ed;
-  --sd-input-ring: rgba(137, 149, 237, 0.22);
-  --sd-banner-bg: rgba(137, 149, 237, 0.1);
-  --sd-banner-border: rgba(137, 149, 237, 0.25);
-  --sd-banner-text: #e0e4ff;
+  --sd-input-border-focus: #70c7b0;
+  --sd-input-ring: rgba(112, 199, 176, 0.22);
+  --sd-banner-bg: rgba(112, 199, 176, 0.1);
+  --sd-banner-border: rgba(112, 199, 176, 0.25);
+  --sd-banner-text: #dff5ef;
   --sd-glass-btn-bg: rgba(24, 29, 39, 0.88);
   --sd-glass-btn-border: rgba(205, 214, 232, 0.085);
-  --sd-glass-btn-hover-bg: rgba(137, 149, 237, 0.13);
-  --sd-glass-btn-hover-border: rgba(137, 149, 237, 0.32);
+  --sd-glass-btn-hover-bg: rgba(112, 199, 176, 0.13);
+  --sd-glass-btn-hover-border: rgba(112, 199, 176, 0.32);
   --sd-backdrop-scrim: linear-gradient(90deg,
       rgba(11, 13, 18, 0.84) 0%,
       rgba(11, 13, 18, 0.38) 45%,

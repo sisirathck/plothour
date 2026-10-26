@@ -88,7 +88,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
     return day >= dateRange.start && day <= dateRange.end;
   }), [entries, dateRange]);
 
-  const effectivePageSize = hideRangeControls || pageSize === 'all' ? Math.max(1, filteredEntries.length) : Number(pageSize);
+  const effectivePageSize = Math.max(1, Math.min(100, hideRangeControls ? filteredEntries.length : Number(pageSize)));
   const pageCount = Math.max(1, Math.ceil(filteredEntries.length / effectivePageSize));
   const visibleEntries = filteredEntries.slice((page - 1) * effectivePageSize, page * effectivePageSize);
 
@@ -215,11 +215,12 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                 className="entries-native-select"
                 value={pageSize}
                 onChange={(e) => { setPageSize(e.target.value); setPage(1); }}
+                aria-label="Sessions per page"
               >
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
-                <option value="all">All</option>
+                <option value="100">100</option>
               </select>
             </div>}
           </div>

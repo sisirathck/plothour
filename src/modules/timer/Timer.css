@@ -294,11 +294,17 @@
 .timer-insights-tab.is-active { border-color: rgba(121, 129, 204, .42); background: linear-gradient(180deg, rgba(121, 129, 204, .16), rgba(121, 129, 204, .09)); color: #343b78; box-shadow: inset 0 0 0 1px rgba(121, 129, 204, .08), 0 2px 7px rgba(65, 72, 140, .12); }
 .timer-insights-tab.is-active small { background: rgba(121, 129, 204, .18); color: #555fae; }
 .timer-insights-tab:focus-visible { outline: 2px solid #7981cc; outline-offset: 1px; }
-[data-theme='dark'] .timer-insights-tab.is-active { color: #eef0ff; background: linear-gradient(180deg, rgba(137, 149, 237, .23), rgba(137, 149, 237, .12)); border-color: rgba(161, 172, 250, .4); }
-[data-theme='dark'] .timer-insights-tab.is-active small { color: #eef0ff; background: rgba(137, 149, 237, .2); }
+[data-theme='dark'] .timer-insights-tab.is-active { color: #eaf8f4; background: linear-gradient(180deg, rgba(112, 199, 176, .2), rgba(112, 199, 176, .1)); border-color: rgba(112, 199, 176, .36); }
+[data-theme='dark'] .timer-insights-tab.is-active small { color: #eaf8f4; background: rgba(112, 199, 176, .18); }
 .timer-insights-tab-hint { margin-left: auto; padding-right: 7px; color: var(--sd-text-muted); font-size: 10px; white-space: nowrap; }
 .timer-insights-pane { height: 390px; min-height: 0; overflow: auto; padding: 9px 3px 4px; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--sd-coral) 34%, transparent) transparent; }
 .timer-insights-pane { overscroll-behavior: contain; }
+.timer-insights-pane > .t-combos-grid,
+.timer-insights-pane > .timer-study-plan-content { animation: timer-pane-arrive 280ms cubic-bezier(.2, .75, .25, 1) both; }
+@keyframes timer-pane-arrive {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @media (min-width: 1081px) {
   .timer-insights-panel { display: flex; flex: 1 1 0; flex-direction: column; min-height: 0; }
   .timer-insights-pane { height: auto; flex: 1 1 0; }
@@ -650,6 +656,11 @@
   border-radius: 50%;
   display: block;
 }
+.horology-dial-mode { position: absolute; inset: 0; display: grid; place-items: center; animation: horology-mode-arrive 440ms cubic-bezier(.2, .75, .25, 1) both; }
+@keyframes horology-mode-arrive {
+  from { opacity: 0; transform: scale(.965); filter: blur(3px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
 
 .horology-focus-ring {
   position: absolute;
@@ -692,6 +703,7 @@
   z-index: 2;
   margin-top: -2px;
   min-height: 44px;
+  animation: horology-readout-arrive 320ms cubic-bezier(.2, .75, .25, 1) both;
 }
 
 .horology-wall-time {
@@ -718,6 +730,11 @@
   z-index: 2;
   margin-top: -2px;
   min-height: 44px;
+  animation: horology-readout-arrive 320ms cubic-bezier(.2, .75, .25, 1) both;
+}
+@keyframes horology-readout-arrive {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .chrono-status-line {
@@ -782,12 +799,14 @@
   z-index: 2;
   display: flex;
   justify-content: center;
+  animation: horology-readout-arrive 320ms cubic-bezier(.2, .75, .25, 1) both;
 }
 
 .horology-idle-actions {
   width: 100%;
   display: flex;
   justify-content: center;
+  animation: horology-readout-arrive 320ms cubic-bezier(.2, .75, .25, 1) both;
 }
 
 .horology-btn-start {
@@ -1139,6 +1158,7 @@
 .timer-study-plan-total-track { height: 7px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
 .timer-study-plan-total-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7981cc, #a0a6dc); transition: width 400ms ease; }
 .timer-study-plan-total-percent { color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
+.timer-study-plan-summary-note { color: var(--sd-text-muted); font-size: 9px; line-height: 1.4; }
 .timer-study-plan-recommendation { border-color: rgba(121, 129, 204, .28); background: linear-gradient(135deg, rgba(121, 129, 204, .13), rgba(121, 129, 204, .055)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .58); }
 .timer-study-plan-recommendation .timer-study-plan-overview-label svg { color: #626bb4; }
 .timer-study-plan-recommendation > strong { overflow: hidden; color: var(--sd-text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1154,10 +1174,11 @@
 .timer-study-plan-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 7px 11px; padding: 10px 0; border-bottom: 1px solid var(--sd-border-glass); }
 .timer-study-plan-row:last-child { border-bottom: 0; }
 .timer-study-plan-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--plan-color, var(--sd-coral)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--plan-color, var(--sd-coral)) 14%, transparent); }
-.timer-study-plan-copy { min-width: 0; display: flex; align-items: center; }
+.timer-study-plan-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 .timer-study-plan-copy strong { display: flex; min-width: 0; align-items: center; gap: 6px; overflow: hidden; color: var(--sd-text-primary); font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .timer-study-plan-copy strong > span { overflow: hidden; color: var(--sd-text-muted); font-size: 10px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .timer-study-plan-copy strong > i { flex: 0 0 auto; color: var(--sd-text-muted); font-style: normal; }
+.timer-study-plan-copy > small { color: var(--sd-text-muted); font-size: 9px; }
 .timer-study-plan-progress-copy { display: grid; grid-template-columns: auto auto; justify-content: end; align-items: center; gap: 3px 11px; color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .timer-study-plan-progress-copy strong { color: var(--sd-text-primary); font-weight: 750; }
 .timer-study-plan-progress-copy small { grid-column: 1 / -1; color: var(--sd-text-muted); font-size: 9px; text-align: right; }
@@ -1346,16 +1367,26 @@
 
 .entries-native-select {
   height: 30px;
-  padding: 0 8px;
+  min-width: 52px;
+  padding: 0 23px 0 8px;
+  appearance: none;
+  -webkit-appearance: none;
   font-size: 11.5px;
   font-weight: 500;
   background: var(--sd-bg-subtle);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aab4c7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  background-size: 12px;
   border: 1px solid var(--sd-border-glass);
   border-radius: var(--sd-radius-sm);
   color: var(--sd-text-primary);
   cursor: pointer;
   outline: none;
+  color-scheme: inherit;
+  transition: border-color var(--sd-transition-fast), box-shadow var(--sd-transition-fast), background-color var(--sd-transition-fast);
 }
+.entries-native-select:focus-visible { border-color: var(--sd-accent-progress, var(--sd-coral)); box-shadow: 0 0 0 3px var(--sd-accent-progress-glow, var(--sd-coral-glow)); }
 
 /* Content Body */
 .entries-content-body {
@@ -1369,6 +1400,12 @@
   .timer-study-plan-toggle > svg,
   .entries-heading-chevron,
   .timer-study-plan-start { transition-duration: 0.01ms; }
+  .horology-dial-mode,
+  .horology-wall-block,
+  .chronograph-digital-block,
+  .horology-idle-actions,
+  .timer-insights-pane > .t-combos-grid,
+  .timer-insights-pane > .timer-study-plan-content { animation-duration: 0.01ms; }
 }
 
 .demo-entry-empty {
@@ -1711,31 +1748,101 @@
   --timer-subcontainer-shadow: 0 9px 24px -14px rgba(0, 0, 0, .58), inset 0 1px 0 rgba(255, 255, 255, .045);
 }
 
+:root[data-theme='dark'] .timer-root .deck-badge-dot.live,
+:root[data-theme='dark'] .timer-root .chrono-dot.live {
+  background: var(--sd-accent-progress);
+  box-shadow: 0 0 0 3px var(--sd-accent-progress-glow);
+  animation-name: darkProgressPulse;
+}
+
+:root[data-theme='dark'] .timer-root .horology-focus-ring-progress {
+  stroke: var(--sd-accent-progress);
+  filter: drop-shadow(0 0 4px var(--sd-accent-progress-glow));
+}
+
+:root[data-theme='dark'] .timer-root .t-combo-card.is-active {
+  border-color: color-mix(in srgb, var(--sd-accent-progress) 58%, var(--sd-border-glass));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sd-accent-progress) 54%, transparent), 0 8px 24px -8px var(--sd-accent-progress-glow);
+}
+
+:root[data-theme='dark'] .timer-root .t-combo-card.is-keyboard-selected {
+  border-color: color-mix(in srgb, var(--sd-accent-progress) 56%, var(--sd-border-glass));
+  background: color-mix(in srgb, var(--sd-accent-progress) 9%, var(--sd-bg-subtle));
+  box-shadow: 0 0 0 2px rgba(112, 199, 176, .18), 0 4px 12px rgba(0, 0, 0, .16);
+}
+
+:root[data-theme='dark'] .timer-root .chrono-subject-name {
+  color: var(--sd-accent-progress) !important;
+}
+
+:root[data-theme='dark'] .timer-root .t-combo-dot,
+:root[data-theme='dark'] .timer-root .timer-study-plan-dot {
+  background: var(--sd-accent-progress) !important;
+  box-shadow: 0 0 0 3px var(--sd-accent-progress-subtle);
+}
+
+:root[data-theme='dark'] .timer-root .timer-study-plan-recommendation {
+  border-color: rgba(112, 199, 176, .22);
+  background: linear-gradient(135deg, rgba(112, 199, 176, .12), rgba(112, 199, 176, .045));
+}
+
+:root[data-theme='dark'] .timer-root .timer-study-plan-start {
+  border-color: rgba(112, 199, 176, .26);
+  background: rgba(112, 199, 176, .1);
+  color: #c7eee3;
+}
+
+:root[data-theme='dark'] .timer-root .timer-study-plan-start:hover {
+  border-color: rgba(112, 199, 176, .48);
+  background: rgba(112, 199, 176, .17);
+  color: #eaf8f4;
+}
+
+:root[data-theme='dark'] .timer-root .timer-context-progress > span,
+:root[data-theme='dark'] .timer-root .timer-study-plan-total-track > span,
+:root[data-theme='dark'] .timer-root .timer-study-plan-track > span {
+  background: linear-gradient(90deg, var(--sd-accent-progress), var(--sd-accent-progress-strong));
+}
+
+:root[data-theme='dark'] .timer-root .timer-study-plan-total-percent,
+:root[data-theme='dark'] .timer-root .timer-study-plan-overview-label svg {
+  color: var(--sd-accent-progress);
+}
+
+@keyframes darkProgressPulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--sd-accent-progress-glow); }
+  50% { box-shadow: 0 0 0 7px rgba(112, 199, 176, 0); }
+}
+
+:root[data-theme='dark'] .timer-root :focus-visible {
+  outline-color: var(--sd-accent-progress);
+}
+
 :root[data-theme='dark'] .timer-root .t-combo-btn.start {
-  color: #c4c9f5;
-  background: rgba(137, 149, 237, .1);
-  border: 1px solid rgba(137, 149, 237, .22);
+  color: #c7eee3;
+  background: rgba(112, 199, 176, .1);
+  border: 1px solid rgba(112, 199, 176, .22);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
 }
 
 :root[data-theme='dark'] .timer-root .t-combo-card:hover .t-combo-btn.start,
 :root[data-theme='dark'] .timer-root .t-combo-btn.start:hover {
-  color: #fff;
-  background: #8995ed;
-  border-color: rgba(177, 185, 255, .76);
-  box-shadow: 0 3px 9px rgba(137, 149, 237, .16), inset 0 1px 0 rgba(255, 255, 255, .16);
+  color: #081714;
+  background: #70c7b0;
+  border-color: rgba(168, 232, 214, .64);
+  box-shadow: 0 3px 9px rgba(112, 199, 176, .16), inset 0 1px 0 rgba(255, 255, 255, .16);
 }
 
 :root[data-theme='dark'] .timer-root .horology-btn-start {
-  background: linear-gradient(180deg, #868de0 0%, #5e66c4 100%);
+  background: linear-gradient(180deg, #84d8c0 0%, #4b9f88 100%);
   border: 1px solid rgba(255, 255, 255, .24);
-  color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 7px 20px -6px rgba(137, 149, 237, .34);
+  color: #071714;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 7px 20px -6px rgba(112, 199, 176, .3);
 }
 
 :root[data-theme='dark'] .timer-root .horology-btn-start:hover:not(:disabled) {
-  background: linear-gradient(180deg, #9299e8 0%, #6870ce 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), 0 9px 23px -5px rgba(137, 149, 237, .4);
+  background: linear-gradient(180deg, #9de4cf 0%, #5ab397 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), 0 9px 23px -5px rgba(112, 199, 176, .36);
 }
 
 :root[data-theme='dark'] .timer-root .horology-metrics-strip {
@@ -1744,7 +1851,7 @@
 }
 
 :root[data-theme='dark'] .timer-root .h-metric:nth-child(3) .h-metric-val {
-  color: var(--sd-accent-warm);
+  color: var(--sd-accent-progress);
 }
 
 .timer-root .timer-deck-card,

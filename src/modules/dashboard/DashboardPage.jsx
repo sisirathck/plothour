@@ -1356,10 +1356,9 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const projectPlans = useMemo(() => projects.filter((project) => !project.archived).map((project) => {
     const matching = entries.filter((entry) => entry.projectId === project.id || (!entry.projectId && entry.projectName === project.name));
     const subjectPlans = project.subjects || [];
-    const projectEstimate = Number(project.estimateHours) || 0;
     const estimatedSubjects = subjectPlans.filter((subject) => Number(subject.estimateHours) > 0);
-    const estimateHours = projectEstimate || estimatedSubjects.reduce((sum, subject) => sum + (Number(subject.estimateHours) || 0), 0);
-    const planEntries = projectEstimate || !estimatedSubjects.length ? matching : matching.filter((entry) => estimatedSubjects.some((subject) => entry.subjectId === subject.id || (!entry.subjectId && entry.subjectName === subject.name)));
+    const estimateHours = estimatedSubjects.reduce((sum, subject) => sum + (Number(subject.estimateHours) || 0), 0);
+    const planEntries = !estimatedSubjects.length ? matching : matching.filter((entry) => estimatedSubjects.some((subject) => entry.subjectId === subject.id || (!entry.subjectId && entry.subjectName === subject.name)));
     const seconds = planEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
     const remainingSeconds = Math.max(0, estimateHours * 3600 - seconds);
     const recentStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
@@ -1373,9 +1372,9 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     }).map((entry) => dateKey(entry.startedAt))).size;
     const pacePerDay = recentActiveDays ? recentSeconds / 30 : 0;
     const forecastDate = remainingSeconds > 0 && pacePerDay > 0 ? new Date(now.getTime() + (remainingSeconds / pacePerDay) * 86400000) : null;
-    const deadlineValues = [project.deadline, ...subjectPlans.map((subject) => subject.deadline)].filter(Boolean).map((value) => new Date(`${value}T23:59:59`)).filter((value) => Number.isFinite(value.getTime())).sort((a, b) => a - b);
+    const deadlineValues = subjectPlans.map((subject) => subject.deadline).filter(Boolean).map((value) => new Date(`${value}T23:59:59`)).filter((value) => Number.isFinite(value.getTime())).sort((a, b) => a - b);
     const deadline = deadlineValues[0] || null;
-    const milestones = [...(Array.isArray(project.milestones) ? project.milestones : []), ...subjectPlans.flatMap((subject) => Array.isArray(subject.milestones) ? subject.milestones : [])];
+    const milestones = subjectPlans.flatMap((subject) => Array.isArray(subject.milestones) ? subject.milestones : []);
     const completedMilestones = milestones.filter((milestone) => milestone.completed).length;
     return { id: project.id, name: project.name, color: project.color, seconds, estimateHours, remainingSeconds, progress: estimateHours > 0 ? Math.min(100, Math.round(seconds / (estimateHours * 3600) * 100)) : null, forecastDate: forecastDate && Number.isFinite(forecastDate.getTime()) ? forecastDate : null, deadline: deadline && Number.isFinite(deadline.getTime()) ? deadline : null, milestones, completedMilestones };
   }), [projects, entries, now]);
