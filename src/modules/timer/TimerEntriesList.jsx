@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Pencil, Save, Trash2, X, Calendar, CalendarDays, Undo2 } from 'lucide-react';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
@@ -73,7 +74,19 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const cancelDeleteRef = useRef(null);
   const [filterDate, setFilterDate] = useState(() => new Date());
+
+  useEffect(() => {
+    if (!deleteTarget) return undefined;
+    cancelDeleteRef.current?.focus();
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setDeleteTarget(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [deleteTarget]);
 
   useEffect(() => {
     const interval = window.setInterval(() => setFilterDate(new Date()), 60_000);
@@ -138,27 +151,26 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   };
 
   const removeEntry = (id) => {
-    if (!window.confirm('Delete this tracked session?')) return;
-    const previousEntry = entries.find((entry) => entry.id === id);
+    setDeleteTarget(entries.find((entry) => entry.id === id) || null);
+  };
+
+  const confirmRemoveEntry = () => {
+    if (!deleteTarget) return;
+    const previousEntry = deleteTarget;
+    const id = previousEntry.id;
     setEntries((items) => items.filter((entry) => entry.id !== id));
     if (previousEntry) { recordChange('Deleted', previousEntry); offerUndo('Session deleted', () => { setEntries((items) => items.some((entry) => entry.id === id) ? items : [...items, previousEntry].sort((a, b) => Number(b.startedAt) - Number(a.startedAt))); recordChange('Restored', previousEntry); }); }
+    setDeleteTarget(null);
   };
 
   return (
     <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}`} aria-label="Completed time entries">
       {/* Panel Header */}
       <div className="entries-panel-heading">
-        <button
-          type="button"
-          className="entries-collapse-btn"
-          onClick={() => setExpanded((current) => !current)}
-          aria-expanded={isExpanded}
-          aria-label={isExpanded ? 'Collapse session history' : 'Expand session history'}
-        >
-            <span className="entries-heading-title">SESSION HISTORY</span>
-            <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
-            <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />
-        </button>
+        <div className="entries-heading-label">
+          <span className="entries-heading-title">SESSION HISTORY</span>
+          <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
+        </div>
         {!hideRangeControls && (
           <div className="entries-heading-actions">
             {onOpenCalendar && (
@@ -399,6 +411,23 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
         </div>
         </div>
       </div>
+      {deleteTarget && createPortal(
+        <div className="entries-delete-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}>
+          <section className="entries-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="entries-delete-title" aria-describedby="entries-delete-description">
+            <span className="entries-delete-icon"><Trash2 size={18} /></span>
+            <div className="entries-delete-copy">
+              <span className="entries-delete-eyebrow">SESSION HISTORY</span>
+              <h2 id="entries-delete-title">Delete this session?</h2>
+              <p id="entries-delete-description">Remove the {deleteTarget.projectName || 'study'} session from your history? You can undo this for a few seconds after deleting.</p>
+            </div>
+            <div className="entries-delete-actions">
+              <button ref={cancelDeleteRef} type="button" className="entries-delete-cancel" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button type="button" className="entries-delete-confirm" onClick={confirmRemoveEntry}><Trash2 size={14} /> Delete session</button>
+            </div>
+          </section>
+        </div>,
+        document.body
+      )}
     </section>
   );
 };
