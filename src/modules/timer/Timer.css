@@ -1887,3 +1887,48 @@
   border-color: var(--timer-container-border);
   box-shadow: var(--timer-subcontainer-shadow);
 }
+
+@media (max-width: 600px) {
+  .timer-root { gap: 12px; }
+  .timer-deck-card { border-radius: 18px; }
+  .timer-cmd-column { padding: 18px 14px 16px; gap: 16px; }
+  .timer-horology-column { min-height: 0; border-top: 1px solid var(--sd-border-glass); border-left: 0; }
+  .horology-face-container { gap: 9px; padding: 16px 12px 14px; }
+  .horology-dial-wrapper { width: min(270px, 76vw); height: min(270px, 76vw); flex-basis: min(270px, 76vw); }
+  .horology-halo-svg { width: min(360px, 100vw); height: min(360px, 100vw); }
+  .timer-primary-selectors { gap: 12px; padding: 14px; }
+  .timer-selects-row { gap: 9px; }
+  .t-select-btn { min-height: 42px; padding-inline: 10px; font-size: 12px; }
+  .timer-combo-search { min-height: 42px; }
+  .timer-insights-pane { height: min(360px, 52vh); min-height: 230px; }
+  .timer-insights-tab { min-height: 38px; }
+  .timer-study-plan-card, .demo-entry-card { border-radius: 17px; }
+  .entries-panel-heading { gap: 8px; padding: 13px 14px; }
+  .entries-heading-actions { gap: 4px; }
+  .entries-controls { gap: 9px; padding: 10px 12px; }
+  .entries-range-pills { max-width: 100%; overflow-x: auto; }
+  .range-pill-btn { min-height: 34px; padding-inline: 9px; white-space: nowrap; }
+  .entries-calendar-btn { min-height: 36px; }
+  .demo-entry-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 6px 8px; padding: 12px 13px; }
+  .demo-entry-left { grid-column: 1; grid-row: 1; align-items: flex-start; gap: 8px; }
+  .demo-entry-name { min-width: 0; gap: 4px 6px; }
+  .entry-proj-title { font-size: 12px; overflow-wrap: anywhere; }
+  .entry-sub-title { font-size: 11px; overflow-wrap: anywhere; }
+  .entry-note-tag { flex-basis: 100%; font-size: 10px; }
+  .demo-entry-time { grid-column: 1; grid-row: 2; min-width: 0; align-items: flex-start; padding-left: 16px; }
+  .entry-range-clock { font-size: 10px; }
+  .demo-entry-date { font-size: 9px; }
+  .demo-entry-right { grid-column: 2; grid-row: 1 / span 2; gap: 4px; }
+  .entry-duration-pill { min-width: 54px; padding: 4px 7px; font-size: 11px; }
+  .entry-row-actions { opacity: 1; }
+  .entry-action-btn { width: 34px; height: 34px; }
+}
+
+@media (max-width: 420px) {
+  .timer-cmd-column { padding-inline: 11px; }
+  .timer-selects-row { grid-template-columns: minmax(0, 1fr); }
+  .timer-primary-selectors { padding: 12px; }
+  .timer-insights-tab { padding-inline: 5px; font-size: 7.5px; }
+  .entries-panel-heading > .entries-collapse-btn:not(.is-static) { flex-basis: 100%; }
+  .entries-heading-actions { width: 100%; justify-content: space-between; }
+}

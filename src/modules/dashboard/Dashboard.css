@@ -3495,6 +3495,68 @@
   background: linear-gradient(90deg, var(--db-progress-accent), var(--db-progress-accent-strong));
 }
 
+@media (max-width: 600px) {
+  .db-apple-root { padding-bottom: 24px; }
+  .db-bento-container { padding: 12px 10px 28px; gap: 12px; }
+  .db-bento-grid-row, .db-preference-section { min-width: 0; gap: 12px; }
+  .db-bento-container .db-card,
+  .db-bento-container .db-weekly-focus-card,
+  .db-bento-container .db-snapshot-card,
+  .db-bento-container .db-chart-card { padding: 15px; border-radius: 17px; }
+  .db-dashboard-controls { gap: 8px; padding: 9px; border-radius: 15px; }
+  .db-today-inline { grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; }
+  .db-today-inline-meta small { max-width: 76px; }
+  .db-weekly-focus-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .db-weekly-focus-calendar, .db-weekly-set-goal { width: 100%; }
+  .db-weekly-focus-main { align-items: stretch; flex-direction: column; gap: 17px; padding: 17px 0; }
+  .db-weekly-total-block, .db-weekly-goal-block { min-width: 0; width: 100%; }
+  .db-weekly-total { font-size: clamp(38px, 12vw, 54px); }
+  .db-weekly-goal-heading { align-items: center; }
+  .db-weekly-quick-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
+  .db-weekly-quick-stats > div { min-width: 0; padding: 0 10px; border-right: 0; }
+  .db-weekly-quick-stats > div:nth-child(odd) { padding-left: 0; }
+  .db-weekly-quick-stats strong { font-size: 16px; }
+  .db-snapshot-header { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .db-snapshot-insight-chip { max-width: 100%; }
+  .db-snapshot-grid { grid-template-columns: minmax(0, 1fr); }
+  .db-snap-goal-row-meta { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .db-rhythm-row, .db-chart-pair { grid-template-columns: minmax(0, 1fr); }
+  .db-chart-pair > .db-velocity-card { grid-column: auto; }
+  .db-chart-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .db-chart-legend { max-width: 100%; flex-wrap: wrap; }
+  .db-hours-project-body { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .db-hours-project-donut-shell { width: min(100%, 205px); }
+  .db-hours-project-legend { max-height: 240px; }
+  .db-hours-project-legend-row { grid-template-columns: minmax(0, 1fr) auto auto; gap: 5px; padding-inline: 7px; }
+}
+
+@media (max-width: 380px) {
+  .db-bento-container { padding-inline: 7px; }
+  .db-today-inline { grid-template-columns: minmax(0, 1fr) auto; }
+  .db-today-inline-date { grid-column: 1; }
+  .db-today-inline-meta { grid-column: 2; grid-row: 1 / span 2; }
+  .db-today-inline-main { grid-column: 1 / -1; }
+  .db-today-inline-meta small { max-width: 88px; }
+}
+
+/* On phones, let the donut and its legend contribute to the card's height.
+   The desktop fixed-height treatment otherwise lets the legend spill into the
+   next dashboard section after the chart stacks vertically. */
+@media (max-width: 600px) {
+  .db-hours-project-card { height: auto; min-height: 0; }
+  .db-hours-project-body { flex: 0 0 auto; min-height: 0; }
+  .db-hours-project-legend { max-height: 250px; }
+  .db-customizer-panel {
+    width: min(390px, calc(100vw - 24px));
+    max-height: calc(100dvh - 110px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .db-customizer-row { min-height: 44px; gap: 6px; }
+  .db-customizer-actions { gap: 1px; }
+  .db-customizer-actions button { width: 34px; height: 34px; }
+}
+
 .db-apple-root.dark-mode .db-power-fill.active,
 .db-apple-root.dark-mode .db-weekly-bar-element.active {
   background: linear-gradient( to top, #54a991, var(--db-progress-accent-strong));

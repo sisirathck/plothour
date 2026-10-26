@@ -1425,3 +1425,19 @@
 .settings-quick-search input::placeholder { color:var(--sd-settings-text-muted); }
 .demo-settings-page [hidden] { display:none !important; }
 @media (max-width:720px) { .settings-quick-search { width:100%; } }
+
+@media (max-width: 600px) {
+  .demo-settings-page { max-height: none; padding: 14px 10px calc(104px + env(safe-area-inset-bottom)); }
+  .demo-settings-heading { margin: 12px 0 17px; }
+  .settings-bento-card { padding: 16px 13px; border-radius: 17px; }
+  .settings-row { gap: 10px; padding-block: 14px; }
+  .settings-row-info strong { font-size: 13px; }
+  .settings-slider-group { gap: 10px; }
+  .settings-range-slider { min-width: 0; }
+  .settings-quick-search { min-width: 0; }
+  .settings-date-format-picker, .settings-timezone-picker { width: 100%; flex-basis: auto; }
+  .settings-save-dock { padding-inline: 10px; }
+  .settings-save-dock button { min-height: 42px; }
+  .settings-confirm-backdrop, .settings-export-preview-backdrop { align-items: end; padding: 10px; }
+  .settings-confirm-dialog, .settings-export-preview { width: 100%; max-height: calc(100dvh - 20px); overflow-y: auto; border-radius: 20px 20px 14px 14px; }
+}
