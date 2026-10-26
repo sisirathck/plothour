@@ -89,43 +89,47 @@
    -------------------------------------------------------------------------- */
 [data-theme='dark'] {
   color-scheme: dark;
-  --sd-bg-base: #090d14;
-  --sd-popover-bg: #151c29;
-  --sd-card-bg: linear-gradient(160deg, rgba(30, 39, 56, 0.78), rgba(18, 23, 34, 0.72));
-  --sd-card-border: rgba(255, 255, 255, 0.06);
-  --sd-card-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
-  --sd-bg-surface: rgba(18, 23, 34, 0.72);
-  --sd-bg-subtle: rgba(13, 18, 27, 0.58);
-  --sd-track-bg: #0d121b;
-  --sd-border-glass: rgba(255, 255, 255, 0.06);
-  --sd-border-soft: rgba(255, 255, 255, 0.09);
-  --sd-border-strong: rgba(255, 255, 255, 0.18);
-  --sd-shadow-sm: 0 8px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
-  --sd-shadow-card: 0 12px 32px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
-
-  --sd-text-primary: #f3f4f6;
-  --sd-text-secondary: #9ca3af;
-  --sd-text-muted: #8a94a6;
-
-  --sd-input-bg: rgba(15, 23, 42, 0.6);
-  --sd-input-border: rgba(255, 255, 255, 0.1);
-  --sd-input-border-focus: #f3957f;
-  --sd-input-ring: rgba(243, 149, 127, 0.25);
-
-  --sd-banner-bg: rgba(243, 149, 127, 0.08);
-  --sd-banner-border: rgba(243, 149, 127, 0.22);
-  --sd-banner-text: #e5e7eb;
-
-  /* Transparent / Specular buttons in Dark Mode */
-  --sd-glass-btn-bg: rgba(255, 255, 255, 0.06);
-  --sd-glass-btn-border: rgba(255, 255, 255, 0.10);
-  --sd-glass-btn-hover-bg: rgba(255, 255, 255, 0.12);
-  --sd-glass-btn-hover-border: rgba(255, 255, 255, 0.20);
-
+  /* Midnight plum surfaces with a clear lavender accent and mint progress color. */
+  --sd-coral: #a99aff;
+  --sd-coral-hover: #b9adff;
+  --sd-coral-active: #9684f0;
+  --sd-coral-glow: rgba(169, 154, 255, 0.28);
+  --sd-orange: var(--sd-coral);
+  --sd-orange-hover: var(--sd-coral-hover);
+  --sd-orange-active: var(--sd-coral-active);
+  --sd-orange-glow: var(--sd-coral-glow);
+  --sd-orange-subtle: rgba(169, 154, 255, 0.13);
+  --sd-bg-base: #11121b;
+  --sd-popover-bg: #242536;
+  --sd-card-bg: linear-gradient(150deg, rgba(36, 37, 54, 0.96), rgba(27, 28, 43, 0.96));
+  --sd-card-border: rgba(211, 204, 255, 0.13);
+  --sd-card-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(236, 232, 255, 0.07);
+  --sd-bg-surface: #1b1c2b;
+  --sd-bg-subtle: #202132;
+  --sd-track-bg: #292a3b;
+  --sd-border-glass: rgba(211, 204, 255, 0.11);
+  --sd-border-soft: rgba(211, 204, 255, 0.16);
+  --sd-border-strong: rgba(211, 204, 255, 0.25);
+  --sd-shadow-sm: 0 8px 24px -12px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(236, 232, 255, 0.055);
+  --sd-shadow-card: var(--sd-card-shadow);
+  --sd-text-primary: #f4f1ff;
+  --sd-text-secondary: #c1bed3;
+  --sd-text-muted: #9997b0;
+  --sd-input-bg: #191a29;
+  --sd-input-border: rgba(211, 204, 255, 0.17);
+  --sd-input-border-focus: #a99aff;
+  --sd-input-ring: rgba(169, 154, 255, 0.24);
+  --sd-banner-bg: rgba(169, 154, 255, 0.11);
+  --sd-banner-border: rgba(169, 154, 255, 0.28);
+  --sd-banner-text: #e7e2ff;
+  --sd-glass-btn-bg: rgba(36, 37, 54, 0.76);
+  --sd-glass-btn-border: rgba(211, 204, 255, 0.14);
+  --sd-glass-btn-hover-bg: rgba(169, 154, 255, 0.14);
+  --sd-glass-btn-hover-border: rgba(211, 204, 255, 0.28);
   --sd-backdrop-scrim: linear-gradient(90deg,
-      rgba(9, 13, 20, 0.70) 0%,
-      rgba(9, 13, 20, 0.25) 45%,
-      rgba(9, 13, 20, 0) 100%);
+      rgba(17, 18, 27, 0.78) 0%,
+      rgba(17, 18, 27, 0.34) 45%,
+      rgba(17, 18, 27, 0) 100%);
 }
 
 /* --------------------------------------------------------------------------

@@ -4,9 +4,9 @@ const demoProjects = [
     name: 'Computer Science',
     color: '#7284dc',
     subjects: [
-      { id: 'demo-subject-algorithms', name: 'Algorithms', color: '#7284dc', goals: { daily: 1.5, weekly: 8, monthly: 32 }, estimateHours: 80, milestones: [{ id: 'demo-milestone-algorithms-1', title: 'Review graph algorithms', completed: true }, { id: 'demo-milestone-algorithms-2', title: 'Complete practice set', completed: false }] },
-      { id: 'demo-subject-databases', name: 'Database Systems', color: '#48a99b', goals: { daily: 1, weekly: 5, monthly: 20 }, estimateHours: 45, milestones: [{ id: 'demo-milestone-db-1', title: 'Build a study tracker schema', completed: true }] },
-      { id: 'demo-subject-web', name: 'Web Development', color: '#df9a53', goals: { daily: 1, weekly: 6, monthly: 24 }, estimateHours: 60 },
+      { id: 'demo-subject-algorithms', name: 'Algorithms', color: '#7284dc', goals: { daily: 1.5, weekly: 8, monthly: 32 }, studyDays: [1, 3, 5], estimateHours: 80, milestones: [{ id: 'demo-milestone-algorithms-1', title: 'Review graph algorithms', completed: true }, { id: 'demo-milestone-algorithms-2', title: 'Complete practice set', completed: false }] },
+      { id: 'demo-subject-databases', name: 'Database Systems', color: '#48a99b', goals: { daily: 1, weekly: 5, monthly: 20 }, studyDays: [2, 4], estimateHours: 45, milestones: [{ id: 'demo-milestone-db-1', title: 'Build a study tracker schema', completed: true }] },
+      { id: 'demo-subject-web', name: 'Web Development', color: '#df9a53', goals: { daily: 1, weekly: 6, monthly: 24 }, studyDays: [1, 6], estimateHours: 60 },
     ],
   },
   {
@@ -14,8 +14,8 @@ const demoProjects = [
     name: 'Mathematics',
     color: '#9a79cc',
     subjects: [
-      { id: 'demo-subject-linear', name: 'Linear Algebra', color: '#9a79cc', goals: { daily: 1, weekly: 5, monthly: 20 }, estimateHours: 50 },
-      { id: 'demo-subject-statistics', name: 'Statistics', color: '#ce7794', goals: { daily: 0.75, weekly: 4, monthly: 16 }, estimateHours: 36 },
+      { id: 'demo-subject-linear', name: 'Linear Algebra', color: '#9a79cc', goals: { daily: 1, weekly: 5, monthly: 20 }, studyDays: [0, 1, 3, 5], estimateHours: 50 },
+      { id: 'demo-subject-statistics', name: 'Statistics', color: '#ce7794', goals: { daily: 0.75, weekly: 4, monthly: 16 }, studyDays: [1, 2, 4], estimateHours: 36 },
     ],
   },
   {
@@ -23,8 +23,8 @@ const demoProjects = [
     name: 'Japanese',
     color: '#56a783',
     subjects: [
-      { id: 'demo-subject-kanji', name: 'Kanji & Vocabulary', color: '#56a783', goals: { daily: 0.5, weekly: 4, monthly: 16 }, estimateHours: 40 },
-      { id: 'demo-subject-speaking', name: 'Listening Practice', color: '#5b9dc1', goals: { daily: 0.5, weekly: 3, monthly: 12 }, estimateHours: 30 },
+      { id: 'demo-subject-kanji', name: 'Kanji & Vocabulary', color: '#56a783', goals: { daily: 0.5, weekly: 4, monthly: 16 }, studyDays: [2, 5], estimateHours: 40 },
+      { id: 'demo-subject-speaking', name: 'Listening Practice', color: '#5b9dc1', goals: { daily: 0.5, weekly: 3, monthly: 12 }, studyDays: [1, 3, 6], estimateHours: 30 },
     ],
   },
   {
@@ -32,8 +32,8 @@ const demoProjects = [
     name: 'Portfolio Capstone',
     color: '#d48368',
     subjects: [
-      { id: 'demo-subject-capstone-research', name: 'Research & Planning', color: '#d48368', goals: { daily: 0.5, weekly: 3, monthly: 12 }, estimateHours: 28 },
-      { id: 'demo-subject-capstone-build', name: 'Implementation', color: '#d2a14e', goals: { daily: 1, weekly: 5, monthly: 20 }, estimateHours: 55 },
+      { id: 'demo-subject-capstone-research', name: 'Research & Planning', color: '#d48368', goals: { daily: 0.5, weekly: 3, monthly: 12 }, studyDays: [0, 2, 4], estimateHours: 28 },
+      { id: 'demo-subject-capstone-build', name: 'Implementation', color: '#d2a14e', goals: { daily: 1, weekly: 5, monthly: 20 }, studyDays: [1, 4, 5], estimateHours: 55 },
     ],
   },
   {
@@ -42,7 +42,7 @@ const demoProjects = [
     color: '#7082b7',
     archived: true,
     archivedAt: Date.now() - 35 * 86400000,
-    subjects: [{ id: 'demo-subject-python', name: 'Python Projects', color: '#7082b7', goals: { daily: 1, weekly: 5, monthly: 20 }, estimateHours: 42 }],
+    subjects: [{ id: 'demo-subject-python', name: 'Python Projects', color: '#7082b7', goals: { daily: 1, weekly: 5, monthly: 20 }, studyDays: [2, 4, 6], estimateHours: 42 }],
   },
 ];
 
@@ -161,7 +161,7 @@ export function resetDemoWorkspace() {
     displayName: 'Alex Morgan',
     dailyGoalHours: 3,
     weekStart: 'monday',
-    defaultTimerMode: '50m',
+    defaultTimerMode: 'stopwatch',
     soundEnabled: true,
   }));
 }

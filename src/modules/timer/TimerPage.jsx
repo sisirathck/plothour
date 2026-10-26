@@ -4,6 +4,8 @@ import {
   Square,
   Pause,
   ChevronDown,
+  CalendarDays,
+  Target,
   Search,
 } from 'lucide-react';
 import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
@@ -26,6 +28,16 @@ const rj = (key, fallback) => {
     return fallback;
   }
 };
+const readTimerPreferences = (key) => {
+  const saved = rj(key, {});
+  const isLegacyDefault = !saved.timerDefaultModeVersion && saved.defaultTimerMode === '50m';
+  return {
+    ...saved,
+    defaultTimerMode: isLegacyDefault ? 'stopwatch' : saved.defaultTimerMode || 'stopwatch',
+    timerDefaultModeVersion: 2,
+    soundEnabled: saved.soundEnabled ?? true,
+  };
+};
 
 const pad = (n) => String(Math.floor(n)).padStart(2, '0');
 const fmtClock = (s) => `${pad(s / 3600)}:${pad((s % 3600) / 60)}:${pad(s % 60)}`;
@@ -35,11 +47,23 @@ const fmtDur = (s) => {
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
+const getSubjectStudySchedule = (subject) => {
+  const dailyGoalHours = Number(subject?.goals?.daily) || 0;
+  const weeklyGoalHours = Number(subject?.goals?.weekly) || 0;
+  const studyDays = Array.isArray(subject?.studyDays)
+    ? subject.studyDays.filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+    : dailyGoalHours > 0 ? ALL_STUDY_DAYS : [];
+  const targetHours = dailyGoalHours > 0
+    ? dailyGoalHours
+    : weeklyGoalHours > 0 && studyDays.length ? weeklyGoalHours / studyDays.length : 0;
+  return { studyDays, targetHours };
+};
 const TIMER_GOALS = [
   { id: '25m', label: '25 min', seconds: 25 * 60 },
   { id: '50m', label: '50 min', seconds: 50 * 60 },
   { id: 'stopwatch', label: 'Open', seconds: 0 },
 ];
+const ALL_STUDY_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 /* ── Default Sample Projects ───────────────── */
 const DEFAULT_PROJECTS = [
@@ -133,8 +157,9 @@ export const TimerPage = ({ user }) => {
   const activeProjects = useMemo(() => projects.filter((project) => !project.archived), [projects]);
   const [activeTimer, setActiveTimer] = useState(() => rj(activeKey, null));
   const [entries, setEntries] = useState(() => rj(entriesKey, []));
-  const [timerPreferences, setTimerPreferences] = useState(() => rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true }));
-  const [sessionGoalMode, setSessionGoalMode] = useState(() => rj(preferencesKey, { defaultTimerMode: '50m' }).defaultTimerMode || '50m');
+  const [timerPreferences, setTimerPreferences] = useState(() => readTimerPreferences(preferencesKey));
+  const [sessionGoalMode, setSessionGoalMode] = useState(() => readTimerPreferences(preferencesKey).defaultTimerMode);
+  const [todayPlanExpanded, setTodayPlanExpanded] = useState(true);
 
   const [selProj, setSelProj] = useState(
     () => rj(activeKey, null)?.projectId || rj(projectsKey, user ? [] : DEFAULT_PROJECTS).find((project) => !project.archived)?.id || ''
@@ -145,6 +170,7 @@ export const TimerPage = ({ user }) => {
 
   const [comboSearch, setComboSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
   const searchRef = useRef(null);
   const [pendingSelection, setPendingSelection] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -177,9 +203,9 @@ export const TimerPage = ({ user }) => {
   useEffect(() => {
     const syncPreferences = (event) => {
       if (event?.detail?.preferencesKey && event.detail.preferencesKey !== preferencesKey) return;
-      const nextPreferences = rj(preferencesKey, { defaultTimerMode: '50m', soundEnabled: true });
+      const nextPreferences = readTimerPreferences(preferencesKey);
       setTimerPreferences(nextPreferences);
-      setSessionGoalMode((current) => activeTimer ? current : nextPreferences.defaultTimerMode || '50m');
+      setSessionGoalMode((current) => activeTimer ? current : nextPreferences.defaultTimerMode || 'stopwatch');
     };
     window.addEventListener('studyduel:preferences-storage', syncPreferences);
     window.addEventListener('storage', syncPreferences);
@@ -257,11 +283,77 @@ export const TimerPage = ({ user }) => {
   const dailyGoalSecs = Math.max(1, Number(timerPreferences.dailyGoalHours) || 4) * 3600;
   const todayProgressSecs = todaySecs + (activeTimer ? elapsed : 0);
   const goalPct = Math.min(100, Math.round((todayProgressSecs / dailyGoalSecs) * 100));
-  const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || '50m';
-  const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[1];
+  const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch';
+  const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[2];
   const sessionProgress = sessionGoal.seconds ? Math.min(100, Math.round((elapsed / sessionGoal.seconds) * 100)) : 0;
   const sessionRemaining = sessionGoal.seconds ? Math.max(0, sessionGoal.seconds - elapsed) : 0;
-  const dailyRemaining = Math.max(0, dailyGoalSecs - todayProgressSecs);
+  const focusSchedule = getSubjectStudySchedule(sessionSubject);
+  const focusGoalSecs = focusSchedule.targetHours * 3600;
+  const focusIsPlannedToday = focusSchedule.studyDays.includes(now.getDay());
+  const focusTodaySecs = entries
+    .filter((entry) => {
+      if (new Date(entry.startedAt).toDateString() !== now.toDateString()) return false;
+      const matchesProject = entry.projectId ? entry.projectId === sessionProjectId : entry.projectName === sessionProject?.name;
+      const matchesSubject = entry.subjectId ? entry.subjectId === sessionSubjectId : entry.subjectName === sessionSubject?.name;
+      return matchesProject && matchesSubject;
+    })
+    .reduce((total, entry) => total + (Number(entry.durationSeconds) || 0), 0)
+    + (activeTimer?.projectId === sessionProjectId && activeTimer?.subjectId === sessionSubjectId ? elapsed : 0);
+  const focusGoalPct = focusGoalSecs ? Math.min(100, Math.round((focusTodaySecs / focusGoalSecs) * 100)) : 0;
+  const focusGoalRemaining = Math.max(0, focusGoalSecs - focusTodaySecs);
+
+  const hasStudyGoals = useMemo(() => activeProjects.some((project) => (project.subjects || []).some((subject) => (
+    (Number(subject.goals?.daily) || 0) > 0 || (Number(subject.goals?.weekly) || 0) > 0
+  ))), [activeProjects]);
+
+  const todayStudyPlan = useMemo(() => {
+    const day = now.getDay();
+    const todayKey = now.toDateString();
+    const scheduled = [];
+    activeProjects.forEach((project) => (project.subjects || []).forEach((subject) => {
+      const { studyDays, targetHours } = getSubjectStudySchedule(subject);
+      if (!studyDays.includes(day) || !studyDays.length) return;
+
+      const targetSeconds = targetHours * 3600;
+      if (targetSeconds <= 0) return;
+
+      const completedSeconds = entries.reduce((total, entry) => {
+        if (new Date(entry.startedAt).toDateString() !== todayKey) return total;
+        const matchesProject = entry.projectId ? entry.projectId === project.id : entry.projectName === project.name;
+        const matchesSubject = entry.subjectId ? entry.subjectId === subject.id : entry.subjectName === subject.name;
+        return matchesProject && matchesSubject ? total + (Number(entry.durationSeconds) || 0) : total;
+      }, 0);
+      const isCurrentSubject = activeTimer?.projectId === project.id && activeTimer?.subjectId === subject.id;
+      const totalSeconds = completedSeconds + (isCurrentSubject ? elapsed : 0);
+      scheduled.push({
+        projectId: project.id,
+        projectName: project.name,
+        subjectId: subject.id,
+        subjectName: subject.name,
+        color: subject.color || project.color,
+        targetSeconds,
+        completedSeconds: totalSeconds,
+        remainingSeconds: Math.max(0, targetSeconds - totalSeconds),
+        progress: Math.min(100, Math.round((totalSeconds / targetSeconds) * 100)),
+      });
+    }));
+    return scheduled.sort((a, b) => (
+      (a.progress - b.progress)
+      || (b.remainingSeconds - a.remainingSeconds)
+      || (b.targetSeconds - a.targetSeconds)
+    ));
+  }, [activeProjects, entries, now, activeTimer?.projectId, activeTimer?.subjectId, elapsed]);
+
+  const todayStudyPlanSummary = useMemo(() => {
+    const targetSeconds = todayStudyPlan.reduce((total, item) => total + item.targetSeconds, 0);
+    const completedSeconds = todayStudyPlan.reduce((total, item) => total + item.completedSeconds, 0);
+    return {
+      targetSeconds,
+      completedSeconds,
+      progress: targetSeconds ? Math.min(100, Math.round((completedSeconds / targetSeconds) * 100)) : 0,
+      nextFocus: todayStudyPlan.find((item) => item.remainingSeconds > 0) || null,
+    };
+  }, [todayStudyPlan]);
 
   // Top 5 Frequently Used Combos
   const topCombos = useMemo(() => {
@@ -387,6 +479,7 @@ export const TimerPage = ({ user }) => {
     setSelSub(item.subjectId);
     setComboSearch('');
     setSearchOpen(false);
+    setActiveSearchIndex(-1);
     if (activeTimer) startTimer(item.projectId, item.subjectId);
     else showSelectionPreview(item.projectId, item.subjectId);
   };
@@ -428,7 +521,7 @@ export const TimerPage = ({ user }) => {
       subjectId: sub?.id || '',
       subjectName: sub?.name || '',
       color: sub?.color || proj.color || '#f3957f',
-      mode: sessionGoalMode || timerPreferences.defaultTimerMode || '50m',
+      mode: sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch',
       startedAt: t,
     });
     setSelProj(proj.id);
@@ -546,26 +639,42 @@ export const TimerPage = ({ user }) => {
               type="search"
               value={comboSearch}
               onFocus={() => setSearchOpen(true)}
-              onChange={(event) => { setComboSearch(event.target.value); setSearchOpen(true); }}
+              onChange={(event) => { setComboSearch(event.target.value); setSearchOpen(true); setActiveSearchIndex(-1); }}
               onKeyDown={(event) => {
-                if (event.key === 'Escape') setSearchOpen(false);
-                if (event.key === 'Enter' && searchMatches[0]) {
+                if (event.key === 'Escape') {
+                  setSearchOpen(false);
+                  setActiveSearchIndex(-1);
+                } else if (event.key === 'ArrowDown' && searchMatches.length) {
                   event.preventDefault();
-                  chooseSearchResult(searchMatches[0]);
+                  setSearchOpen(true);
+                  setActiveSearchIndex((current) => current < 0 ? 0 : (current + 1) % searchMatches.length);
+                } else if (event.key === 'ArrowUp' && searchMatches.length) {
+                  event.preventDefault();
+                  setSearchOpen(true);
+                  setActiveSearchIndex((current) => current < 0 ? searchMatches.length - 1 : (current - 1 + searchMatches.length) % searchMatches.length);
+                } else if (event.key === 'Enter' && searchMatches.length) {
+                  event.preventDefault();
+                  chooseSearchResult(searchMatches[activeSearchIndex >= 0 ? activeSearchIndex : 0]);
                 }
               }}
               placeholder={text('timer', 'searchPlaceholder', 'Search projects or subjects to start a session')}
               aria-label="Search projects and subjects"
               aria-autocomplete="list"
+              aria-expanded={searchOpen && Boolean(comboSearch.trim())}
+              aria-controls="timer-search-results"
+              aria-activedescendant={searchOpen && activeSearchIndex >= 0 ? `timer-search-result-${activeSearchIndex}` : undefined}
             />
             {searchOpen && comboSearch.trim() && (
-              <div className="timer-search-results" role="listbox" aria-label="Project and subject results">
-                {searchMatches.length ? searchMatches.map((item) => (
+              <div className="timer-search-results" id="timer-search-results" role="listbox" aria-label="Project and subject results">
+                {searchMatches.length ? searchMatches.map((item, index) => (
                   <button
                     key={`${item.projectId}-${item.subjectId || 'general'}`}
+                    id={`timer-search-result-${index}`}
                     type="button"
-                    className="timer-search-result"
+                    className={`timer-search-result${activeSearchIndex === index ? ' is-highlighted' : ''}`}
                     role="option"
+                    aria-selected={activeSearchIndex === index}
+                    onMouseEnter={() => setActiveSearchIndex(index)}
                     onClick={() => chooseSearchResult(item)}
                   >
                     <span className="timer-search-result-dot" style={{ background: item.color }} />
@@ -855,10 +964,11 @@ export const TimerPage = ({ user }) => {
               {activeTimer ? (
                 <>
                   <div className="timer-context-progress-copy">
-                    <span>{sessionGoal.seconds ? (sessionRemaining > 0 ? `${fmtDur(sessionRemaining)} remaining` : 'Focus goal reached') : 'Open-ended focus'}</span>
-                    {sessionGoal.seconds > 0 && <span>{sessionProgress}%</span>}
+                    <span>{!focusGoalSecs ? 'Set a daily or weekly goal in Manage' : !focusIsPlannedToday ? 'Not planned for today' : focusGoalRemaining ? `${fmtDur(focusGoalRemaining)} left for this focus` : 'Today’s focus goal complete'}</span>
+                    {focusGoalSecs > 0 && focusIsPlannedToday && <span>{focusGoalPct}%</span>}
                   </div>
-                  {sessionGoal.seconds > 0 && <div className="timer-context-progress"><span style={{ width: `${sessionProgress}%` }} /></div>}
+                  {focusGoalSecs > 0 && focusIsPlannedToday && <div className="timer-context-progress"><span style={{ width: `${focusGoalPct}%` }} /></div>}
+                  <span className="timer-session-goal-status">{sessionGoal.seconds ? `${fmtDur(sessionRemaining)} remaining in this session · ${sessionProgress}%` : 'Open-ended session'}</span>
                   <label className="timer-session-note-wrap">
                     <span>SESSION NOTE</span>
                     <textarea
@@ -875,10 +985,10 @@ export const TimerPage = ({ user }) => {
               ) : (
                 <>
                   <div className="timer-context-progress-copy">
-                    <span>{dailyRemaining ? `${fmtDur(dailyRemaining)} to today’s goal` : 'Daily goal complete'}</span>
-                    <span>{goalPct}%</span>
+                    <span>{!focusGoalSecs ? 'Set a daily or weekly goal in Manage' : !focusIsPlannedToday ? 'Not planned for today' : focusGoalRemaining ? `${fmtDur(focusGoalRemaining)} left for this focus` : 'Today’s focus goal complete'}</span>
+                    {focusGoalSecs > 0 && focusIsPlannedToday && <span>{focusGoalPct}%</span>}
                   </div>
-                  <div className="timer-context-progress"><span style={{ width: `${goalPct}%` }} /></div>
+                  {focusGoalSecs > 0 && focusIsPlannedToday && <div className="timer-context-progress"><span style={{ width: `${focusGoalPct}%` }} /></div>}
                 </>
               )}
             </section>
@@ -908,6 +1018,71 @@ export const TimerPage = ({ user }) => {
           </div>
         </div>
       </section>
+
+      {hasStudyGoals && (
+        <section className={`timer-study-plan-card${todayPlanExpanded ? ' is-expanded' : ''}`} aria-label="Today's study plan">
+          <button
+            type="button"
+            className="timer-study-plan-toggle"
+            aria-expanded={todayPlanExpanded}
+            onClick={() => setTodayPlanExpanded((expanded) => !expanded)}
+          >
+            <span className="timer-study-plan-title">
+              <CalendarDays size={16} />
+              <span>TODAY’S STUDY PLAN</span>
+              <small>{todayStudyPlan.length ? `${todayStudyPlan.length} scheduled` : 'Goal set'}</small>
+            </span>
+            <ChevronDown size={17} className={todayPlanExpanded ? 'is-open' : ''} />
+          </button>
+          {todayPlanExpanded && (
+            <div className="timer-study-plan-content">
+              {todayStudyPlan.length > 0 && (
+                <div className="timer-study-plan-overview">
+                  <div className="timer-study-plan-total">
+                    <span className="timer-study-plan-overview-label">TOTAL DAILY GOALS</span>
+                    <strong>{fmtDur(todayStudyPlanSummary.completedSeconds)} <small>of {fmtDur(todayStudyPlanSummary.targetSeconds)}</small></strong>
+                    <div className="timer-study-plan-total-track" role="progressbar" aria-label="Total daily study goals" aria-valuemin={0} aria-valuemax={100} aria-valuenow={todayStudyPlanSummary.progress}>
+                      <span style={{ width: `${todayStudyPlanSummary.progress}%` }} />
+                    </div>
+                    <span className="timer-study-plan-total-percent">{todayStudyPlanSummary.progress}% complete</span>
+                  </div>
+                  <div className="timer-study-plan-recommendation">
+                    <span className="timer-study-plan-overview-label"><Target size={12} /> FOCUS NEXT</span>
+                    {todayStudyPlanSummary.nextFocus ? (
+                      <>
+                        <strong>{todayStudyPlanSummary.nextFocus.subjectName}</strong>
+                        <small>{todayStudyPlanSummary.nextFocus.projectName}</small>
+                        <span>{todayStudyPlanSummary.nextFocus.progress}% done · {fmtDur(todayStudyPlanSummary.nextFocus.remainingSeconds)} remaining</span>
+                      </>
+                    ) : (
+                      <strong>All today’s planned goals are complete</strong>
+                    )}
+                  </div>
+                </div>
+              )}
+              {todayStudyPlan.length ? todayStudyPlan.map((item) => (
+                <article className={`timer-study-plan-row${todayStudyPlanSummary.nextFocus === item ? ' is-recommended' : ''}`} key={`${item.projectId}:${item.subjectId}`}>
+                  <span className="timer-study-plan-dot" style={{ '--plan-color': item.color }} aria-hidden="true" />
+                  <div className="timer-study-plan-copy">
+                    <strong>{item.subjectName}</strong>
+                    <span>{item.projectName}</span>
+                  </div>
+                  <div className="timer-study-plan-progress-copy">
+                    <span>{fmtDur(item.completedSeconds)} / {fmtDur(item.targetSeconds)}</span>
+                    <strong>{item.progress}%</strong>
+                    <small>{item.remainingSeconds > 0 ? `${fmtDur(item.remainingSeconds)} left` : 'Goal complete'}</small>
+                  </div>
+                  <div className="timer-study-plan-track" role="progressbar" aria-label={`${item.subjectName} daily goal`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.progress}>
+                    <span style={{ width: `${item.progress}%`, '--plan-color': item.color }} />
+                  </div>
+                </article>
+              )) : (
+                <p className="timer-study-plan-empty">Set study days for a subproject in Manage to see today’s agenda. A daily goal is used directly; otherwise the weekly goal is split across your selected days.</p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── SESSION HISTORY LIST ─────────────────────────── */}
       <TimerEntriesList entries={entries} setEntries={setEntries} projects={projects} user={user} onOpenCalendar={() => setCalendarOpen(true)} />

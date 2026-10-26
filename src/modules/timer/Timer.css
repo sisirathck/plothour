@@ -463,7 +463,10 @@
   border-radius: var(--sd-radius-sm);
   transition: background var(--sd-transition-fast);
 }
-.timer-search-result:hover, .timer-search-result:focus-visible { background: var(--sd-bg-subtle); outline: none; }
+.timer-search-result:hover,
+.timer-search-result:focus-visible,
+.timer-search-result.is-highlighted,
+.timer-search-result[aria-selected="true"] { background: color-mix(in srgb, var(--sd-coral) 12%, var(--sd-bg-subtle)); outline: none; }
 .timer-search-result-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; }
 .timer-search-result-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
 .timer-search-result-copy strong { overflow: hidden; font-size: 12.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
@@ -908,6 +911,7 @@
 .timer-context-progress-copy { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
 .timer-context-progress { grid-column: 1 / -1; width: 100%; height: 5px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
 .timer-context-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-coral), color-mix(in srgb, var(--sd-coral) 55%, #b7a7ff)); transition: width 500ms ease; }
+.timer-session-goal-status { grid-column: 1 / -1; color: var(--sd-text-muted); font-size: 9px; font-variant-numeric: tabular-nums; }
 .timer-context-card .timer-session-note-wrap { grid-column: 1 / -1; margin-top: 2px; }
 
 /* Chronograph Laps Strip */
@@ -1003,6 +1007,80 @@
   width: 1px;
   height: 26px;
   background: var(--sd-border-glass);
+}
+
+/* ── Today study plan ────────────────────────────────────────────────────── */
+.timer-study-plan-card {
+  overflow: hidden;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: var(--sd-radius-xl);
+  background: var(--sd-bg-surface);
+  box-shadow: var(--sd-shadow-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.timer-study-plan-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 20px;
+  border: 0;
+  color: var(--sd-text-primary);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.timer-study-plan-toggle:hover { background: var(--sd-bg-subtle); }
+.timer-study-plan-toggle:focus-visible { outline: 2px solid var(--sd-coral); outline-offset: -3px; }
+.timer-study-plan-toggle > svg { flex: 0 0 auto; color: var(--sd-text-muted); transition: transform 180ms ease; }
+.timer-study-plan-toggle > svg.is-open { transform: rotate(180deg); }
+.timer-study-plan-title { min-width: 0; display: flex; align-items: center; gap: 9px; }
+.timer-study-plan-title > svg { flex: 0 0 auto; color: var(--sd-coral); }
+.timer-study-plan-title > span { font-size: 10px; font-weight: 750; letter-spacing: .11em; }
+.timer-study-plan-title small { padding: 3px 8px; border: 1px solid var(--sd-border-glass); border-radius: 999px; color: var(--sd-text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0; white-space: nowrap; }
+
+.timer-study-plan-content { display: grid; gap: 0; padding: 0 20px 8px; border-top: 1px solid var(--sd-border-glass); }
+.timer-study-plan-overview { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(220px, .8fr); gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--sd-border-glass); }
+.timer-study-plan-total,
+.timer-study-plan-recommendation { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 13px 15px; border: 1px solid var(--sd-border-glass); border-radius: 13px; background: var(--sd-bg-subtle); }
+.timer-study-plan-overview-label { display: flex; align-items: center; gap: 6px; color: var(--sd-text-muted); font-size: 9px; font-weight: 750; letter-spacing: .1em; }
+.timer-study-plan-overview-label svg { color: var(--sd-coral); }
+.timer-study-plan-total > strong { color: var(--sd-text-primary); font-size: 17px; font-variant-numeric: tabular-nums; }
+.timer-study-plan-total > strong small { color: var(--sd-text-muted); font-size: 11px; font-weight: 550; }
+.timer-study-plan-total-track { height: 7px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
+.timer-study-plan-total-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-coral), color-mix(in srgb, var(--sd-coral) 58%, #8b91ed)); transition: width 400ms ease; }
+.timer-study-plan-total-percent { color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
+.timer-study-plan-recommendation { border-color: color-mix(in srgb, var(--sd-coral) 34%, var(--sd-border-glass)); background: color-mix(in srgb, var(--sd-coral) 7%, var(--sd-bg-subtle)); }
+.timer-study-plan-recommendation > strong { overflow: hidden; color: var(--sd-text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-recommendation > small { overflow: hidden; color: var(--sd-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-recommendation > span:last-child { color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
+.timer-study-plan-row { display: grid; grid-template-columns: 9px minmax(140px, 1fr) minmax(180px, auto); align-items: center; gap: 7px 11px; padding: 13px 0; border-bottom: 1px solid var(--sd-border-glass); }
+.timer-study-plan-row:last-child { border-bottom: 0; }
+.timer-study-plan-row.is-recommended { padding-left: 10px; border-left: 2px solid var(--sd-coral); }
+.timer-study-plan-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--plan-color, var(--sd-coral)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--plan-color, var(--sd-coral)) 14%, transparent); }
+.timer-study-plan-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.timer-study-plan-copy strong { overflow: hidden; color: var(--sd-text-primary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-copy span { overflow: hidden; color: var(--sd-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-progress-copy { display: grid; grid-template-columns: auto auto; justify-content: end; align-items: center; gap: 3px 11px; color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.timer-study-plan-progress-copy strong { color: var(--sd-text-primary); font-weight: 750; }
+.timer-study-plan-progress-copy small { grid-column: 1 / -1; color: var(--sd-text-muted); font-size: 9px; text-align: right; }
+.timer-study-plan-track { grid-column: 2 / -1; height: 6px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
+.timer-study-plan-track > span { display: block; height: 100%; border-radius: inherit; background: var(--plan-color, var(--sd-coral)); transition: width 400ms ease; }
+.timer-study-plan-empty { max-width: 720px; margin: 0; padding: 15px 0 13px; color: var(--sd-text-muted); font-size: 11px; line-height: 1.6; }
+
+@media (max-width: 560px) {
+  .timer-study-plan-toggle { min-height: 54px; padding: 11px 14px; }
+  .timer-study-plan-content { padding-inline: 14px; }
+  .timer-study-plan-overview { grid-template-columns: 1fr; }
+  .timer-study-plan-row { grid-template-columns: 9px minmax(0, 1fr); gap: 7px 10px; }
+  .timer-study-plan-progress-copy { grid-column: 2; justify-content: space-between; }
+  .timer-study-plan-progress-copy small { text-align: left; }
+  .timer-study-plan-track { grid-column: 2; }
 }
 
 /* ==========================================================================

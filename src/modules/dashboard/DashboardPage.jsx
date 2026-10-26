@@ -20,43 +20,10 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { getSiteFontStyle, siteAssetUrl, useSiteCustomization } from '../../context/SiteCustomizationContext';
+import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import './Dashboard.css';
-
-// Dedicated dashboard artwork assets (8 pictures each for light and dark modes)
-// Easily add more picture paths to these arrays as needed!
-export const LIGHT_HERO_ARTS = [
-  '/dashboard_whitetheme_1.webp',
-  '/dashboard_whitetheme_2.webp',
-  '/dashboard_whitetheme_3.webp',
-  '/dashboard_whitetheme_4.webp',
-  '/dashboard_whitetheme_5.webp',
-  '/dashboard_whitetheme_6.webp',
-  '/dashboard_whitetheme_7.webp',
-  '/dashboard_whitetheme_8.webp',
-];
-
-export const DARK_HERO_ARTS = [
-  '/dashboard_darktheme_1.webp',
-  '/dashboard_darktheme_2.webp',
-  '/dashboard_darktheme_3.webp',
-  '/dashboard_darktheme_4.webp',
-  '/dashboard_darktheme_5.webp',
-  '/dashboard_darktheme_6.webp',
-  '/dashboard_darktheme_7.webp',
-  '/dashboard_darktheme_8.webp',
-];
-
-const pickNextHeroIndex = (currentIdx, totalCount) => {
-  if (totalCount <= 1) return 0;
-  let nextIdx;
-  do {
-    nextIdx = Math.floor(Math.random() * totalCount);
-  } while (nextIdx === currentIdx);
-  return nextIdx;
-};
 
 /* ── Helpers ─────────────────────────────────── */
 const fmtDur = (s) => {
@@ -501,13 +468,40 @@ const dashboardRangeOptions = [
 
 const dashboardSectionDefaults = [
   { id: 'overview', label: 'Overview', visible: true, pinned: true, collapsed: false },
-  { id: 'focus', label: 'Focus distribution', visible: true, pinned: false, collapsed: false },
-  { id: 'rhythms', label: 'Study rhythms', visible: true, pinned: false, collapsed: false },
+  { id: 'daily', label: 'Daily time breakdown', visible: true, pinned: true, collapsed: false },
+  { id: 'focus', label: 'Focus distribution', visible: false, pinned: false, collapsed: false },
+  { id: 'rhythms', label: 'Study rhythms', visible: false, pinned: false, collapsed: false },
   { id: 'projects', label: 'Project progress', visible: true, pinned: true, collapsed: false },
-  { id: 'patterns', label: 'Study pattern charts', visible: true, pinned: false, collapsed: false },
-  { id: 'heatmap', label: 'Time-of-day heatmap', visible: true, pinned: false, collapsed: false },
-  { id: 'calendar', label: 'Activity calendar', visible: true, pinned: false, collapsed: false },
+  { id: 'patterns', label: 'Study pattern charts', visible: false, pinned: false, collapsed: false },
+  { id: 'heatmap', label: 'Time-of-day heatmap', visible: false, pinned: false, collapsed: false },
+  { id: 'calendar', label: 'Activity calendar', visible: false, pinned: false, collapsed: false },
 ];
+
+const previousDefaultDashboardSections = [
+  { id: 'overview', pinned: true },
+  { id: 'focus', pinned: false },
+  { id: 'rhythms', pinned: false },
+  { id: 'projects', pinned: true },
+  { id: 'patterns', pinned: false },
+  { id: 'heatmap', pinned: false },
+  { id: 'calendar', pinned: false },
+];
+
+const getSavedDashboardPreferences = (preferenceKey) => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(preferenceKey) || 'null');
+    if (!Array.isArray(saved)) return dashboardSectionDefaults;
+    const isUntouchedOldDefault = saved.length === previousDefaultDashboardSections.length && saved.every((item, index) => {
+      const previous = previousDefaultDashboardSections[index];
+      return item.id === previous.id && item.visible === true && item.pinned === previous.pinned && item.collapsed === false;
+    });
+    if (isUntouchedOldDefault) return dashboardSectionDefaults;
+    const current = new Map(saved.map((item) => [item.id, item]));
+    return dashboardSectionDefaults.map((section) => ({ ...section, ...(current.get(section.id) || {}) }));
+  } catch {
+    return dashboardSectionDefaults;
+  }
+};
 
 const getDashboardWindow = (range, customStart, customEnd, entries, now = new Date(), weekStart = 'monday') => {
   const end = new Date(now);
@@ -537,68 +531,6 @@ const getDashboardWindow = (range, customStart, customEnd, entries, now = new Da
   return { start, end };
 };
 
-const isInRange = (entry, range) => {
-  if (!entry?.startedAt) return false;
-  const d = new Date(entry.startedAt);
-  const now = new Date();
-  if (range === 'Today' || range === 'today') {
-    return d.toDateString() === now.toDateString();
-  }
-  if (range === 'Week' || range === 'week') {
-    const s = new Date(now);
-    s.setDate(now.getDate() - now.getDay());
-    s.setHours(0, 0, 0, 0);
-    return d >= s;
-  }
-  if (range === 'Month' || range === 'month') {
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  }
-  return true; // 'All time' or 'all'
-};
-
-const calcStreak = (entries) => {
-  const dates = new Set();
-  entries.forEach((e) => {
-    if (e.durationSeconds > 0 && e.startedAt) {
-      dates.add(dateKey(e.startedAt));
-    }
-  });
-  if (!dates.size) return 0;
-  const now = new Date();
-  const todayK = dateKey(now);
-  const yest = new Date(now);
-  yest.setDate(yest.getDate() - 1);
-  const yesterK = dateKey(yest);
-  let check = dates.has(todayK) ? new Date(now) : dates.has(yesterK) ? yest : null;
-  if (!check) return 0;
-  let n = 0;
-  while (true) {
-    if (dates.has(dateKey(check))) {
-      n++;
-      check.setDate(check.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-  return n;
-};
-
-const calcLongestStreak = (entries) => {
-  const serials = Array.from(new Set(entries.filter((entry) => Number(entry.durationSeconds) > 0 && entry.startedAt).map((entry) => {
-    const [year, month, day] = dateKey(entry.startedAt).split('-').map(Number);
-    return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
-  }))).sort((a, b) => a - b);
-  let best = 0;
-  let current = 0;
-  let previous = null;
-  serials.forEach((day) => {
-    current = previous != null && day === previous + 1 ? current + 1 : 1;
-    best = Math.max(best, current);
-    previous = day;
-  });
-  return best;
-};
-
 export function DashboardPage({ user, onNavigate, standalone = false }) {
   const { theme: currentTheme, toggleTheme } = useTheme();
   const { config, text } = useSiteCustomization();
@@ -607,7 +539,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const [activeNav, setActiveNav] = useState('Dashboard');
   const preferenceKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences` : 'studyduel_demo_dashboard_preferences';
   const [dateRange, setDateRange] = useState(() => {
-    try { return localStorage.getItem(`${preferenceKey}_range_v2`) || 'week'; } catch { return 'week'; }
+    try {
+      const saved = localStorage.getItem(`${preferenceKey}_range_v2`);
+      return dashboardRangeOptions.some((option) => option.id === saved) ? saved : 'week';
+    } catch { return 'week'; }
   });
   const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
@@ -634,11 +569,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, []);
   useEffect(() => { const id = window.setInterval(() => setNow(new Date()), 60_000); return () => window.clearInterval(id); }, []);
   const [dashboardPreferences, setDashboardPreferences] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(preferenceKey) || 'null');
-      const current = new Map((Array.isArray(saved) ? saved : []).map((item) => [item.id, item]));
-      return dashboardSectionDefaults.map((section) => ({ ...section, ...current.get(section.id) }));
-    } catch { return dashboardSectionDefaults; }
+    return getSavedDashboardPreferences(preferenceKey);
   });
   useEffect(() => {
     localStorage.setItem(`${preferenceKey}_range_v2`, dateRange);
@@ -740,50 +671,6 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     return projectTotal > 0 ? projectTotal : 4;
   }, [projects, preferences.dailyGoalHours]);
 
-  const customHeroIds = config?.visuals?.dashboard?.[isDark ? 'dark' : 'light'] || [];
-  const defaultHeroArts = isDark ? DARK_HERO_ARTS : LIGHT_HERO_ARTS;
-  const heroArts = customHeroIds.length ? customHeroIds.map(siteAssetUrl) : defaultHeroArts;
-  const shuffleHeroArt = config?.visuals?.dashboard?.shuffle !== false;
-
-  // Pick a different piece of artwork on each page load.
-  const [heroArtIndex, setHeroArtIndex] = useState(() => {
-    const totalCount = Math.min(LIGHT_HERO_ARTS.length, DARK_HERO_ARTS.length);
-    const saved = parseInt(localStorage.getItem('studyduel_hero_art_index') || '-1', 10);
-    const previousIndex = Number.isInteger(saved) && saved >= 0 && saved < totalCount ? saved : -1;
-    return pickNextHeroIndex(previousIndex, totalCount);
-  });
-
-  // Preload all hero artwork for instantaneous, flicker-free switching.
-  useEffect(() => {
-    [...LIGHT_HERO_ARTS, ...DARK_HERO_ARTS, ...(config?.visuals?.dashboard?.light || []).map(siteAssetUrl), ...(config?.visuals?.dashboard?.dark || []).map(siteAssetUrl)].forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, [config?.visuals?.dashboard]);
-
-  // Remember the current image so the next browser refresh picks a different one.
-  useEffect(() => {
-    localStorage.setItem('studyduel_hero_art_index', String(heroArtIndex));
-  }, [heroArtIndex]);
-
-  // Rotate artwork on a steady 10-minute interval while the dashboard is open.
-  useEffect(() => {
-    const totalCount = heroArts.length;
-    if (!shuffleHeroArt || totalCount <= 1) {
-      setHeroArtIndex(0);
-      return undefined;
-    }
-
-    const timer = window.setInterval(() => {
-      setHeroArtIndex((currentIndex) => pickNextHeroIndex(currentIndex, totalCount));
-    }, 10 * 60 * 1000);
-
-    return () => window.clearInterval(timer);
-  }, [heroArts.length, shuffleHeroArt]);
-
-  const currentHeroArt = heroArts[heroArtIndex] || heroArts[0];
-
-
   const [entries, setEntries] = useState(() => {
     try {
       const d = JSON.parse(localStorage.getItem(entriesKey) || 'null');
@@ -860,36 +747,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   );
   const rangeDeltaSecs = rangeSecs - previousRangeSecs;
   const rangeActiveDays = new Set(rangeEntries.filter((entry) => entry.durationSeconds > 0).map((entry) => dateKey(entry.startedAt))).size;
-  const averageSessionSecs = rangeEntries.length ? Math.round(rangeSecs / rangeEntries.length) : 0;
   const averageActiveDaySecs = rangeActiveDays ? Math.round(rangeSecs / rangeActiveDays) : 0;
-  const previousRangeDaysCount = previousWindow
-    ? Math.max(1, Math.floor((previousWindow.end.getTime() - previousWindow.start.getTime()) / 86400000) + 1)
-    : 1;
-  const previousRangeActiveDays = new Set(previousRangeEntries.map((entry) => dateKey(entry.startedAt))).size;
-  const previousAverageSessionSecs = previousRangeEntries.length
-    ? Math.round(previousRangeSecs / previousRangeEntries.length)
-    : 0;
-  const averageSessionsPerDay = rangeEntries.length / rangeDaysCount;
-  const previousAverageSessionsPerDay = previousRangeEntries.length / previousRangeDaysCount;
-  const compareMetric = (current, previous, formatDelta) => {
-    if (!previousWindow) return { label: 'No previous range', tone: 'neutral' };
-    const delta = current - previous;
-    if (Math.abs(delta) < 0.0001) return { label: 'No change vs previous', tone: 'neutral' };
-    const roundedDelta = Number.isInteger(current) && Number.isInteger(previous)
-      ? Math.abs(delta)
-      : Math.round(Math.abs(delta) * 10) / 10;
-    return {
-      label: `${delta > 0 ? '+' : '−'}${formatDelta(roundedDelta)} vs previous`,
-      tone: delta > 0 ? 'positive' : 'negative',
-    };
-  };
-  const kpiComparisons = {
-    time: compareMetric(rangeSecs, previousRangeSecs, fmtDur),
-    sessions: compareMetric(rangeEntries.length, previousRangeEntries.length, (value) => `${value} ${value === 1 ? 'session' : 'sessions'}`),
-    activeDays: compareMetric(rangeActiveDays, previousRangeActiveDays, (value) => `${value} ${value === 1 ? 'day' : 'days'}`),
-    averageSession: compareMetric(averageSessionSecs, previousAverageSessionSecs, fmtDur),
-    sessionsPerDay: compareMetric(averageSessionsPerDay, previousAverageSessionsPerDay, (value) => `${value.toFixed(1)} / day`),
-  };
   const rangeLabel = dateRange === 'custom'
     ? `${formatDisplayDate(dateWindow.start, { month: 'short', day: 'numeric', year: 'numeric' })} – ${formatDisplayDate(dateWindow.end, { month: 'short', day: 'numeric', year: 'numeric' })}`
     : dashboardRangeOptions.find((item) => item.id === dateRange)?.label || 'This week';
@@ -905,88 +763,23 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     }, 0);
   }, 0), [projects, dateRange, rangeDaysCount]);
   const rangeGoalSecs = rangeGoalHours * 3600;
-
-  const weeklyReview = useMemo(() => {
-    const now = new Date();
-    const weekStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - getWeekStartOffset(now, weekStart));
-    const priorStart = new Date(weekStartDate);
-    priorStart.setDate(priorStart.getDate() - 7);
-    const current = entries.filter((entry) => {
-      const time = new Date(entry.startedAt).getTime();
-      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= weekStartDate.getTime() && time <= now.getTime();
-    });
-    const priorEnd = new Date(now.getTime() - 7 * 86400000);
-    const prior = entries.filter((entry) => {
-      const time = new Date(entry.startedAt).getTime();
-      return Number(entry.durationSeconds) > 0 && Number.isFinite(time) && time >= priorStart.getTime() && time <= priorEnd.getTime();
-    });
-    const seconds = current.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
-    const previousSeconds = prior.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0);
-    const activeDays = new Set(current.map((entry) => dateKey(entry.startedAt))).size;
-    const byProject = new Map();
-    current.forEach((entry) => {
+  const hasComparableGoal = dateRange !== 'all' && rangeGoalSecs > 0;
+  const elapsedRangeDays = Math.min(rangeDaysCount, Math.max(1, Math.floor((Math.min(now.getTime(), dateWindow.end.getTime()) - dateWindow.start.getTime()) / 86400000) + 1));
+  const rangeGoalPct = rangeGoalSecs > 0 ? Math.min(100, Math.round((rangeSecs / rangeGoalSecs) * 100)) : 0;
+  const rangeGoalRemainingSecs = Math.max(0, rangeGoalSecs - rangeSecs);
+  const expectedGoalByNowSecs = rangeGoalSecs > 0 ? rangeGoalSecs * (elapsedRangeDays / rangeDaysCount) : 0;
+  const paceDifferenceSecs = Math.max(0, expectedGoalByNowSecs - rangeSecs);
+  const paceIsOnTrack = rangeSecs >= expectedGoalByNowSecs;
+  const rangeTopProject = useMemo(() => {
+    const totals = new Map();
+    rangeEntries.forEach((entry) => {
       const name = entry.projectName || 'General Study';
-      byProject.set(name, (byProject.get(name) || 0) + (Number(entry.durationSeconds) || 0));
+      totals.set(name, (totals.get(name) || 0) + (Number(entry.durationSeconds) || 0));
     });
-    const topProject = Array.from(byProject.entries()).sort((a, b) => b[1] - a[1])[0] || null;
-    const weeklyGoal = projects.filter((project) => !project.archived).reduce(
-      (sum, project) => sum + (project.subjects || []).reduce((part, subject) => part + (Number(subject.goals?.weekly) || 0), 0), 0
-    ) * 3600;
-    const weekOffset = getWeekStartOffset(now, weekStart);
-    const currentWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - weekOffset);
-    const recentWeeks = Array.from({ length: 4 }, (_, index) => {
-      const weekEnd = new Date(currentWeekStart); weekEnd.setDate(weekEnd.getDate() - index * 7 - 1); weekEnd.setHours(23, 59, 59, 999);
-      const weekBeginning = new Date(weekEnd); weekBeginning.setDate(weekBeginning.getDate() - 6); weekBeginning.setHours(0, 0, 0, 0);
-      return entries.filter((entry) => { const time = new Date(entry.startedAt).getTime(); return time >= weekBeginning.getTime() && time <= weekEnd.getTime(); }).reduce((total, entry) => total + (Number(entry.durationSeconds) || 0), 0);
-    });
-    const recentWeeklyAverage = Math.round(recentWeeks.reduce((sum, value) => sum + value, 0) / recentWeeks.length);
-    const goalTuneSuggestion = weeklyGoal > 0 && recentWeeklyAverage > 0 && Math.abs(weeklyGoal - recentWeeklyAverage) >= 7200
-      ? `Your recent four-week average is ${fmtDur(recentWeeklyAverage)} per week. Review whether your ${fmtDur(weeklyGoal)} weekly target still fits your schedule.`
-      : '';
-    const elapsedDays = Math.min(7, getWeekStartOffset(now, weekStart) + 1);
-    const expectedByNow = weeklyGoal * elapsedDays / 7;
-    const remainingThisWeek = Math.max(0, weeklyGoal - seconds);
-    let suggestion = 'Add a weekly target in Manage to get a pace recommendation.';
-    if (!current.length) suggestion = 'Start a session today to give this week some momentum.';
-    else if (weeklyGoal > 0 && seconds < expectedByNow) suggestion = `${fmtDur(expectedByNow - seconds)} behind this week’s planned pace. ${fmtDur(remainingThisWeek)} of study remains this week; adjust your weekly targets in Manage if that total is unrealistic.`;
-    else if (weeklyGoal > 0) suggestion = 'You are on pace for this week’s goal. Keep your next session focused.';
-    else if (topProject) suggestion = `Your most studied project is ${topProject[0]}. Set a weekly target to track its pace.`;
-    return {
-      seconds,
-      previousSeconds,
-      delta: seconds - previousSeconds,
-      sessions: current.length,
-      activeDays,
-      topProject,
-      weeklyGoal,
-      elapsedDays,
-      remainingThisWeek,
-      goalPct: weeklyGoal ? Math.min(100, Math.round((seconds / weeklyGoal) * 100)) : null,
-      suggestion,
-      goalTuneSuggestion,
-    };
-  }, [entries, projects, now, weekStart]);
+    return Array.from(totals.entries()).sort((a, b) => b[1] - a[1])[0] || null;
+  }, [rangeEntries]);
 
   /* ── Core Computed Metrics ───────────────────── */
-  const todayEntries = useMemo(() => entries.filter((e) => Number(e.durationSeconds) > 0 && isInRange(e, 'Today')), [entries]);
-
-  const todaySecs = useMemo(
-    () => todayEntries.reduce((s, e) => s + (e.durationSeconds || 0), 0),
-    [todayEntries]
-  );
-  // Daily goal calculation
-  const goalSecs = dailyGoalHours * 3600;
-  const goalPct = goalSecs > 0 ? Math.min(100, Math.round((todaySecs / goalSecs) * 100)) : 0;
-  const goalRemainingSecs = Math.max(0, goalSecs - todaySecs);
-  const currentStreak = useMemo(() => calcStreak(entries), [entries]);
-  const longestStreak = useMemo(() => calcLongestStreak(entries), [entries]);
-
-  // SVG Progress Ring circumference: 2 * PI * 40 = 251.327
-  const ringCircumference = 251.327;
-  const strokeDashoffset = goalSecs > 0
-    ? ringCircumference * (1 - Math.min(1, todaySecs / goalSecs))
-    : ringCircumference;
-
   /* ── ROW 2: Focus Depth & Flow State Tiers ──── */
   const sessionTierStats = useMemo(() => {
     let sprint = 0,
@@ -1784,179 +1577,68 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           </div>
         </section>
         <DashboardSection section={dashboardSection('overview')} order={dashboardSectionOrder('overview')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-          {/* ROW 1: PAINTERLY WINDOW HERO (LEFT) + RANGE-SCOPED KPI GRID (RIGHT) */}
-          <div className="db-bento-grid-row db-hero-row">
-            {/* Painterly Illustrated Window + Glassmorphic Daily Goal */}
-            <div className="db-hero-window-card">
-              {/* Background Illustration with Smooth Cross-Fade */}
-              <img
-                key={`${isDark ? 'dark' : 'light'}-${heroArtIndex}`}
-                src={currentHeroArt}
-                alt="Cozy Focus Sanctuary"
-                className="db-hero-art-img"
-              />
-              {/* Directional Gradient Scrim: Character & scenery shine on right */}
-              <div className="db-hero-gradient-scrim" />
+          <section className="db-weekly-focus-card" aria-label={`${rangeLabel} study summary`}>
+            <div className="db-weekly-focus-heading">
+              <div>
+                <span className="db-weekly-focus-eyebrow">{rangeLabel.toUpperCase()} · STUDY SUMMARY</span>
+                <h2>Your time, clearly.</h2>
+              </div>
+              <button type="button" className="db-weekly-focus-calendar" onClick={() => setCalendarOpen(true)}>
+                <CalendarDays size={15} /> {text('dashboard', 'calendarButton', 'Calendar View')} <ArrowRight size={14} />
+              </button>
+            </div>
 
-              {/* Frosted Glass Apple Activity Card */}
-              <div className="db-hero-goal-glass-card">
-                <div className="db-goal-card-header">
-                  <span className="db-goal-card-title">{text('dashboard', 'dailyGoalTitle', 'Daily Goal')}</span>
-                  <button
-                    onClick={() => onNavigate?.('manage')}
-                    className="db-goal-edit-btn"
-                  >
-                    {dailyGoalHours > 0 ? 'Edit' : 'Set goals'}
-                  </button>
+            <div className="db-weekly-focus-main">
+              <div className="db-weekly-total-block">
+                <span className="db-weekly-total-label">{text('dashboard', 'timeTrackedLabel', 'TIME LOGGED')}</span>
+                <strong className="db-weekly-total">{fmtDur(rangeSecs)}</strong>
+                <span className={`db-weekly-comparison ${previousWindow ? (rangeDeltaSecs >= 0 ? 'is-positive' : 'is-negative') : 'is-neutral'}`}>
+                  {previousWindow
+                    ? `${rangeDeltaSecs > 0 ? '+' : rangeDeltaSecs < 0 ? '−' : ''}${fmtDur(Math.abs(rangeDeltaSecs))} vs previous comparable period`
+                    : 'Total across all recorded time'}
+                </span>
+              </div>
+
+              <div className="db-weekly-goal-block">
+                <div className="db-weekly-goal-heading">
+                  <div><span className="db-weekly-total-label">{dateRange === 'week' ? 'WEEKLY' : 'PERIOD'} TARGET</span><strong>{hasComparableGoal ? `${fmtDur(rangeSecs)} of ${fmtDur(rangeGoalSecs)}` : dateRange === 'all' ? 'Not used for all-time totals' : 'No target set yet'}</strong></div>
+                  {hasComparableGoal
+                    ? <span className="db-weekly-goal-percent">{rangeGoalPct}%</span>
+                    : dateRange !== 'all' && <button type="button" className="db-weekly-set-goal" onClick={() => onNavigate?.('manage')}>Set a target <ArrowRight size={13} /></button>}
                 </div>
-
-                <div className="db-goal-content-flex">
-                  {/* SVG Smooth Progress Ring */}
-                  <div className="db-goal-ring-wrapper">
-                    <svg className="db-goal-ring-svg" viewBox="0 0 100 100">
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="transparent"
-                        className="db-goal-ring-bg-circle"
-                        strokeWidth="9"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="transparent"
-                        stroke="var(--sd-coral-primary)"
-                        strokeWidth="9"
-                        strokeDasharray={ringCircumference}
-                        strokeDashoffset={strokeDashoffset}
-                        strokeLinecap="round"
-                        className="db-goal-ring-fill-circle"
-                      />
-                    </svg>
-                    <div className="db-goal-ring-center">
-                      <span className="db-goal-pct-num">{goalPct}%</span>
-                      <span className="db-goal-pct-sub">of goal</span>
-                    </div>
-                  </div>
-
-                  {/* Goal Breakdown */}
-                  <div className="db-goal-breakdown-list">
-                    <div className="db-goal-breakdown-row">
-                      <span className="db-goal-row-label">Today</span>
-                      <span className="db-goal-row-val">{todaySecs > 0 ? fmtDur(todaySecs) : '—'}</span>
-                    </div>
-                    <div className="db-goal-breakdown-row">
-                      <span className="db-goal-row-label">Goal</span>
-                      <span className="db-goal-row-val">{dailyGoalHours}h</span>
-                    </div>
-                    <div className="db-goal-breakdown-row no-border">
-                      <span className="db-goal-row-label">Remaining</span>
-                      <span className="db-goal-row-val accent">
-                        {goalSecs <= 0 ? '—' : todaySecs >= goalSecs ? 'Goal Met! 🎉' : fmtDur(goalRemainingSecs)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                {dateRange !== 'all' && <div className={`db-weekly-goal-track${hasComparableGoal ? '' : ' is-empty'}`} aria-label={hasComparableGoal ? `Goal progress ${rangeGoalPct}%` : 'No period target set'}>
+                  <span style={{ width: `${rangeGoalPct}%` }} />
+                </div>}
+                <p className="db-weekly-pace-copy">
+                  {dateRange === 'all'
+                    ? 'All recorded study time across your account.'
+                    : hasComparableGoal
+                    ? rangeGoalRemainingSecs === 0
+                      ? 'Weekly target reached. Great work.'
+                      : paceIsOnTrack
+                        ? `${fmtDur(rangeGoalRemainingSecs)} left · on pace for this point in the period`
+                        : `${fmtDur(paceDifferenceSecs)} behind the planned pace · ${fmtDur(rangeGoalRemainingSecs)} left`
+                    : 'Add weekly goals to your projects to see whether you are on pace.'}
+                </p>
               </div>
             </div>
 
-            {/* 6 KPI Stat Cards (Anchored with Tinted Squircle Badges & Tabular Typography) */}
-            <div className="db-kpi-grid">
-              {[
-                {
-                  label: text('dashboard', 'timeTrackedLabel', 'TIME TRACKED'),
-                  value: rangeEntries.length ? fmtDur(rangeSecs) : '—',
-                  sub: rangeGoalSecs > 0 ? `${fmtDur(rangeSecs)} / ${fmtDur(rangeGoalSecs)} goal` : rangeLabel,
-                  comparison: kpiComparisons.time,
-                },
-                {
-                  label: text('dashboard', 'sessionsPerDayLabel', 'AVG SESSIONS / DAY'),
-                  value: rangeEntries.length ? averageSessionsPerDay.toFixed(1) : '—',
-                  sub: `over ${rangeDaysCount} ${rangeDaysCount === 1 ? 'day' : 'days'}`,
-                  comparison: kpiComparisons.sessionsPerDay,
-                },
-                {
-                  label: text('dashboard', 'sessionsLabel', 'SESSIONS'),
-                  value: rangeEntries.length || '—',
-                  sub: `in ${rangeLabel.toLocaleLowerCase()}`,
-                  comparison: kpiComparisons.sessions,
-                },
-                {
-                  label: text('dashboard', 'activeDaysLabel', 'ACTIVE DAYS'),
-                  value: rangeActiveDays || '—',
-                  sub: `of ${rangeDaysCount} days · ${rangeActiveDays ? `${fmtDur(averageActiveDaySecs)} avg / active day` : 'no active days'}`,
-                  comparison: kpiComparisons.activeDays,
-                },
-                {
-                  label: text('dashboard', 'averageSessionLabel', 'AVG / SESSION'),
-                  value: rangeEntries.length ? fmtDur(averageSessionSecs) : '—',
-                  sub: 'tracked session length',
-                  comparison: kpiComparisons.averageSession,
-                },
-                { action: 'calendar' },
-              ].map((kpi, idx) => {
-                if (kpi.action === 'calendar') {
-                  return (
-                    <button key="calendar-view" type="button" className="db-kpi-card db-kpi-calendar-card" onClick={() => setCalendarOpen(true)}>
-                      <span className="db-kpi-calendar-icon"><CalendarDays size={20} /></span>
-                      <span className="db-kpi-calendar-copy">
-                        <strong>{text('dashboard', 'calendarButton', 'Calendar View')}</strong>
-                        <small>{text('dashboard', 'calendarDescription', 'Browse study sessions by day')}</small>
-                      </span>
-                      <ArrowRight size={17} className="db-kpi-calendar-arrow" />
-                    </button>
-                  );
-                }
-                return (
-                  <div key={idx} className="db-kpi-card">
-                    <div className="db-kpi-header">
-                      <span className="db-kpi-label">{kpi.label}</span>
-                    </div>
-                    <div className="db-kpi-val-container">
-                      <div className="db-kpi-value">{kpi.value}</div>
-                    </div>
-                    <div className="db-kpi-sub-row">
-                      {kpi.badge ? (
-                        <>
-                          <span className={`db-kpi-trend-pill ${rangeDeltaSecs >= 0 ? 'is-positive' : 'is-negative'}`}>{kpi.badge}</span>
-                          <span className="db-kpi-sub">{kpi.sub}</span>
-                        </>
-                      ) : (
-                        <span className="db-kpi-sub">{kpi.sub}</span>
-                      )}
-                    </div>
-                    {kpi.comparison && <div className={`db-kpi-comparison is-${kpi.comparison.tone}`}>{kpi.comparison.label}</div>}
-                  </div>
-                );
-              })}
+            <div className="db-weekly-quick-stats">
+              <div><strong>{rangeActiveDays}<span> / {elapsedRangeDays}</span></strong><small>days studied so far</small></div>
+              <div><strong>{rangeEntries.length}</strong><small>sessions this period</small></div>
+              <div><strong>{rangeActiveDays ? fmtDur(averageActiveDaySecs) : '—'}</strong><small>average per study day</small></div>
+              <div className="db-weekly-top-project"><strong>{rangeTopProject?.[0] || '—'}</strong><small>most studied project</small></div>
             </div>
-          </div>
-          <div className="db-weekly-review-card">
-            <div className="db-weekly-review-heading">
-              <div><span className="db-review-kicker">{weekStart === 'sunday' ? 'SUNDAY–SATURDAY · THIS WEEK' : 'MONDAY–SUNDAY · THIS WEEK'}</span><h2>{text('dashboard', 'weeklyReviewTitle', 'Weekly review')}</h2></div>
-              <span className={`db-review-delta ${weeklyReview.delta >= 0 ? 'positive' : 'negative'}`}>
-                {weeklyReview.delta > 0 ? '+' : weeklyReview.delta < 0 ? '−' : ''}{fmtDur(Math.abs(weeklyReview.delta))} vs same days last week
-              </span>
-            </div>
-            <div className="db-weekly-review-metrics">
-              <div><strong>{fmtDur(weeklyReview.seconds)}</strong><span>this week</span></div>
-              <div><strong>{weeklyReview.activeDays} / {weeklyReview.elapsedDays}</strong><span>active days so far</span></div>
-              <div><strong>{weeklyReview.sessions}</strong><span>sessions</span></div>
-              <div><strong>{weeklyReview.topProject ? weeklyReview.topProject[0] : '—'}</strong><span>most studied project</span></div>
-              <div><strong>{currentStreak} {currentStreak === 1 ? 'day' : 'days'}</strong><span>current study streak</span></div>
-              <div><strong>{longestStreak} {longestStreak === 1 ? 'day' : 'days'}</strong><span>longest study streak</span></div>
-            </div>
-            {weeklyReview.weeklyGoal > 0 && (
-              <div className="db-review-goal-track" aria-label={`Weekly goal progress ${weeklyReview.goalPct}%`}>
-                <span style={{ width: `${weeklyReview.goalPct}%` }} />
-              </div>
-            )}
-            <p className="db-weekly-review-suggestion">{weeklyReview.suggestion}</p>
-            {weeklyReview.sessions > 0 && <p className="db-weekly-trend-explainer">{weeklyReview.delta > 0 ? `You have logged ${fmtDur(weeklyReview.delta)} more than the same point last week.` : weeklyReview.delta < 0 ? `You have logged ${fmtDur(Math.abs(weeklyReview.delta))} less than the same point last week; use this as context when planning the rest of your week.` : 'Your study time is level with the same point last week.'}</p>}
-            {weeklyReview.goalTuneSuggestion && <div className="db-goal-tune-suggestion"><Sparkles size={14} /><span>{weeklyReview.goalTuneSuggestion}</span><button type="button" onClick={() => onNavigate?.('manage')}>Review goals <span aria-hidden="true">→</span></button></div>}
-          </div>
+          </section>
+        </DashboardSection>
+
+        <DashboardSection section={dashboardSection('daily')} order={dashboardSectionOrder('daily')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
+          <DailyHoursGraph
+            days={dailyHoursData.days}
+            title={dailyHoursData.title}
+            hasData={rangeEntries.length > 0}
+            onStart={() => onNavigate?.('timer')}
+          />
         </DashboardSection>
 
         <DashboardSection section={dashboardSection('focus')} order={dashboardSectionOrder('focus')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
@@ -2393,11 +2075,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             <div className="db-chart-section-heading">
               <div>
                 <h2 id="db-study-patterns-title">Study patterns</h2>
-                <p>Daily output, weekly momentum, and session length</p>
+                <p>Study consistency, momentum, and session length</p>
               </div>
             </div>
             <div className="db-bento-grid-row db-two-col db-chart-pair">
-              <DailyHoursGraph days={dailyHoursData.days} title={dailyHoursData.title} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
               <StudyVelocityCard stats={studyVelocityStats} hasData={rangeEntries.length > 0} onStart={() => onNavigate?.('timer')} />
             </div>
             <div className="db-bento-grid-row db-two-col db-chart-pair">

@@ -58,6 +58,16 @@ const projectColorPresets = [
   { name: 'Slate', value: '#7D8799' },
 ];
 
+const studyWeekdays = [
+  { label: 'Sun', value: 0 },
+  { label: 'Mon', value: 1 },
+  { label: 'Tue', value: 2 },
+  { label: 'Wed', value: 3 },
+  { label: 'Thu', value: 4 },
+  { label: 'Fri', value: 5 },
+  { label: 'Sat', value: 6 },
+];
+
 const getRandomProjectColor = (exclude = []) => {
   const excluded = new Set(exclude.filter(Boolean).map((color) => color.toLowerCase()));
   const available = projectColorPresets.filter((color) => !excluded.has(color.value.toLowerCase()));
@@ -238,6 +248,38 @@ const PlanEditor = ({ value, label, onChange }) => {
   );
 };
 
+const StudyDaysEditor = ({ label, value = [], onChange }) => {
+  const selectedDays = Array.isArray(value) ? value : [];
+  const toggleDay = (day) => onChange(selectedDays.includes(day)
+    ? selectedDays.filter((item) => item !== day)
+    : [...selectedDays, day].sort((a, b) => a - b));
+
+  return (
+    <div className="manage-study-days-editor" aria-label={`Study days for ${label}`}>
+      <div className="manage-study-days-copy">
+        <strong>Planned study days</strong>
+        <span>Daily goal applies on these days. Otherwise, weekly goal is split across them.</span>
+        <small className="manage-study-days-state" aria-live="polite">
+          {selectedDays.length ? `${selectedDays.length} ${selectedDays.length === 1 ? 'day' : 'days'} selected` : 'No days selected'}
+        </small>
+      </div>
+      <div className="manage-study-days-picker" role="group" aria-label={`Choose study days for ${label}`}>
+        {studyWeekdays.map((day) => (
+          <button
+            key={day.value}
+            type="button"
+            className={selectedDays.includes(day.value) ? 'selected' : ''}
+            aria-pressed={selectedDays.includes(day.value)}
+            onClick={() => toggleDay(day.value)}
+          >
+            {day.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const ManagePage = ({ user }) => {
   const { config, text } = useSiteCustomization();
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
@@ -261,9 +303,7 @@ export const ManagePage = ({ user }) => {
   const [view, setView] = useState('active');
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
-  const [openSubjectPlans, setOpenSubjectPlans] = useState({});
-  const [openProjectPlans, setOpenProjectPlans] = useState({});
-  const [editingProjectGoals, setEditingProjectGoals] = useState({});
+  const [openManageEditor, setOpenManageEditor] = useState(null);
   const [projectPendingDelete, setProjectPendingDelete] = useState(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [collapsedProjectIds, setCollapsedProjectIds] = useState([]);
@@ -355,6 +395,7 @@ export const ManagePage = ({ user }) => {
         name,
         color: getRandomProjectColor([project.color, ...(project.subjects || []).map((subject) => subject.color)]),
         goals: { daily: 0, weekly: 0, monthly: 0 },
+        studyDays: [],
       }],
     } : project));
     setNewSubject((items) => ({ ...items, [projectId]: '' }));
@@ -400,6 +441,20 @@ export const ManagePage = ({ user }) => {
       }),
     }));
   };
+
+  const setSubjectStudyDays = (projectId, subjectId, days) => setProjects((items) => items.map((project) => project.id !== projectId ? project : {
+    ...project,
+    subjects: (project.subjects || []).map((subject) => subject.id !== subjectId ? subject : { ...subject, studyDays: days }),
+  }));
+
+  const isManageEditorOpen = (type, projectId, subjectId = null) => openManageEditor?.type === type
+    && openManageEditor.projectId === projectId
+    && (subjectId === null || openManageEditor.subjectId === subjectId);
+  const toggleManageEditor = (type, projectId, subjectId = null) => setOpenManageEditor((current) => (
+    current?.type === type && current.projectId === projectId && current.subjectId === subjectId
+      ? null
+      : { type, projectId, subjectId }
+  ));
 
   const projectGoalTotals = (project) => (project.subjects || []).reduce((totals, subject) => ({
     daily: totals.daily + (Number(subject.goals?.daily) || 0),
@@ -519,6 +574,8 @@ export const ManagePage = ({ user }) => {
               const totals = projectGoalTotals(project);
               const stats = getProjectStats(project, entries);
               const subjects = project.subjects || [];
+              const isEditingProjectGoals = isManageEditorOpen('project-goals', project.id);
+              const isProjectPlanOpen = isManageEditorOpen('project-plan', project.id);
               const subjectTotals = new Map();
               stats.entries.forEach((entry) => {
                 const key = entry.subjectId || entry.subjectName || '__unassigned';
@@ -592,20 +649,20 @@ export const ManagePage = ({ user }) => {
                         <strong>{formatGoalHours(totals.daily)} <small>/ day</small></strong>
                         <strong>{formatGoalHours(totals.weekly)} <small>/ week</small></strong>
                         <strong>{formatGoalHours(totals.monthly)} <small>/ month</small></strong>
-                        <button type="button" className="manage-inline-toggle" aria-expanded={!!editingProjectGoals[project.id]} onClick={() => setEditingProjectGoals((items) => ({ ...items, [project.id]: !items[project.id] }))}>
-                          <Pencil size={13} /> {editingProjectGoals[project.id] ? 'Done' : 'Edit goals'}
+                        <button type="button" className="manage-inline-toggle" aria-expanded={isEditingProjectGoals} onClick={() => toggleManageEditor('project-goals', project.id)}>
+                          <Pencil size={13} /> {isEditingProjectGoals ? 'Done' : 'Edit goals'}
                         </button>
-                        <button type="button" className="manage-inline-toggle" aria-expanded={!!openProjectPlans[project.id]} onClick={() => setOpenProjectPlans((items) => ({ ...items, [project.id]: !items[project.id] }))}>
-                          Plan <ChevronDown size={14} className={openProjectPlans[project.id] ? 'is-open' : ''} />
+                        <button type="button" className="manage-inline-toggle" aria-expanded={isProjectPlanOpen} onClick={() => toggleManageEditor('project-plan', project.id)}>
+                          Plan <ChevronDown size={14} className={isProjectPlanOpen ? 'is-open' : ''} />
                         </button>
                       </div>
-                      {openProjectPlans[project.id] && <PlanEditor
+                      {isProjectPlanOpen && <PlanEditor
                         value={project}
                         label={project.name}
                         onChange={(changes) => setProjects((items) => items.map((item) => item.id === project.id ? { ...item, ...changes } : item))}
                       />}
-                      <div className={`manage-subprojects${editingProjectGoals[project.id] ? ' is-editing-goals' : ''}`}>
-                        <div className="manage-subproject-table-head"><span>Subproject</span>{editingProjectGoals[project.id] && <><span>Daily</span><span>Weekly</span><span>Monthly</span></>}<span aria-label="Actions" /></div>
+                      <div className={`manage-subprojects${isEditingProjectGoals ? ' is-editing-goals' : ''}`}>
+                        <div className="manage-subproject-table-head"><span>Subproject</span>{isEditingProjectGoals && <><span>Daily</span><span>Weekly</span><span>Monthly</span></>}<span aria-label="Actions" /></div>
                         {subjects.map((subject) => (
                           <div className="manage-subproject-row" key={subject.id}>
                             <span className="manage-subproject-name">
@@ -618,18 +675,20 @@ export const ManagePage = ({ user }) => {
                                 </form>
                               ) : <span>{subject.name}</span>}
                             </span>
-                            {editingProjectGoals[project.id] && ['daily', 'weekly', 'monthly'].map((period) => (
+                            {isEditingProjectGoals && ['daily', 'weekly', 'monthly'].map((period) => (
                               <label className="manage-goal-input-wrap" key={period}>
                                 <input type="number" min="0" max={period === 'daily' ? 24 : period === 'weekly' ? 168 : 744} step="0.25" value={subject.goals?.[period] ?? 0} onChange={(event) => setSubjectGoal(project.id, subject.id, period, event.target.value)} aria-label={`${period} goal hours for ${subject.name}`} />
                                 <span>h</span>
                               </label>
                             ))}
                             <div className="manage-card-actions compact">
-                              <button type="button" title={openSubjectPlans[subject.id] ? 'Hide plan' : 'Edit estimate, deadline, and milestones'} aria-label={`${openSubjectPlans[subject.id] ? 'Hide' : 'Edit'} plan for ${subject.name}`} onClick={() => setOpenSubjectPlans((items) => ({ ...items, [subject.id]: !items[subject.id] }))}><Target size={14} /></button>
+                              <button type="button" title={isManageEditorOpen('subject-days', project.id, subject.id) ? 'Hide study days' : 'Choose study days'} aria-label={`${isManageEditorOpen('subject-days', project.id, subject.id) ? 'Hide' : 'Choose'} study days for ${subject.name}`} aria-expanded={isManageEditorOpen('subject-days', project.id, subject.id)} onClick={() => toggleManageEditor('subject-days', project.id, subject.id)}><CalendarDays size={14} /></button>
+                              <button type="button" title={isManageEditorOpen('subject-plan', project.id, subject.id) ? 'Hide plan' : 'Edit estimate, deadline, and milestones'} aria-label={`${isManageEditorOpen('subject-plan', project.id, subject.id) ? 'Hide' : 'Edit'} plan for ${subject.name}`} aria-expanded={isManageEditorOpen('subject-plan', project.id, subject.id)} onClick={() => toggleManageEditor('subject-plan', project.id, subject.id)}><Target size={14} /></button>
                               <button type="button" title="Rename subproject" aria-label={`Rename ${subject.name}`} onClick={() => beginRename('subject', subject.id, subject.name)}><Pencil size={14} /></button>
                               <button type="button" title="Delete subproject" aria-label={`Delete ${subject.name}`} onClick={() => deleteSubject(project.id, subject.id)}><Trash2 size={14} /></button>
                             </div>
-                            {openSubjectPlans[subject.id] && <div className="manage-subproject-plan"><PlanEditor value={subject} label={subject.name} onChange={(changes) => setProjects((items) => items.map((item) => item.id !== project.id ? item : { ...item, subjects: item.subjects.map((child) => child.id === subject.id ? { ...child, ...changes } : child) }))} /></div>}
+                            {isManageEditorOpen('subject-days', project.id, subject.id) && <div className="manage-subproject-study-days"><StudyDaysEditor label={subject.name} value={subject.studyDays} onChange={(days) => setSubjectStudyDays(project.id, subject.id, days)} /></div>}
+                            {isManageEditorOpen('subject-plan', project.id, subject.id) && <div className="manage-subproject-plan"><PlanEditor value={subject} label={subject.name} onChange={(changes) => setProjects((items) => items.map((item) => item.id !== project.id ? item : { ...item, subjects: item.subjects.map((child) => child.id === subject.id ? { ...child, ...changes } : child) }))} /></div>}
                           </div>
                         ))}
                         {!subjects.length && <p className="manage-no-subprojects">Add a subproject to define goals for this project.</p>}

@@ -423,14 +423,18 @@ export const SettingsPage = ({ onBack, user }) => {
   // Tab 1: Preferences State
   const [preferences, setPreferences] = useState(() => {
     const saved = readJson(preferencesKey, {});
+    const isLegacyTimerDefault = !saved.timerDefaultModeVersion && saved.defaultTimerMode === '50m';
     return {
       dailyGoalHours: 4,
       weekStart: weekDays[Number.isInteger(user?.week_starts_on) ? user.week_starts_on : 1] || 'monday',
       timezone: systemTimezone,
       dateFormat: 'system',
-      defaultTimerMode: '50m',
+      defaultTimerMode: isLegacyTimerDefault ? 'stopwatch' : saved.defaultTimerMode || 'stopwatch',
+      timerDefaultModeVersion: 2,
       soundEnabled: true,
       ...saved,
+      defaultTimerMode: isLegacyTimerDefault ? 'stopwatch' : saved.defaultTimerMode || 'stopwatch',
+      timerDefaultModeVersion: 2,
       // The account profile is shared with connections; stale local preferences
       // must not mask the public display name stored on the account.
       displayName: user?.display_name || saved.displayName || user?.email?.split('@')[0] || 'Alex Rivera',
@@ -565,7 +569,7 @@ export const SettingsPage = ({ onBack, user }) => {
         : '';
       const projectStr = entry.projectName || entry.project || 'General Study';
       const durationMinutes = Math.round((Number(entry.durationSeconds) || 0) / 60);
-      const timerMode = entry.mode || preferences.defaultTimerMode || '50m';
+      const timerMode = entry.mode || preferences.defaultTimerMode || 'stopwatch';
       const completed = true;
 
       return [
@@ -602,7 +606,7 @@ export const SettingsPage = ({ onBack, user }) => {
         day: isValidDate ? startedAt.toLocaleDateString('en-US', { weekday: 'short' }) : '',
         project: entry.projectName || entry.project || 'General Study',
         duration_minutes: Math.round((Number(entry.durationSeconds) || 0) / 60),
-        timer_mode: entry.mode || preferences.defaultTimerMode || '50m',
+        timer_mode: entry.mode || preferences.defaultTimerMode || 'stopwatch',
         completed: true,
       };
     });
