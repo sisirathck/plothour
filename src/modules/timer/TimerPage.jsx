@@ -922,14 +922,21 @@ export const TimerPage = ({ user }) => {
                 {todayStudyPlan.length ? todayStudyPlan.map((item) => (
                   <article className={`timer-study-plan-row${todayStudyPlanSummary.nextFocus === item ? ' is-recommended' : ''}`} key={`${item.projectId}:${item.subjectId}`}>
                     <div className="timer-study-plan-copy">
-                      <strong>{item.subjectName}</strong>
-                      <span>{item.projectName}</span>
+                      <strong><span>{item.projectName}</span><i aria-hidden="true">·</i>{item.subjectName || 'General Study'}</strong>
                     </div>
                     <div className="timer-study-plan-progress-copy">
                       <span>{fmtDur(item.completedSeconds)} / {fmtDur(item.targetSeconds)}</span>
                       <strong>{item.progress}%</strong>
                       <small>{item.remainingSeconds > 0 ? `${fmtDur(item.remainingSeconds)} left` : 'Goal complete'}</small>
                     </div>
+                    <button
+                      type="button"
+                      className="timer-study-plan-start timer-study-plan-row-start"
+                      onClick={() => startTimer(item.projectId, item.subjectId)}
+                      aria-label={`Start timer for ${item.projectName}${item.subjectName ? `, ${item.subjectName}` : ''}`}
+                    >
+                      <Play size={12} fill="currentColor" /> Start timer
+                    </button>
                     <div className="timer-study-plan-track" role="progressbar" aria-label={`${item.subjectName} daily goal`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.progress}>
                       <span style={{ width: `${item.progress}%`, '--plan-color': item.color }} />
                     </div>

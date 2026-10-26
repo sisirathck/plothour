@@ -1151,18 +1151,20 @@
 .timer-study-plan-start { display: inline-flex; min-height: 32px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(121, 129, 204, .34); border-radius: 9px; background: rgba(255, 255, 255, .72); color: #3f477f; box-shadow: 0 1px 3px rgba(50, 56, 110, .08); font: inherit; font-size: 10px; font-weight: 750; cursor: pointer; transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
 .timer-study-plan-start:hover { transform: translateY(-1px); border-color: rgba(121, 129, 204, .6); background: #fff; box-shadow: 0 3px 8px rgba(50, 56, 110, .12); }
 .timer-study-plan-start:focus-visible { outline: 2px solid #7981cc; outline-offset: 2px; }
-.timer-study-plan-row { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(180px, auto); align-items: center; gap: 7px 11px; padding: 13px 0; border-bottom: 1px solid var(--sd-border-glass); }
+.timer-study-plan-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 7px 11px; padding: 10px 0; border-bottom: 1px solid var(--sd-border-glass); }
 .timer-study-plan-row:last-child { border-bottom: 0; }
 .timer-study-plan-row.is-recommended { padding-left: 10px; border-left: 2px solid #7981cc; background: linear-gradient(90deg, rgba(121, 129, 204, .045), transparent 45%); }
 .timer-study-plan-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--plan-color, var(--sd-coral)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--plan-color, var(--sd-coral)) 14%, transparent); }
-.timer-study-plan-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.timer-study-plan-copy strong { overflow: hidden; color: var(--sd-text-primary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.timer-study-plan-copy span { overflow: hidden; color: var(--sd-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-copy { min-width: 0; display: flex; align-items: center; }
+.timer-study-plan-copy strong { display: flex; min-width: 0; align-items: center; gap: 6px; overflow: hidden; color: var(--sd-text-primary); font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-copy strong > span { overflow: hidden; color: var(--sd-text-muted); font-size: 10px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-copy strong > i { flex: 0 0 auto; color: var(--sd-text-muted); font-style: normal; }
 .timer-study-plan-progress-copy { display: grid; grid-template-columns: auto auto; justify-content: end; align-items: center; gap: 3px 11px; color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .timer-study-plan-progress-copy strong { color: var(--sd-text-primary); font-weight: 750; }
 .timer-study-plan-progress-copy small { grid-column: 1 / -1; color: var(--sd-text-muted); font-size: 9px; text-align: right; }
-.timer-study-plan-track { grid-column: 1 / -1; height: 6px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
+.timer-study-plan-track { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
 .timer-study-plan-track > span { display: block; height: 100%; border-radius: inherit; background: var(--plan-color, var(--sd-coral)); transition: width 400ms ease; }
+.timer-study-plan-row-start { min-height: 28px; padding: 0 9px; font-size: 9px; }
 .timer-study-plan-empty { max-width: 720px; margin: 0; padding: 15px 0 13px; color: var(--sd-text-muted); font-size: 11px; line-height: 1.6; }
 
 @media (max-width: 560px) {
@@ -1174,7 +1176,9 @@
   .timer-study-plan-toggle { min-height: 54px; padding: 11px 14px; }
   .timer-study-plan-content { padding-inline: 14px; }
   .timer-study-plan-overview { grid-template-columns: 1fr; }
-  .timer-study-plan-row { grid-template-columns: minmax(0, 1fr); gap: 7px 10px; }
+  .timer-study-plan-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; }
+  .timer-study-plan-copy { grid-column: 1 / -1; }
+  .timer-study-plan-row-start { grid-column: 2; grid-row: 2; }
   .timer-study-plan-progress-copy { grid-column: 1; justify-content: space-between; }
   .timer-study-plan-progress-copy small { text-align: left; }
   .timer-study-plan-track { grid-column: 1; }
@@ -1694,3 +1698,48 @@
 .entries-recent-changes li { display:flex; gap:8px; align-items:center; }
 .entries-recent-changes li strong { color:var(--sd-text-primary); }
 .entries-recent-changes li time { margin-left:auto; }
+
+/* Shared raised-edge treatment to match the dashboard's tactile cards. */
+.timer-root {
+  --timer-container-border: color-mix(in srgb, var(--sd-border-strong) 38%, var(--sd-border-glass));
+  --timer-container-shadow: 0 2px 5px rgba(68, 69, 126, .035), 9px 11px 23px -7px rgba(94, 94, 164, .16), -7px -7px 20px rgba(255, 255, 255, .72), inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 -1px 0 rgba(91, 96, 164, .035);
+  --timer-subcontainer-shadow: 4px 5px 13px rgba(91, 92, 145, .085), -4px -4px 12px rgba(255, 255, 255, .68), inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+:root[data-theme='dark'] .timer-root {
+  --timer-container-border: color-mix(in srgb, var(--sd-border-strong) 46%, var(--sd-border-glass));
+  --timer-container-shadow: 0 16px 40px -16px rgba(0, 0, 0, .58), inset 0 1px 0 rgba(236, 232, 255, .07);
+  --timer-subcontainer-shadow: 0 9px 24px -14px rgba(0, 0, 0, .52), inset 0 1px 0 rgba(236, 232, 255, .055);
+}
+
+.timer-root .timer-deck-card,
+.timer-root .demo-entry-card {
+  border-color: var(--timer-container-border);
+  box-shadow: var(--timer-container-shadow);
+}
+
+.timer-root .timer-primary-selectors,
+.timer-root .timer-combo-search,
+.timer-root .t-combo-card:not(:hover):not(.is-active):not(.is-keyboard-selected),
+.timer-root .timer-context-card,
+.timer-root .timer-study-plan-total,
+.timer-root .timer-study-plan-recommendation {
+  border-color: var(--timer-container-border);
+  box-shadow: var(--timer-subcontainer-shadow);
+}
+
+.timer-root .timer-combo-search:focus-within {
+  box-shadow: 0 0 0 3px var(--sd-coral-glow), var(--timer-subcontainer-shadow);
+}
+
+.timer-root .horology-metrics-strip { box-shadow: var(--timer-subcontainer-shadow); }
+
+.timer-root .timer-study-plan-card {
+  border-color: var(--timer-container-border);
+  box-shadow: var(--timer-container-shadow);
+}
+
+.timer-root .timer-session-note-wrap {
+  border-color: var(--timer-container-border);
+  box-shadow: var(--timer-subcontainer-shadow);
+}

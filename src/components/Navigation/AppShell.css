@@ -59,16 +59,17 @@
 }
 
 .nav-datetime {
-  position: absolute;
-  left: clamp(220px, calc(50% - 420px), 520px);
-  width: 220px;
+  position: static;
+  width: auto;
   min-width: 0;
+  padding-left: 14px;
+  border-left: 1px solid var(--sd-border-glass);
   color: var(--sd-text-muted);
   font-size: 12px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
-  text-align: center;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -126,6 +127,22 @@
   align-items: center;
   gap: 10px;
 }
+
+.nav-study-streak {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, #e08a58 25%, var(--sd-card-border));
+  border-radius: 999px;
+  color: var(--sd-text-primary);
+  background: color-mix(in srgb, #e08a58 8%, var(--sd-bg-surface));
+  white-space: nowrap;
+}
+.nav-study-streak svg { color: #d27a43; fill: color-mix(in srgb, #d27a43 16%, transparent); }
+.nav-study-streak strong { font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.nav-study-streak span { color: var(--sd-text-muted); font-size: 10px; font-weight: 600; }
 
 .running-session-indicator {
   display: inline-flex;
@@ -253,7 +270,8 @@
 /* ── Responsive ──────────────────────────────── */
 @media (max-width: 900px) {
   .dashboard-nav { flex-wrap: wrap; gap: 8px; }
-  .nav-datetime { position: static; order: 2; flex: 1 1 auto; width: auto; text-align: right; font-size: 11px; }
+  .nav-left { flex-wrap: wrap; gap: 10px; }
+  .nav-datetime { flex: 0 1 auto; font-size: 11px; }
   .dashboard-tabs { position: static; order: 3; width: 100%; overflow-x: auto; transform: none; }
   .dashboard-tab.active::after { bottom: -8px; }
   .running-session-indicator { max-width: 28vw; }
@@ -264,6 +282,8 @@
   .dashboard-nav { padding: 8px 12px; }
   .demo-mode-pill { display: none; }
   .nav-datetime { font-size: 10px; letter-spacing: 0; }
+  .nav-study-streak { min-height: 32px; gap: 4px; padding: 0 8px; }
+  .nav-study-streak span { font-size: 9px; }
   .exit-demo-btn span { display: none; }
   .dashboard-tab { padding: 0 12px; font-size: 13px; }
   .running-session-indicator { max-width: 34vw; gap: 7px; font-size: 11px; }

@@ -11,7 +11,6 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowRight,
-  CalendarDays,
   Pin,
   Clock,
   Target,
@@ -70,30 +69,56 @@ const useSvgChartTooltip = () => {
   return { show, hide, node };
 };
 
-const DailyHoursGraph = ({ days, title, hasData, onStart }) => {
+const dailyHoursGroupingOptions = [
+  { id: 'days', label: 'Days' },
+  { id: 'weeks', label: 'Weeks' },
+  { id: 'months', label: 'Months' },
+  { id: 'quarters', label: 'Quarters' },
+  { id: 'years', label: 'Years' },
+  { id: 'all', label: 'All time' },
+];
+
+const DailyHoursGraph = ({ days, title, hasData, onStart, grouping, onGroupingChange }) => {
   const chartTooltip = useSvgChartTooltip();
-  const isCompact = days.length <= 14;
-  const width = Math.max(isCompact ? 540 : 640, days.length * (isCompact ? 46 : 28));
+  const chartScrollRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  useEffect(() => {
+    const node = chartScrollRef.current;
+    if (!node) return undefined;
+    const updateWidth = () => setContainerWidth(Math.floor(node.getBoundingClientRect().width));
+    updateWidth();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasData]);
+
+  const width = Math.max(320, containerWidth || days.length * 60);
   const height = 240;
-  const margin = { top: 14, right: 18, bottom: 34, left: 44 };
+  const margin = { top: 8, right: 18, bottom: 24, left: 44 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const maxSeconds = Math.max(1800, ...days.map((day) => day.seconds));
   const hourTicks = getHourTicks(maxSeconds);
   const maxHours = hourTicks[hourTicks.length - 1];
   const slotWidth = plotWidth / days.length;
-  const barWidth = Math.max(4, Math.min(38, slotWidth * 0.58));
+  const barWidth = Math.max(8, Math.min(44, slotWidth * 0.42));
 
   return (
-    <div className="db-chart-card db-card">
+    <div className="db-chart-card db-card db-daily-hours-card db-snapshot-card">
       <div className="db-chart-heading db-chart-heading-stack">
         <div>
-          <h3 className="db-section-title">Daily Hours</h3>
+          <h3 className="db-section-title">Snapshot</h3>
           <span className="db-section-meta">{title}</span>
         </div>
+        <label className="db-daily-group-control">Group by
+          <select value={grouping} onChange={(event) => onGroupingChange(event.target.value)} aria-label="Group daily hours by">
+            {dailyHoursGroupingOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
       </div>
-      {!hasData ? <QuietEmptyState message="No sessions in this date range yet." onStart={onStart} /> : <div className="db-chart-scroll">
-        <svg className="db-svg-chart db-daily-chart" style={{ width: `${width}px` }} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Study hours for ${title}`}>
+      {!hasData ? <QuietEmptyState message="No study time for this view yet." onStart={onStart} /> : <div ref={chartScrollRef} className="db-chart-scroll db-daily-chart-scroll">
+        <svg className="db-svg-chart db-daily-chart" style={{ width: '100%', height: `${height}px` }} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Study hours for ${title}`}>
           {hourTicks.map((value) => {
             const y = margin.top + plotHeight - (value / maxHours) * plotHeight;
             return (
@@ -467,8 +492,8 @@ const dashboardRangeOptions = [
 ];
 
 const dashboardSectionDefaults = [
+  { id: 'daily', label: 'Snapshot', visible: true, pinned: true, collapsed: false },
   { id: 'overview', label: 'Overview', visible: true, pinned: true, collapsed: false },
-  { id: 'daily', label: 'Daily time breakdown', visible: true, pinned: true, collapsed: false },
   { id: 'focus', label: 'Focus distribution', visible: false, pinned: false, collapsed: false },
   { id: 'rhythms', label: 'Study rhythms', visible: false, pinned: false, collapsed: false },
   { id: 'projects', label: 'Project progress', visible: true, pinned: true, collapsed: false },
@@ -486,18 +511,29 @@ const previousDefaultDashboardSections = [
   { id: 'heatmap', pinned: false },
   { id: 'calendar', pinned: false },
 ];
+const previousCurrentDefaultOrder = ['overview', 'daily', 'focus', 'rhythms', 'projects', 'patterns', 'heatmap', 'calendar'];
 
 const getSavedDashboardPreferences = (preferenceKey) => {
   try {
     const saved = JSON.parse(localStorage.getItem(preferenceKey) || 'null');
     if (!Array.isArray(saved)) return dashboardSectionDefaults;
+    const isUntouchedCurrentDefault = saved.length === dashboardSectionDefaults.length && saved.every((item, index) => {
+      const currentDefault = dashboardSectionDefaults[index];
+      return item.id === currentDefault.id && item.visible === currentDefault.visible && item.pinned === currentDefault.pinned && item.collapsed === currentDefault.collapsed;
+    });
+    if (isUntouchedCurrentDefault) return dashboardSectionDefaults;
+    const isUntouchedPreviousCurrentDefault = saved.length === dashboardSectionDefaults.length && saved.every((item, index) => {
+      const currentDefault = dashboardSectionDefaults.find((section) => section.id === previousCurrentDefaultOrder[index]);
+      return item.id === previousCurrentDefaultOrder[index] && item.visible === currentDefault.visible && item.pinned === currentDefault.pinned && item.collapsed === currentDefault.collapsed;
+    });
+    if (isUntouchedPreviousCurrentDefault) return dashboardSectionDefaults;
     const isUntouchedOldDefault = saved.length === previousDefaultDashboardSections.length && saved.every((item, index) => {
       const previous = previousDefaultDashboardSections[index];
       return item.id === previous.id && item.visible === true && item.pinned === previous.pinned && item.collapsed === false;
     });
     if (isUntouchedOldDefault) return dashboardSectionDefaults;
     const current = new Map(saved.map((item) => [item.id, item]));
-    return dashboardSectionDefaults.map((section) => ({ ...section, ...(current.get(section.id) || {}) }));
+    return dashboardSectionDefaults.map((section) => ({ ...section, ...(current.get(section.id) || {}), label: section.label }));
   } catch {
     return dashboardSectionDefaults;
   }
@@ -544,6 +580,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       return dashboardRangeOptions.some((option) => option.id === saved) ? saved : 'week';
     } catch { return 'week'; }
   });
+  const [dailyHoursGrouping, setDailyHoursGrouping] = useState('days');
   const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -770,6 +807,33 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const expectedGoalByNowSecs = rangeGoalSecs > 0 ? rangeGoalSecs * (elapsedRangeDays / rangeDaysCount) : 0;
   const paceDifferenceSecs = Math.max(0, expectedGoalByNowSecs - rangeSecs);
   const paceIsOnTrack = rangeSecs >= expectedGoalByNowSecs;
+  const todaySnapshot = useMemo(() => {
+    const todayKey = dateKey(now);
+    const todayEntries = entries.filter((entry) => Number(entry.durationSeconds) > 0 && entry.startedAt && dateKey(entry.startedAt) === todayKey);
+    const loggedSeconds = todayEntries.reduce((total, entry) => total + (Number(entry.durationSeconds) || 0), 0);
+    const plannedGoalHours = projects.reduce((total, project) => {
+      if (project.archived) return total;
+      return total + (project.subjects || []).reduce((subjectTotal, subject) => {
+        const dailyHours = Number(subject.goals?.daily) || 0;
+        const weeklyHours = Number(subject.goals?.weekly) || 0;
+        const studyDays = Array.isArray(subject.studyDays)
+          ? subject.studyDays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+          : dailyHours > 0 ? [0, 1, 2, 3, 4, 5, 6] : [];
+        if (!studyDays.includes(now.getDay())) return subjectTotal;
+        const targetHours = dailyHours || (weeklyHours > 0 && studyDays.length ? weeklyHours / studyDays.length : 0);
+        return subjectTotal + targetHours;
+      }, 0);
+    }, 0);
+    const globalGoalHours = Number(preferences.dailyGoalHours) || 0;
+    const targetSeconds = (plannedGoalHours || globalGoalHours) * 3600;
+    return {
+      loggedSeconds,
+      sessionCount: todayEntries.length,
+      targetSeconds,
+      remainingSeconds: Math.max(0, targetSeconds - loggedSeconds),
+      progress: targetSeconds ? Math.min(100, Math.round((loggedSeconds / targetSeconds) * 100)) : 0,
+    };
+  }, [entries, projects, now, preferences.dailyGoalHours]);
   const rangeTopProject = useMemo(() => {
     const totals = new Map();
     rangeEntries.forEach((entry) => {
@@ -1028,73 +1092,98 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, [dateRange, weekBarData.minWidth]);
 
   const dailyHoursData = useMemo(() => {
-    const totals = new Map();
-    rangeEntries.forEach((entry) => {
-      if (!entry.startedAt) return;
-      const key = dateKey(entry.startedAt);
-      const total = totals.get(key) || { seconds: 0, sessions: 0 };
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(currentWeekStart.getDate() - getWeekStartOffset(currentWeekStart, weekStart));
+    const periods = [];
+    let firstDate = null;
+    const monthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+    const quarterStart = (date) => new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1);
+
+    if (dailyHoursGrouping === 'days') {
+      for (let index = 0; index < 7; index++) {
+        const start = new Date(currentWeekStart);
+        start.setDate(start.getDate() + index);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+        periods.push({ start, end, key: dateKey(start), dateLabel: formatDisplayDate(start, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }), axisLabel: start.toLocaleDateString(undefined, { weekday: 'short' }) });
+      }
+      firstDate = currentWeekStart;
+    } else if (dailyHoursGrouping === 'weeks') {
+      for (let index = 11; index >= 0; index--) {
+        const start = new Date(currentWeekStart);
+        start.setDate(start.getDate() - index * 7);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 7);
+        periods.push({ start, end, key: dateKey(start), dateLabel: `Week of ${formatDisplayDate(start, { month: 'short', day: 'numeric', year: 'numeric' })}`, axisLabel: formatDisplayDate(start, { month: 'short', day: 'numeric' }) });
+      }
+      firstDate = periods[0]?.start || currentWeekStart;
+    } else if (dailyHoursGrouping === 'months') {
+      for (let index = 11; index >= 0; index--) {
+        const start = monthStart(new Date(today.getFullYear(), today.getMonth() - index, 1));
+        const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+        periods.push({ start, end, key: `${start.getFullYear()}-${start.getMonth()}`, dateLabel: formatDisplayDate(start, { month: 'long', year: 'numeric' }), axisLabel: start.toLocaleDateString(undefined, { month: 'short' }) });
+      }
+      firstDate = periods[0]?.start || monthStart(today);
+    } else if (dailyHoursGrouping === 'quarters') {
+      for (let index = 7; index >= 0; index--) {
+        const start = quarterStart(new Date(today.getFullYear(), today.getMonth() - index * 3, 1));
+        const end = new Date(start.getFullYear(), start.getMonth() + 3, 1);
+        const quarter = Math.floor(start.getMonth() / 3) + 1;
+        periods.push({ start, end, key: `${start.getFullYear()}-Q${quarter}`, dateLabel: `Q${quarter} ${start.getFullYear()}`, axisLabel: `Q${quarter} '${String(start.getFullYear()).slice(-2)}` });
+      }
+      firstDate = periods[0]?.start || quarterStart(today);
+    } else if (dailyHoursGrouping === 'years') {
+      for (let index = 4; index >= 0; index--) {
+        const year = today.getFullYear() - index;
+        const start = new Date(year, 0, 1);
+        periods.push({ start, end: new Date(year + 1, 0, 1), key: `${year}`, dateLabel: `${year}`, axisLabel: `${year}` });
+      }
+      firstDate = periods[0]?.start || new Date(today.getFullYear(), 0, 1);
+    } else {
+      const timestamps = entries.map((entry) => new Date(entry.startedAt).getTime()).filter(Number.isFinite);
+      const earliest = timestamps.length ? new Date(Math.min(...timestamps)) : new Date(today.getFullYear(), 0, 1);
+      earliest.setHours(0, 0, 0, 0);
+      periods.push({ start: earliest, end: new Date(today.getTime() + 86400000), key: 'all-time', dateLabel: 'All recorded time', axisLabel: 'All time' });
+      firstDate = earliest;
+    }
+
+    const totals = new Map(periods.map((period) => [period.key, { seconds: 0, sessions: 0 }]));
+    const periodForDate = (date) => {
+      if (dailyHoursGrouping === 'days') return dateKey(date);
+      if (dailyHoursGrouping === 'weeks') {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - getWeekStartOffset(start, weekStart));
+        return dateKey(start);
+      }
+      if (dailyHoursGrouping === 'months') return `${date.getFullYear()}-${date.getMonth()}`;
+      if (dailyHoursGrouping === 'quarters') return `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`;
+      if (dailyHoursGrouping === 'years') return `${date.getFullYear()}`;
+      return 'all-time';
+    };
+    entries.forEach((entry) => {
+      if (!(Number(entry.durationSeconds) > 0) || !entry.startedAt) return;
+      const date = new Date(entry.startedAt);
+      if (!Number.isFinite(date.getTime()) || date < firstDate || date > now) return;
+      const total = totals.get(periodForDate(date));
+      if (!total) return;
       total.seconds += Number(entry.durationSeconds) || 0;
       total.sessions += 1;
-      totals.set(key, total);
     });
-    const useYears = dateRange === 'all' && rangeDaysCount > 365 * 5;
-    const useQuarters = dateRange === 'all' && rangeDaysCount > 180 && !useYears;
-    const useWeeks = !useYears && !useQuarters && rangeDaysCount > 45;
-    const days = [];
-    if (!useWeeks) {
-      if (useQuarters || useYears) {
-        const cursor = new Date(dateWindow.start.getFullYear(), useYears ? 0 : Math.floor(dateWindow.start.getMonth() / 3) * 3, 1);
-        while (cursor <= dateWindow.end) {
-          const periodStart = new Date(cursor);
-          const periodEnd = useYears
-            ? new Date(periodStart.getFullYear() + 1, 0, 1)
-            : new Date(periodStart.getFullYear(), periodStart.getMonth() + 3, 1);
-          let seconds = 0;
-          let sessions = 0;
-          for (let date = new Date(periodStart); date < periodEnd && date <= dateWindow.end; date.setDate(date.getDate() + 1)) {
-            const total = totals.get(dateKey(date)) || { seconds: 0, sessions: 0 };
-            seconds += total.seconds;
-            sessions += total.sessions;
-          }
-          const quarter = Math.floor(periodStart.getMonth() / 3) + 1;
-          const dateLabel = useYears ? `${periodStart.getFullYear()}` : `Q${quarter} ${periodStart.getFullYear()}`;
-          days.push({ key: dateKey(periodStart), dayOfMonth: useYears ? `${periodStart.getFullYear()}` : `Q${quarter}`, dateLabel, axisLabel: useYears ? `${periodStart.getFullYear()}` : `Q${quarter} '${String(periodStart.getFullYear()).slice(-2)}`, seconds, sessions });
-          cursor.setTime(periodEnd.getTime());
-        }
-      } else {
-      const count = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
-      for (let index = 0; index < count; index++) {
-        const date = new Date(dateWindow.start);
-        date.setDate(date.getDate() + index);
-        const key = dateKey(date);
-        const total = totals.get(key) || { seconds: 0, sessions: 0 };
-        days.push({ key, dayOfMonth: date.getDate(), dateLabel: formatDisplayDate(date, { month: 'short', day: 'numeric', year: 'numeric' }), seconds: total.seconds, sessions: total.sessions });
-      }
-      }
-    } else {
-      const cursor = new Date(dateWindow.start);
-      cursor.setDate(cursor.getDate() - getWeekStartOffset(cursor, weekStart));
-      while (cursor <= dateWindow.end) {
-        const weekStart = new Date(cursor);
-        let seconds = 0;
-        let sessions = 0;
-        for (let offset = 0; offset < 7; offset++) {
-          const date = new Date(weekStart);
-          date.setDate(date.getDate() + offset);
-          const total = totals.get(dateKey(date)) || { seconds: 0, sessions: 0 };
-          seconds += total.seconds;
-          sessions += total.sessions;
-        }
-        days.push({ key: dateKey(weekStart), dayOfMonth: weekStart.getDate(), dateLabel: `Week of ${formatDisplayDate(weekStart, { month: 'short', day: 'numeric', year: 'numeric' })}`, seconds, sessions });
-        cursor.setDate(cursor.getDate() + 7);
-      }
-    }
-    const period = useYears ? 'yearly' : useQuarters ? 'quarterly' : useWeeks ? 'weekly' : 'daily';
-    return {
-      days,
-      title: `${rangeLabel} · ${period} totals`,
+
+    const days = periods.map((period) => ({ ...period, ...(totals.get(period.key) || { seconds: 0, sessions: 0 }) }));
+    const titles = {
+      days: 'Current week · daily totals',
+      weeks: 'Last 12 weeks · weekly totals',
+      months: 'Last 12 months · monthly totals',
+      quarters: 'Last 8 quarters · quarterly totals',
+      years: 'Last 5 years · yearly totals',
+      all: 'All recorded study time',
     };
-  }, [rangeEntries, dateWindow, rangeDaysCount, rangeLabel, weekStart, dateRange]);
+    return { days, title: titles[dailyHoursGrouping] };
+  }, [entries, now, weekStart, dailyHoursGrouping]);
 
   const studyVelocityStats = useMemo(() => {
     const totalDaysCount = Math.max(1, rangeDaysCount);
@@ -1554,6 +1643,17 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
               <label>To<input type="date" value={customEnd} min={customStart} max={new Date().toLocaleDateString('en-CA')} onChange={(event) => setCustomEnd(event.target.value)} /></label>
             </div>
           )}
+          <div className="db-today-inline" aria-label="Today's study progress">
+            <div className="db-today-inline-date"><span>TODAY</span><strong>{formatDisplayDate(now, { weekday: 'short', month: 'short', day: 'numeric' })}</strong></div>
+            <div className="db-today-inline-main">
+              <strong>{fmtDur(todaySnapshot.loggedSeconds)} <small>{todaySnapshot.targetSeconds ? `of ${fmtDur(todaySnapshot.targetSeconds)} goal` : 'logged'}</small></strong>
+              <div className={`db-today-inline-track${todaySnapshot.targetSeconds ? '' : ' is-empty'}`}><span style={{ width: `${todaySnapshot.progress}%` }} /></div>
+            </div>
+            <div className="db-today-inline-meta">
+              <strong>{todaySnapshot.targetSeconds ? `${todaySnapshot.progress}%` : '—'}</strong>
+              <small>{todaySnapshot.sessionCount} {todaySnapshot.sessionCount === 1 ? 'session' : 'sessions'}{todaySnapshot.targetSeconds ? ` · ${todaySnapshot.remainingSeconds ? `${fmtDur(todaySnapshot.remainingSeconds)} left` : 'goal met'}` : ''}</small>
+            </div>
+          </div>
           <div className="db-customize-wrap">
             <button type="button" className={`db-customize-trigger${customizerOpen ? ' active' : ''}`} aria-label="Customize dashboard sections" aria-expanded={customizerOpen} onClick={() => setCustomizerOpen((open) => !open)}>
               <SlidersHorizontal size={16} aria-hidden="true" />
@@ -1581,11 +1681,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
             <div className="db-weekly-focus-heading">
               <div>
                 <span className="db-weekly-focus-eyebrow">{rangeLabel.toUpperCase()} · STUDY SUMMARY</span>
-                <h2>Your time, clearly.</h2>
               </div>
-              <button type="button" className="db-weekly-focus-calendar" onClick={() => setCalendarOpen(true)}>
-                <CalendarDays size={15} /> {text('dashboard', 'calendarButton', 'Calendar View')} <ArrowRight size={14} />
-              </button>
             </div>
 
             <div className="db-weekly-focus-main">
@@ -1636,8 +1732,10 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
           <DailyHoursGraph
             days={dailyHoursData.days}
             title={dailyHoursData.title}
-            hasData={rangeEntries.length > 0}
+            hasData={dailyHoursData.days.some((day) => day.seconds > 0)}
             onStart={() => onNavigate?.('timer')}
+            grouping={dailyHoursGrouping}
+            onGroupingChange={setDailyHoursGrouping}
           />
         </DashboardSection>
 

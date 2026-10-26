@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { Bell, LogOut, Settings, Square, X } from 'lucide-react';
+import { Bell, Flame, LogOut, Settings, Square, X } from 'lucide-react';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
 import { TimerPage } from '../../modules/timer/TimerPage';
 import { DashboardPage } from '../../modules/dashboard/DashboardPage';
@@ -41,6 +41,41 @@ const formatRunningTime = (seconds) => {
   return [hours, minutes, remainder].map((part) => String(part).padStart(2, '0')).join(':');
 };
 
+const localStudyDateKey = (value) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+const calculateStudyStreak = (entries) => {
+  const studiedDates = [...new Set((Array.isArray(entries) ? entries : [])
+    .filter((entry) => Number(entry?.durationSeconds) > 0)
+    .map((entry) => localStudyDateKey(entry.startedAt))
+    .filter(Boolean))].sort();
+  const serialFor = (key) => {
+    const [year, month, day] = key.split('-').map(Number);
+    return Date.UTC(year, month - 1, day) / 86400000;
+  };
+  const serials = studiedDates.map(serialFor);
+  let longestStreak = 0;
+  let run = 0;
+  let previous = null;
+  serials.forEach((serial) => {
+    run = previous !== null && serial === previous + 1 ? run + 1 : 1;
+    longestStreak = Math.max(longestStreak, run);
+    previous = serial;
+  });
+  const todaySerial = serialFor(localStudyDateKey(new Date()));
+  const activeSerials = new Set(serials);
+  let cursor = activeSerials.has(todaySerial) ? todaySerial : activeSerials.has(todaySerial - 1) ? todaySerial - 1 : null;
+  let currentStreak = 0;
+  while (cursor !== null && activeSerials.has(cursor)) {
+    currentStreak += 1;
+    cursor -= 1;
+  }
+  return { currentStreak, longestStreak, lastStudyDate: studiedDates.at(-1) || null };
+};
+
 export const AppShell = ({ user, onLogout }) => {
   const [currentRoute, setCurrentRoute] = useState(getRouteFromPath);
   const visibleNavItems = user?.is_admin
@@ -52,6 +87,7 @@ export const AppShell = ({ user, onLogout }) => {
   const entriesKey = user?.id
     ? `studyduel_user_${user.id}_time_entries`
     : 'studyduel_demo_time_entries';
+  const streakKey = user?.id ? `studyduel_user_${user.id}_study_streak` : null;
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const remindersKey = user?.id ? `studyduel_user_${user.id}_reminders` : 'studyduel_demo_reminders';
   const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : 'studyduel_demo_preferences';
@@ -63,6 +99,19 @@ export const AppShell = ({ user, onLogout }) => {
   const [reminderNotice, setReminderNotice] = useState(null);
   const [activeTimer, setActiveTimer] = useState(() => readLocalValue(activeTimerKey));
   const [timerNow, setTimerNow] = useState(Date.now());
+  const [studyStreak, setStudyStreak] = useState(() => streakKey ? readLocalValue(streakKey, { currentStreak: 0, longestStreak: 0 }) : { currentStreak: 0, longestStreak: 0 });
+
+  useEffect(() => {
+    if (!streakKey) return;
+    const next = calculateStudyStreak(readLocalValue(entriesKey, []));
+    const saved = readLocalValue(streakKey, {});
+    if (saved.currentStreak !== next.currentStreak || saved.longestStreak !== next.longestStreak || saved.lastStudyDate !== next.lastStudyDate) {
+      localStorage.setItem(streakKey, JSON.stringify(next));
+    }
+    setStudyStreak((current) => current.currentStreak === next.currentStreak && current.longestStreak === next.longestStreak
+      ? current
+      : next);
+  }, [entriesKey, streakKey, timerNow]);
 
   useLayoutEffect(() => {
     const initialPreferences = readLocalValue(preferencesKey, {});
@@ -261,13 +310,12 @@ export const AppShell = ({ user, onLogout }) => {
               {preferences.displayName || user?.display_name || 'Guest'}
             </span>
           )}
+          {!isSettings && (
+            <time className="nav-datetime" dateTime={localDateTime.iso}>
+              {localDateTime.label}
+            </time>
+          )}
         </div>
-
-        {!isSettings && (
-          <time className="nav-datetime" dateTime={localDateTime.iso}>
-            {localDateTime.label}
-          </time>
-        )}
 
         {/* 4 Primary Navigation Tabs: /timer, /dashboard, /compare, /manage */}
         {!isSettings && (
@@ -294,6 +342,18 @@ export const AppShell = ({ user, onLogout }) => {
 
         {/* Right Action Controls: Theme, Settings, Log out */}
         <div className="nav-right">
+          {currentRoute === 'dashboard' && streakKey && (
+            <div
+              className="nav-study-streak"
+              role="status"
+              title={`${studyStreak.currentStreak} day current streak · ${studyStreak.longestStreak} day longest streak`}
+              aria-label={`${studyStreak.currentStreak} day current study streak; longest streak ${studyStreak.longestStreak} days`}
+            >
+              <Flame size={16} aria-hidden="true" />
+              <strong>{studyStreak.currentStreak}</strong>
+              <span>day streak</span>
+            </div>
+          )}
           {activeTimer && currentRoute !== 'timer' && (
             <div
               className="running-session-indicator"
