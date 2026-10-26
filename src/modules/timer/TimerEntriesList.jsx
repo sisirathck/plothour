@@ -190,17 +190,10 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
     <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}`} aria-label="Completed time entries">
       {/* Panel Header */}
       <div className="entries-panel-heading">
-        <button
-          type="button"
-          className="entries-collapse-btn"
-          onClick={() => setExpanded((current) => !current)}
-          aria-expanded={isExpanded}
-          aria-label={isExpanded ? 'Collapse session history' : 'Expand session history'}
-        >
-            <span className="entries-heading-title">SESSION HISTORY</span>
-            <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
-            {hideRangeControls && <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />}
-        </button>
+        <div className="entries-heading-label">
+          <span className="entries-heading-title">SESSION HISTORY</span>
+          <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
+        </div>
         {!hideRangeControls && (
           <div className="entries-heading-actions">
             {onOpenCalendar && (
