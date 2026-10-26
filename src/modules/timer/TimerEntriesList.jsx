@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Save, Trash2, X, Calendar, CalendarDays, Undo2 } from 'lucide-react';
+import { ChevronDown, Pencil, Save, Trash2, X, Calendar, CalendarDays, Undo2 } from 'lucide-react';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
 const localDateKey = (value) => {
@@ -50,7 +50,7 @@ const durationLabel = (seconds) => {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
-export const TimerEntriesList = ({ entries, setEntries, projects, user, selectedDate = null, hideRangeControls = false, onOpenCalendar }) => {
+export const TimerEntriesList = ({ entries, setEntries, projects, user, selectedDate = null, hideRangeControls = false, hideProjectColors = false, onOpenCalendar }) => {
   const [expanded, setExpanded] = useState(false);
   const isExpanded = hideRangeControls || expanded;
   const [range, setRange] = useState('today');
@@ -145,14 +145,14 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   };
 
   return (
-    <section className="demo-entry-card" aria-label="Completed time entries">
+    <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}`} aria-label="Completed time entries">
       {/* Panel Header */}
       <div className="entries-panel-heading">
         {hideRangeControls ? (
           <div className="entries-collapse-btn is-static" aria-label="Session history, expanded">
-            <span className="entries-caret-icon"><ChevronDown size={16} /></span>
             <span className="entries-heading-title">SESSION HISTORY</span>
             <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
+            <ChevronDown size={16} className="entries-heading-chevron is-open" />
           </div>
         ) : (
           <button
@@ -161,17 +161,16 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
             onClick={() => setExpanded((current) => !current)}
             aria-expanded={expanded}
           >
-            <span className="entries-caret-icon">
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </span>
             <span className="entries-heading-title">SESSION HISTORY</span>
             <span className="date-badge">
               {filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}
             </span>
+            <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />
           </button>
         )}
-
-        {isExpanded && (
+      </div>
+      <div className="entries-expand-region" aria-hidden={!isExpanded}>
+        <div className="entries-expand-inner" inert={!isExpanded}>
           <div className="entries-controls">
             {!hideRangeControls && onOpenCalendar && (
               <button type="button" className="entries-calendar-btn" onClick={() => {
@@ -214,13 +213,10 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
               </select>
             </div>}
           </div>
-        )}
-      </div>
       {undoAction && <div className="entries-undo-toast" role="status"><span>{undoAction.message}</span><button type="button" onClick={() => { undoAction.undo(); setUndoAction(null); window.clearTimeout(undoTimerRef.current); }}><Undo2 size={14} /> Undo</button></div>}
       {recentChanges.length > 0 && <details className="entries-recent-changes"><summary>Recent changes <span>{recentChanges.length}</span></summary><ul>{recentChanges.map((item) => <li key={item.id}><strong>{item.action}</strong><span>{item.project}</span><time>{new Date(item.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</time></li>)}</ul></details>}
 
       {/* Expanded Content */}
-      {isExpanded && (
         <div className="entries-content-body">
           {filteredEntries.length === 0 ? (
             <div className="demo-entry-empty">
@@ -234,7 +230,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                   <div className="demo-entry-row">
                     {/* Left: Project & Subject */}
                     <div className="demo-entry-left">
-                      <span className="demo-entry-color" style={{ backgroundColor: entry.color || 'var(--sd-coral)' }} />
+                      {!hideProjectColors && <span className="demo-entry-color" style={{ backgroundColor: entry.color || 'var(--sd-coral)' }} />}
                       <div className="demo-entry-name">
                         <strong className="entry-proj-title">{entry.projectName}</strong>
                         <span className="entry-sub-title">{entry.subjectName || 'No subject'}</span>
@@ -398,7 +394,8 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
             </div>
           )}
         </div>
-      )}
+        </div>
+      </div>
     </section>
   );
 };

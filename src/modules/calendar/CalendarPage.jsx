@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X } from 'lucide-react';
 import { TimerEntriesList } from '../timer/TimerEntriesList';
 import { formatDisplayDate } from '../../utils/dateFormat';
@@ -17,9 +18,11 @@ const readLocalValue = (key, fallback) => {
 const dateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const entryDateKey = (value) => dateKey(new Date(value));
 const formatDuration = (seconds) => {
+  if (!(Number(seconds) > 0)) return '0m';
   const minutes = Math.floor(Math.max(0, seconds) / 60);
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
+  if (!hours && !minutes) return '<1m';
   if (hours && remainder) return `${hours}h ${remainder}m`;
   if (hours) return `${hours}h`;
   return minutes ? `${minutes}m` : '—';
@@ -103,15 +106,16 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   const monthCells = useMemo(() => {
     const first = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
     const offset = first.getDay();
-    const count = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
-    const cellCount = Math.ceil((offset + count) / 7) * 7;
-    return Array.from({ length: cellCount }, (_, index) => {
-      const day = index - offset + 1;
-      return day < 1 || day > count ? null : new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
-    });
+    const cellCount = 42;
+    const gridStart = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1 - offset);
+    return Array.from({ length: cellCount }, (_, index) => new Date(
+      gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index,
+    ));
   }, [viewMonth]);
 
-  const monthSeconds = monthCells.reduce((sum, day) => sum + (day ? totalsByDay[dateKey(day)] || 0 : 0), 0);
+  const isInViewMonth = (day) => day.getFullYear() === viewMonth.getFullYear() && day.getMonth() === viewMonth.getMonth();
+  const viewMonthDays = monthCells.filter(isInViewMonth);
+  const monthSeconds = viewMonthDays.reduce((sum, day) => sum + (totalsByDay[dateKey(day)] || 0), 0);
   const monthSessions = filteredEntries.filter((entry) => {
     const date = new Date(entry.startedAt);
     return date.getFullYear() === viewMonth.getFullYear() && date.getMonth() === viewMonth.getMonth();
@@ -122,7 +126,6 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
     if (kind === 'project') return projects.find((project) => project.id === id)?.name || 'All study areas';
     return projects.flatMap((project) => project.subjects || []).find((subject) => subject.id === id)?.name || 'All study areas';
   })();
-  const maxDaySeconds = Math.max(1, ...monthCells.map((day) => day ? totalsByDay[dateKey(day)] || 0 : 0));
   const changeMonth = (delta) => {
     const next = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + delta, 1);
     setViewMonth(next);
@@ -132,20 +135,38 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
 
   const calendarContent = (
     <div className="calendar-page" style={getSiteFontStyle(config, 'calendar')}>
-      <header className="calendar-page-heading">
-        <div>
-          <span className="calendar-eyebrow"><CalendarDays size={14} /> CALENDAR</span>
-          <h1>Calendar</h1>
-        </div>
-      </header>
+      {!onClose && (
+        <header className="calendar-page-heading">
+          <div>
+            <span className="calendar-eyebrow"><CalendarDays size={14} /> CALENDAR</span>
+            <h1>Calendar</h1>
+          </div>
+        </header>
+      )}
 
       <section className="calendar-month-card" aria-label="Monthly study calendar">
         <div className="calendar-month-toolbar">
           <div className="calendar-month-title">
             <h2>{viewMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
-            <span><Clock3 size={14} /> {formatDuration(monthSeconds)} · {monthSessions} {monthSessions === 1 ? 'session' : 'sessions'}</span>
+            <div className="calendar-month-metrics" aria-label={`${formatDuration(monthSeconds)} studied across ${monthSessions} sessions`}>
+              <span><Clock3 size={13} /> {formatDuration(monthSeconds)}</span>
+              <span>{monthSessions} {monthSessions === 1 ? 'session' : 'sessions'}</span>
+            </div>
           </div>
           <div className="calendar-month-actions">
+            <div className="calendar-command-controls">
+              <div className="calendar-filter-field calendar-filter-select" ref={projectFilterRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setProjectFilterOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setProjectFilterOpen(false); }}>
+                <button type="button" className="calendar-filter-trigger" aria-label="Filter calendar by project or subproject" aria-haspopup="listbox" aria-expanded={projectFilterOpen} onClick={() => setProjectFilterOpen((open) => !open)}><span>{projectFilterLabel}</span><ChevronDown size={14} aria-hidden="true" /></button>
+                {projectFilterOpen && <div className="calendar-filter-menu" role="listbox" aria-label="Study areas">
+                  <button type="button" role="option" aria-selected={projectFilter === 'all'} onClick={() => { setProjectFilter('all'); setProjectFilterOpen(false); }}><span>All study areas</span>{projectFilter === 'all' && <Check size={15} />}</button>
+                  {projects.map((project) => <div className="calendar-filter-group" key={project.id}><span>{project.name}</span><button type="button" role="option" aria-selected={projectFilter === `project:${project.id}`} onClick={() => { setProjectFilter(`project:${project.id}`); setProjectFilterOpen(false); }}><span>{project.name}</span>{projectFilter === `project:${project.id}` && <Check size={15} />}</button>{(project.subjects || []).map((subject) => <button className="is-nested" type="button" role="option" aria-selected={projectFilter === `subject:${subject.id}`} key={subject.id} onClick={() => { setProjectFilter(`subject:${subject.id}`); setProjectFilterOpen(false); }}><span>{subject.name}</span>{projectFilter === `subject:${subject.id}` && <Check size={15} />}</button>)}</div>)}
+                </div>}
+              </div>
+              <label className="calendar-jump-control" aria-label="Jump to date">
+                <CalendarDays size={14} aria-hidden="true" />
+                <input aria-label="Jump to date" type="date" value={jumpDate} onChange={(event) => { const value = event.target.value; setJumpDate(value); if (!value) return; const date = new Date(`${value}T12:00:00`); if (Number.isFinite(date.getTime())) { setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1)); setSelectedDate(date); } }} />
+              </label>
+            </div>
             <button type="button" className="calendar-today-btn" onClick={() => {
               const today = new Date();
               setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -156,44 +177,43 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
             <button type="button" className="calendar-nav-btn" aria-label="Next month" onClick={() => changeMonth(1)}><ChevronRight size={18} /></button>
           </div>
         </div>
-        <div className="calendar-filter-toolbar">
-          <div className="calendar-filter-field calendar-filter-select" ref={projectFilterRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setProjectFilterOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setProjectFilterOpen(false); }}>
-            <span>Study area</span>
-            <button type="button" className="calendar-filter-trigger" aria-label="Filter calendar by project or subproject" aria-haspopup="listbox" aria-expanded={projectFilterOpen} onClick={() => setProjectFilterOpen((open) => !open)}><span>{projectFilterLabel}</span><ChevronDown size={15} aria-hidden="true" /></button>
-            {projectFilterOpen && <div className="calendar-filter-menu" role="listbox" aria-label="Study areas">
-              <button type="button" role="option" aria-selected={projectFilter === 'all'} onClick={() => { setProjectFilter('all'); setProjectFilterOpen(false); }}><span>All study areas</span>{projectFilter === 'all' && <Check size={15} />}</button>
-              {projects.map((project) => <div className="calendar-filter-group" key={project.id}><span>{project.name}</span><button type="button" role="option" aria-selected={projectFilter === `project:${project.id}`} onClick={() => { setProjectFilter(`project:${project.id}`); setProjectFilterOpen(false); }}><span>{project.name}</span>{projectFilter === `project:${project.id}` && <Check size={15} />}</button>{(project.subjects || []).map((subject) => <button className="is-nested" type="button" role="option" aria-selected={projectFilter === `subject:${subject.id}`} key={subject.id} onClick={() => { setProjectFilter(`subject:${subject.id}`); setProjectFilterOpen(false); }}><span>{subject.name}</span>{projectFilter === `subject:${subject.id}` && <Check size={15} />}</button>)}</div>)}
-            </div>}
-          </div>
-          <label>Jump to date<input type="date" value={jumpDate} onChange={(event) => { const value = event.target.value; setJumpDate(value); if (!value) return; const date = new Date(`${value}T12:00:00`); if (Number.isFinite(date.getTime())) { setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1)); setSelectedDate(date); } }} /></label>
-        </div>
 
         <div className="calendar-weekdays" aria-hidden="true">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}
         </div>
-        <div className="calendar-month-grid">
-          {monthCells.map((day, index) => {
-            if (!day) return <span className="calendar-day-empty" key={`empty-${index}`} aria-hidden="true" />;
+        <div className="calendar-grid-tray">
+          <div className="calendar-month-grid">
+            {monthCells.map((day) => {
             const key = dateKey(day);
             const seconds = totalsByDay[key] || 0;
-            const intensity = seconds === 0 ? 0 : Math.min(4, Math.max(1, Math.ceil((seconds / maxDaySeconds) * 4)));
+            const inViewMonth = isInViewMonth(day);
+            const intensity = !inViewMonth || seconds === 0 ? 0
+              : seconds < 3600 ? 1
+                : seconds < 7200 ? 2
+                  : seconds < 10800 ? 3 : 4;
             const today = key === dateKey(new Date());
             return (
               <button
                 key={key}
                 type="button"
-                className={`calendar-day-cell heat-${intensity}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}`}
-                onClick={() => { setSelectedDate(day); setJumpDate(key); }}
+                className={`calendar-day-cell heat-${intensity}${!inViewMonth ? ' adjacent' : ''}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}`}
+                onClick={() => {
+                  if (!inViewMonth) setViewMonth(new Date(day.getFullYear(), day.getMonth(), 1));
+                  setSelectedDate(day);
+                  setJumpDate(key);
+                }}
                 aria-pressed={selectedKey === key}
-                aria-label={`${formatDisplayDate(day, { month: 'long', day: 'numeric', year: 'numeric' })}: ${formatDuration(seconds)} study`}
-                title={`${formatDisplayDate(day, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)}`}
+                aria-label={`${formatDisplayDate(day, { month: 'long', day: 'numeric', year: 'numeric' })}${inViewMonth ? `: ${formatDuration(seconds)} study` : ''}`}
+                title={inViewMonth ? `${formatDisplayDate(day, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)}` : `Go to ${formatDisplayDate(day, { month: 'long', year: 'numeric' })}`}
               >
                 <span className="calendar-day-number">{day.getDate()}</span>
-                <span className="calendar-day-total">{formatDuration(seconds)}</span>
-                {seconds > 0 && <span className="calendar-day-mark" aria-hidden="true" />}
+                {today && <span className="calendar-today-mark">Today</span>}
+                {!today && inViewMonth && intensity === 4 && <span className="calendar-day-mark" aria-hidden="true" />}
+                {inViewMonth && seconds > 0 && <span className="calendar-day-total">{formatDuration(seconds)}</span>}
               </button>
             );
           })}
+          </div>
         </div>
         <div className="calendar-heat-legend"><span>Less</span><i className="heat-0" /><i className="heat-1" /><i className="heat-2" /><i className="heat-3" /><i className="heat-4" /><span>More study</span></div>
       </section>
@@ -212,7 +232,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   );
 
   if (!onClose) return calendarContent;
-  return (
+  return createPortal((
     <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="calendar-modal-dialog" role="dialog" aria-modal="true" aria-label="Calendar">
         <div className="calendar-modal-topbar">
@@ -222,5 +242,5 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
         <div className="calendar-modal-scroll">{calendarContent}</div>
       </section>
     </div>
-  );
+  ), document.body);
 };

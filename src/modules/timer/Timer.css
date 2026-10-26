@@ -24,7 +24,13 @@
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   overflow: hidden;
-  transition: all var(--sd-transition);
+  transition: box-shadow var(--sd-transition), border-color var(--sd-transition);
+}
+
+@media (min-width: 1081px) {
+  .timer-deck-card { height: clamp(730px, 74vh, 760px); }
+  .timer-cmd-column, .timer-horology-column { min-height: 0; }
+  .timer-cmd-column { overflow: hidden; }
 }
 
 @media (max-width: 1080px) {
@@ -37,6 +43,7 @@
    LEFT COLUMN: Command Center & Controls
    ========================================================================== */
 .timer-cmd-column {
+  position: relative;
   display: flex;
   flex-direction: column;
   padding: 32px 36px 30px;
@@ -95,6 +102,10 @@
 }
 
 .timer-flash-notice {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  z-index: 5;
   font-size: 12px;
   font-weight: 600;
   color: var(--sd-coral);
@@ -274,6 +285,37 @@
   flex-direction: column;
   gap: 8px;
 }
+
+.timer-insights-panel { min-width: 0; }
+.timer-insights-tabbar { min-height: 42px; display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-bottom: 1px solid var(--sd-border-glass); }
+.timer-insights-tab { min-height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--sd-text-muted); font: inherit; font-size: 9px; font-weight: 750; letter-spacing: .075em; white-space: nowrap; cursor: pointer; transition: color 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.timer-insights-tab:hover { color: var(--sd-text-primary); background: var(--sd-bg-subtle); }
+.timer-insights-tab small { min-width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; border-radius: 999px; background: var(--sd-bg-subtle); color: var(--sd-text-muted); font-size: 9px; font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.timer-insights-tab.is-active { border-color: rgba(121, 129, 204, .42); background: linear-gradient(180deg, rgba(121, 129, 204, .16), rgba(121, 129, 204, .09)); color: #343b78; box-shadow: inset 0 0 0 1px rgba(121, 129, 204, .08), 0 2px 7px rgba(65, 72, 140, .12); }
+.timer-insights-tab.is-active small { background: rgba(121, 129, 204, .18); color: #555fae; }
+.timer-insights-tab:focus-visible { outline: 2px solid #7981cc; outline-offset: 1px; }
+[data-theme='dark'] .timer-insights-tab.is-active { color: #eef0ff; background: linear-gradient(180deg, rgba(121, 129, 204, .27), rgba(121, 129, 204, .16)); border-color: rgba(155, 163, 235, .45); }
+[data-theme='dark'] .timer-insights-tab.is-active small { color: #eef0ff; background: rgba(155, 163, 235, .24); }
+.timer-insights-tab-hint { margin-left: auto; padding-right: 7px; color: var(--sd-text-muted); font-size: 10px; white-space: nowrap; }
+.timer-insights-pane { height: 390px; min-height: 0; overflow: auto; padding: 9px 3px 4px; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--sd-coral) 34%, transparent) transparent; }
+.timer-insights-pane { overscroll-behavior: contain; }
+@media (min-width: 1081px) {
+  .timer-insights-panel { display: flex; flex: 1 1 0; flex-direction: column; min-height: 0; }
+  .timer-insights-pane { height: auto; flex: 1 1 0; }
+}
+.timer-insights-pane::-webkit-scrollbar { width: 7px; }
+.timer-insights-pane::-webkit-scrollbar-thumb { border-radius: 999px; background: color-mix(in srgb, var(--sd-coral) 28%, transparent); }
+.timer-insights-pane .t-combos-grid { gap: 7px; }
+.timer-insights-pane .t-combo-card { min-height: 66px; padding: 8px 12px; border-radius: 12px; }
+.timer-insights-pane .t-combo-proj-name { font-size: 12.5px; }
+.timer-insights-pane .t-combo-sub-name { font-size: 11.5px; }
+.timer-insights-pane .t-combo-meta { font-size: 9.5px; }
+.timer-insights-pane .timer-study-plan-content-embedded { padding: 3px 2px 8px; border-top: 0; }
+.timer-insights-pane .timer-study-plan-overview { padding: 7px 0 11px; }
+.timer-insights-pane .timer-study-plan-total,
+.timer-insights-pane .timer-study-plan-recommendation { padding: 11px 12px; }
+.timer-insights-pane .timer-study-plan-row { padding: 10px 0; }
+.timer-insights-pane .timer-study-plan-empty { padding: 18px 4px; }
 
 .t-combo-card {
   display: flex;
@@ -777,7 +819,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  max-width: 320px;
+  max-width: 410px;
 }
 
 .horology-btn-stop {
@@ -831,6 +873,27 @@
   color: var(--sd-coral);
   border-color: var(--sd-coral);
 }
+
+.horology-btn-discard {
+  min-height: 44px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: var(--sd-radius-md);
+  color: var(--sd-text-secondary);
+  background: var(--sd-bg-subtle);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.horology-btn-discard:hover { color: #a83c48; border-color: rgba(168, 60, 72, .3); background: rgba(201, 75, 87, .08); }
+.horology-btn-discard:focus-visible { outline: 2px solid #7981cc; outline-offset: 2px; }
 
 .timer-session-note-wrap {
   width: 100%;
@@ -901,6 +964,9 @@
   box-shadow: 0 8px 22px rgba(20, 24, 44, .045), inset 0 1px 0 rgba(255, 255, 255, .22);
   z-index: 2;
 }
+.timer-context-card.is-running { width: 100%; max-width: none; padding: 10px 12px; gap: 6px 12px; }
+.timer-context-card.is-running .timer-session-note-wrap { margin-top: 0; padding: 7px 9px; gap: 4px; border-radius: 12px; }
+.timer-context-card.is-running .timer-session-note { min-height: 34px; padding: 7px 10px; }
 
 .timer-context-heading { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .timer-context-kicker { color: var(--sd-text-muted); font-size: 9px; font-weight: 750; letter-spacing: .13em; }
@@ -957,6 +1023,8 @@
   transition: opacity var(--sd-transition), border-color var(--sd-transition), background var(--sd-transition);
   z-index: 2;
   overflow: hidden;
+  flex: 0 0 auto;
+  margin-top: auto;
 }
 
 .horology-face-container.mode-stopwatch .horology-metrics-strip { opacity: 1; border-color: color-mix(in srgb, var(--sd-coral) 24%, var(--sd-border-glass)); }
@@ -1045,6 +1113,14 @@
 .timer-study-plan-title small { padding: 3px 8px; border: 1px solid var(--sd-border-glass); border-radius: 999px; color: var(--sd-text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0; white-space: nowrap; }
 
 .timer-study-plan-content { display: grid; gap: 0; padding: 0 20px 8px; border-top: 1px solid var(--sd-border-glass); }
+.timer-study-plan-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 420ms cubic-bezier(.2, .75, .25, 1), opacity 240ms ease;
+}
+.timer-study-plan-card.is-expanded .timer-study-plan-body { grid-template-rows: 1fr; opacity: 1; }
+.timer-study-plan-body-inner { min-height: 0; overflow: hidden; }
 .timer-study-plan-overview { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(220px, .8fr); gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--sd-border-glass); }
 .timer-study-plan-total,
 .timer-study-plan-recommendation { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 13px 15px; border: 1px solid var(--sd-border-glass); border-radius: 13px; background: var(--sd-bg-subtle); }
@@ -1053,15 +1129,23 @@
 .timer-study-plan-total > strong { color: var(--sd-text-primary); font-size: 17px; font-variant-numeric: tabular-nums; }
 .timer-study-plan-total > strong small { color: var(--sd-text-muted); font-size: 11px; font-weight: 550; }
 .timer-study-plan-total-track { height: 7px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
-.timer-study-plan-total-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--sd-coral), color-mix(in srgb, var(--sd-coral) 58%, #8b91ed)); transition: width 400ms ease; }
+.timer-study-plan-total-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7981cc, #a0a6dc); transition: width 400ms ease; }
 .timer-study-plan-total-percent { color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
-.timer-study-plan-recommendation { border-color: color-mix(in srgb, var(--sd-coral) 34%, var(--sd-border-glass)); background: color-mix(in srgb, var(--sd-coral) 7%, var(--sd-bg-subtle)); }
+.timer-study-plan-recommendation { border-color: rgba(121, 129, 204, .28); background: linear-gradient(135deg, rgba(121, 129, 204, .13), rgba(121, 129, 204, .055)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .58); }
+.timer-study-plan-recommendation .timer-study-plan-overview-label svg { color: #626bb4; }
 .timer-study-plan-recommendation > strong { overflow: hidden; color: var(--sd-text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .timer-study-plan-recommendation > small { overflow: hidden; color: var(--sd-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.timer-study-plan-recommendation > span:last-child { color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
-.timer-study-plan-row { display: grid; grid-template-columns: 9px minmax(140px, 1fr) minmax(180px, auto); align-items: center; gap: 7px 11px; padding: 13px 0; border-bottom: 1px solid var(--sd-border-glass); }
+.timer-study-plan-recommendation-focus { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.timer-study-plan-recommendation-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.timer-study-plan-recommendation-copy strong { overflow: hidden; color: var(--sd-text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-recommendation-copy small { overflow: hidden; color: var(--sd-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.timer-study-plan-recommendation-progress { color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
+.timer-study-plan-start { display: inline-flex; min-height: 32px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(121, 129, 204, .34); border-radius: 9px; background: rgba(255, 255, 255, .72); color: #3f477f; box-shadow: 0 1px 3px rgba(50, 56, 110, .08); font: inherit; font-size: 10px; font-weight: 750; cursor: pointer; transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.timer-study-plan-start:hover { transform: translateY(-1px); border-color: rgba(121, 129, 204, .6); background: #fff; box-shadow: 0 3px 8px rgba(50, 56, 110, .12); }
+.timer-study-plan-start:focus-visible { outline: 2px solid #7981cc; outline-offset: 2px; }
+.timer-study-plan-row { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(180px, auto); align-items: center; gap: 7px 11px; padding: 13px 0; border-bottom: 1px solid var(--sd-border-glass); }
 .timer-study-plan-row:last-child { border-bottom: 0; }
-.timer-study-plan-row.is-recommended { padding-left: 10px; border-left: 2px solid var(--sd-coral); }
+.timer-study-plan-row.is-recommended { padding-left: 10px; border-left: 2px solid #7981cc; background: linear-gradient(90deg, rgba(121, 129, 204, .045), transparent 45%); }
 .timer-study-plan-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--plan-color, var(--sd-coral)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--plan-color, var(--sd-coral)) 14%, transparent); }
 .timer-study-plan-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .timer-study-plan-copy strong { overflow: hidden; color: var(--sd-text-primary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1069,18 +1153,23 @@
 .timer-study-plan-progress-copy { display: grid; grid-template-columns: auto auto; justify-content: end; align-items: center; gap: 3px 11px; color: var(--sd-text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .timer-study-plan-progress-copy strong { color: var(--sd-text-primary); font-weight: 750; }
 .timer-study-plan-progress-copy small { grid-column: 1 / -1; color: var(--sd-text-muted); font-size: 9px; text-align: right; }
-.timer-study-plan-track { grid-column: 2 / -1; height: 6px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
+.timer-study-plan-track { grid-column: 1 / -1; height: 6px; overflow: hidden; border-radius: 999px; background: var(--sd-track-bg); }
 .timer-study-plan-track > span { display: block; height: 100%; border-radius: inherit; background: var(--plan-color, var(--sd-coral)); transition: width 400ms ease; }
 .timer-study-plan-empty { max-width: 720px; margin: 0; padding: 15px 0 13px; color: var(--sd-text-muted); font-size: 11px; line-height: 1.6; }
 
 @media (max-width: 560px) {
+  .timer-insights-tabbar { gap: 2px; }
+  .timer-insights-tab { flex: 1 1 auto; gap: 5px; padding-inline: 7px; font-size: 8px; letter-spacing: .045em; }
+  .timer-insights-tab-hint { display: none; }
+  .timer-insights-pane { height: 360px; padding-inline: 1px; }
+  .timer-insights-pane .t-combo-card { min-height: 64px; padding: 8px 9px; }
   .timer-study-plan-toggle { min-height: 54px; padding: 11px 14px; }
   .timer-study-plan-content { padding-inline: 14px; }
   .timer-study-plan-overview { grid-template-columns: 1fr; }
-  .timer-study-plan-row { grid-template-columns: 9px minmax(0, 1fr); gap: 7px 10px; }
-  .timer-study-plan-progress-copy { grid-column: 2; justify-content: space-between; }
+  .timer-study-plan-row { grid-template-columns: minmax(0, 1fr); gap: 7px 10px; }
+  .timer-study-plan-progress-copy { grid-column: 1; justify-content: space-between; }
   .timer-study-plan-progress-copy small { text-align: left; }
-  .timer-study-plan-track { grid-column: 2; }
+  .timer-study-plan-track { grid-column: 1; }
 }
 
 /* ==========================================================================
@@ -1110,6 +1199,7 @@
 
 .entries-collapse-btn {
   display: inline-flex;
+  width: 100%;
   align-items: center;
   gap: 10px;
   background: transparent;
@@ -1120,6 +1210,18 @@
 }
 
 .entries-collapse-btn.is-static { cursor: default; }
+
+.entries-heading-chevron { flex: 0 0 auto; margin-left: auto; color: var(--sd-text-muted); transition: transform 320ms cubic-bezier(.2, .75, .25, 1); }
+.entries-heading-chevron.is-open { transform: rotate(180deg); }
+
+.entries-expand-region {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 420ms cubic-bezier(.2, .75, .25, 1), opacity 240ms ease;
+}
+.demo-entry-card.is-expanded .entries-expand-region { grid-template-rows: 1fr; opacity: 1; }
+.entries-expand-inner { min-height: 0; overflow: hidden; }
 
 .entries-caret-icon {
   display: flex;
@@ -1150,7 +1252,10 @@
 .entries-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--sd-border-glass);
 }
 
 .entries-calendar-btn {
@@ -1239,6 +1344,14 @@
 .entries-content-body {
   display: flex;
   flex-direction: column;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-study-plan-body,
+  .entries-expand-region,
+  .timer-study-plan-toggle > svg,
+  .entries-heading-chevron,
+  .timer-study-plan-start { transition-duration: 0.01ms; }
 }
 
 .demo-entry-empty {
@@ -1541,7 +1654,8 @@
 
 /* Light theme: make primary start actions feel deliberate, with a restrained violet finish. */
 [data-theme='light'] .horology-btn-start,
-[data-theme='light'] .t-combo-btn.start {
+[data-theme='light'] .t-combo-btn.start,
+[data-theme='light'] .timer-study-plan-start {
   background: linear-gradient(135deg, #9298e2 0%, #747bc9 100%);
   color: #fff;
   border: 1px solid rgba(105, 111, 195, 0.22);
@@ -1549,7 +1663,8 @@
 }
 
 [data-theme='light'] .horology-btn-start:hover:not(:disabled),
-[data-theme='light'] .t-combo-btn.start:hover {
+[data-theme='light'] .t-combo-btn.start:hover,
+[data-theme='light'] .timer-study-plan-start:hover {
   background: linear-gradient(135deg, #858bda 0%, #666fc0 100%);
   color: #fff;
   box-shadow: 0 7px 16px rgba(101, 105, 185, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.26);
