@@ -33,7 +33,17 @@
 }
 
 [data-theme='dark'] .studyduel-logo-img {
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+  filter: none;
+  image-rendering: auto;
+}
+
+[data-theme='dark'] .studyduel-logo-wrapper.size-large {
+  height: 70px;
+  flex-basis: 70px;
+}
+
+[data-theme='dark'] .studyduel-logo-wrapper.size-large .studyduel-logo-img {
+  height: 70px;
 }
 
 .studyduel-logo-wrapper.size-small .studyduel-logo-img {

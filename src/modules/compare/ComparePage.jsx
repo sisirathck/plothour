@@ -260,7 +260,8 @@ export const ComparePage = ({ user, onNavigate }) => {
     if (demoMode) {
       const demoConnections = readJson('studyduel_demo_friends', []);
       setConnections(demoConnections);
-      setSelectedIds((current) => current.length ? [...new Set([profileId, ...current])] : [profileId, ...demoConnections.map((friend) => friend.id)]);
+      const connectedIds = new Set(demoConnections.map((friend) => friend.id));
+      setSelectedIds((current) => [...new Set([profileId, ...current.filter((id) => id !== profileId && connectedIds.has(id))])]);
       setColorSelections((current) => ({ ...current, [profileId]: Number.isInteger(current[profileId]) ? current[profileId] : 0, ...Object.fromEntries(demoConnections.map((friend, index) => [friend.id, Number.isInteger(current[friend.id]) ? current[friend.id] : (index + 1) % 12])) }));
       return undefined;
     }
@@ -282,7 +283,8 @@ export const ComparePage = ({ user, onNavigate }) => {
       const ownerEntries = readJson('studyduel_demo_time_entries', []);
       const ownerPreferences = readJson('studyduel_demo_preferences', {});
       const demoProjects = readJson('studyduel_demo_projects', []);
-      const sources = [{ id: 'demo-profile', name: ownerPreferences.displayName || 'You', entries: ownerEntries }, ...readJson('studyduel_demo_compare_profiles', [])];
+      const connectedIds = new Set(connections.map((connection) => connection.id));
+      const sources = [{ id: 'demo-profile', name: ownerPreferences.displayName || 'You', entries: ownerEntries }, ...readJson('studyduel_demo_compare_profiles', []).filter((source) => connectedIds.has(source.id))];
       const days = Math.max(1, Math.floor((new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate()) - new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate())) / 86400000) + 1);
       setProfiles(sources.filter((source) => selectedIds.includes(source.id)).map((source) => summarizeLocalProfile(source, period.start, period.end, previous, range, days, demoProjects)));
       setLoading(false); setDataError('');
@@ -293,7 +295,7 @@ export const ComparePage = ({ user, onNavigate }) => {
     const params = new URLSearchParams({ profileIds: selectedIds.join(','), from: String(period.start.getTime()), to: String(period.end.getTime()), previousFrom: String(previous.start.getTime()), previousTo: String(previous.end.getTime()), calendarDays: String(days), rangeType: range, weekStartsOn: String(weekStartsOn), recentFrom: String(recentHeadToHeadStart.getTime()), recentTo: String(recentHeadToHeadEnd.getTime()) });
     fetch(`/api/connections/comparison?${params}`, { credentials: 'same-origin' }).then(async (r) => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Could not load comparison data.'); if (!cancelled) setProfiles(data.profiles || []); }).catch((e) => { if (!cancelled) { setProfiles([]); setDataError(e.message); } }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [profileId, demoMode, selectedIds, period.start.getTime(), period.end.getTime(), previous.start.getTime(), previous.end.getTime(), range, weekStartsOn, recentHeadToHeadStart.getTime(), recentHeadToHeadEnd.getTime()]);
+  }, [profileId, demoMode, connections, selectedIds, period.start.getTime(), period.end.getTime(), previous.start.getTime(), previous.end.getTime(), range, weekStartsOn, recentHeadToHeadStart.getTime(), recentHeadToHeadEnd.getTime()]);
   const ordered = useMemo(() => [...profiles].sort((a, b) => b.current.seconds - a.current.seconds || a.name.localeCompare(b.name)), [profiles]);
   const periodLabel = RANGE_OPTIONS.find((item) => item.id === range)?.label || 'This week'; const periodDescription = range === 'all' ? `All time through ${formatDisplayDate(period.end, { day: 'numeric', month: 'short', year: 'numeric' })}` : `${formatDisplayDate(period.start, { day: 'numeric', month: 'short', year: 'numeric' })} → ${formatDisplayDate(period.end, { day: 'numeric', month: 'short', year: 'numeric' })}`;
   const series = useMemo(() => daySeries(profiles, period.start, period.end), [profiles, period.start.getTime(), period.end.getTime()]);
@@ -398,8 +400,8 @@ export const ComparePage = ({ user, onNavigate }) => {
 
     {manageViewOpen && createPortal(<div className="compare-modal-backdrop" style={comparePaletteStyle} onMouseDown={(e) => { if (e.target === e.currentTarget) setManageViewOpen(false); }}><section className="compare-manage-panel" role="dialog" aria-modal="true" aria-labelledby="compare-manage-heading"><div className="compare-manage-panel-heading"><div><span className="compare-eyebrow">COMPARE VIEW</span><h2 id="compare-manage-heading">Choose profiles</h2><p>Select the connected people to include in your comparison.</p></div><button type="button" aria-label="Close manage view" onClick={() => setManageViewOpen(false)}>×</button></div>
       {!user?.id && !demoMode ? <div className="compare-empty compact"><strong>Sign in to compare account data</strong><span>Comparison uses saved account sessions and connected profiles. Demo history is not used.</span></div> : connectionError ? <p className="compare-inline-error" role="alert">{connectionError}</p> : <div className="compare-manage-list">
-        <div className="compare-manage-person is-you"><span className="compare-manage-name"><i className="compare-person-dot" style={{ '--profile-color': profileColor(profileId) }} /><span><strong>{demoMode ? readJson('studyduel_demo_preferences', {}).displayName || 'Alex Morgan' : user.display_name || user.email?.split('@')[0] || 'You'}</strong><small>{demoMode ? 'Demo account · always included' : 'Your account · always included'}</small></span></span><ColorChooser id={profileId} selected={colorSlot(profileId)} onSelect={selectProfileColor} /><button type="button" className="compare-profile-toggle" role="checkbox" aria-label="Your account is always included" aria-checked="true" disabled><Check size={14} strokeWidth={3} aria-hidden="true" /></button></div>
-        {connections.map((connection) => <div className="compare-manage-person" key={connection.id}><span className="compare-manage-name"><i className="compare-person-dot" style={{ '--profile-color': profileColor(connection.id) }} /><span><strong>{connection.name}</strong><small>{connection.email || 'Study partner'}</small></span></span><ColorChooser id={connection.id} selected={colorSlot(connection.id)} onSelect={selectProfileColor} /><button type="button" className="compare-profile-toggle" role="checkbox" aria-label={`Include ${connection.name} in comparison`} aria-checked={selectedIds.includes(connection.id)} onClick={() => toggle(connection.id)}><Check size={14} strokeWidth={3} aria-hidden="true" /></button></div>)}
+        <div className="compare-manage-person is-you"><span className="compare-manage-name"><i className="compare-person-dot" style={{ '--profile-color': profileColor(profileId) }} /><span><strong>{demoMode ? readJson('studyduel_demo_preferences', {}).displayName || 'Alex Morgan' : user.display_name || user.email?.split('@')[0] || 'You'}</strong><small>{demoMode ? 'Demo account · always included' : 'Your account · always included'}</small></span></span><ColorChooser id={profileId} selected={colorSlot(profileId)} onSelect={selectProfileColor} paletteStyle={comparePaletteStyle} /><button type="button" className="compare-profile-toggle" role="checkbox" aria-label="Your account is always included" aria-checked="true" disabled><Check size={14} strokeWidth={3} aria-hidden="true" /></button></div>
+        {connections.map((connection) => <div className="compare-manage-person" key={connection.id}><span className="compare-manage-name"><i className="compare-person-dot" style={{ '--profile-color': profileColor(connection.id) }} /><span><strong>{connection.name}</strong><small>{connection.email || 'Study partner'}</small></span></span><ColorChooser id={connection.id} selected={colorSlot(connection.id)} onSelect={selectProfileColor} paletteStyle={comparePaletteStyle} /><button type="button" className="compare-profile-toggle" role="checkbox" aria-label={`Include ${connection.name} in comparison`} aria-checked={selectedIds.includes(connection.id)} onClick={() => toggle(connection.id)}><Check size={14} strokeWidth={3} aria-hidden="true" /></button></div>)}
         {!connections.length && <div className="compare-empty compact"><strong>No connected profiles yet</strong><span>Connect study partners in Settings to make them available here.</span>{!demoMode && <button type="button" className="compare-manage-button" onClick={() => { setManageViewOpen(false); try { localStorage.setItem('studyduel_settings_tab', 'connections'); } catch {} onNavigate?.('settings'); }}>Manage connections</button>}</div>}
       </div>}
       <div className="compare-manage-panel-footer"><span>{selectedConnections.length} {demoMode ? 'sample ' : ''}connected {selectedConnections.length === 1 ? 'profile' : 'profiles'} selected</span><button type="button" onClick={() => setManageViewOpen(false)}>Done</button></div></section></div>, document.body)}
@@ -439,19 +441,41 @@ export const ComparePage = ({ user, onNavigate }) => {
 
 function Heading({ eyebrow, title, detail, loading }) { return <div className="compare-section-heading"><div><span className="compare-eyebrow">{eyebrow}</span><h2>{title}</h2><p>{detail}</p></div>{loading && <span className="compare-loading"><LoaderCircle size={15} className="compare-spin" /> Updating</span>}</div>; }
 function Empty({ user, demoMode, onManage }) { return <div className="compare-empty"><Users size={22} /><strong>{user?.id || demoMode ? 'Choose a connected profile to compare' : 'Sign in to compare account data'}</strong><span>{user?.id || demoMode ? 'Your profile is included automatically. Use Manage view to choose study partners.' : 'Comparison requires your saved account sessions. Sign in to load your account and connected profiles.'}</span>{(user?.id || demoMode) && <button type="button" className="compare-manage-button" onClick={onManage}>Manage view</button>}</div>; }
-function ColorChooser({ id, selected, onSelect }) {
+function ColorChooser({ id, selected, onSelect, paletteStyle }) {
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
   const rootRef = useRef(null);
+  const menuRef = useRef(null);
+  const triggerRef = useRef(null);
+  const updateMenuPosition = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuWidth = 158;
+    const menuHeight = 62;
+    const top = rect.bottom + menuHeight + 7 > window.innerHeight - 8
+      ? Math.max(8, rect.top - menuHeight - 7)
+      : Math.min(rect.bottom + 7, window.innerHeight - menuHeight - 8);
+    setMenuPosition({ top, left: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) });
+  };
   useEffect(() => {
     if (!open) return undefined;
-    const closeOnOutsideClick = (event) => { if (!rootRef.current?.contains(event.target)) setOpen(false); };
+    updateMenuPosition();
+    const closeOnOutsideClick = (event) => {
+      if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
+    };
     document.addEventListener('pointerdown', closeOnOutsideClick);
-    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
   }, [open]);
   return <div ref={rootRef} className="compare-color-chooser" role="group" aria-label={`Color for profile ${id}`}>
-    <button type="button" className="compare-color-trigger" style={{ '--profile-color': `var(--compare-series-${selected})` }} aria-label={`Change profile color for ${id}`} aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((value) => !value)} />
-    {open && <div className="compare-color-options" role="group" aria-label={`Choose profile color for ${id}`}>
+    <button ref={triggerRef} type="button" className="compare-color-trigger" style={{ '--profile-color': `var(--compare-series-${selected})` }} aria-label={`Change profile color for ${id}`} aria-haspopup="true" aria-expanded={open} onClick={() => { if (open) setOpen(false); else { updateMenuPosition(); setOpen(true); } }} />
+    {open && menuPosition && createPortal(<div ref={menuRef} className="compare-color-options" style={{ ...paletteStyle, ...menuPosition }} role="group" aria-label={`Choose profile color for ${id}`}>
       {Array.from({ length: 12 }, (_, slot) => <button key={slot} type="button" className={selected === slot ? 'is-selected' : ''} style={{ '--profile-color': `var(--compare-series-${slot})` }} aria-label={`Color ${slot + 1}`} aria-pressed={selected === slot} onClick={() => { onSelect(id, slot); setOpen(false); }} />)}
-    </div>}
+    </div>, document.body)}
   </div>;
 }

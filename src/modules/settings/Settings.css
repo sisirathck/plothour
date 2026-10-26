@@ -1417,7 +1417,7 @@
 .settings-danger-btn:hover { filter:brightness(1.06); transform:translateY(-1px); }
 .settings-confirm-dialog :focus-visible { outline:2px solid var(--sd-settings-accent); outline-offset:3px; }
 [data-theme='light'] .settings-confirm-dialog { --settings-danger:#b8485e; }
-[data-theme='dark'] .settings-confirm-dialog { --settings-danger:#e98191; }
+[data-theme='dark'] .settings-confirm-dialog { --settings-danger:#e98191; border-color:var(--sd-card-border); background:var(--sd-card-bg); box-shadow:0 28px 80px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.045); }
 @media (max-width:540px) { .settings-confirm-dialog { padding:21px; } .settings-confirm-actions { flex-direction:column-reverse; } .settings-confirm-actions button { width:100%; min-height:44px; } }
 .settings-quick-search { display:flex; min-width:180px; height:38px; align-items:center; gap:8px; padding:0 11px; border:1px solid var(--sd-settings-card-border); border-radius:12px; background:var(--sd-settings-card-bg); color:var(--sd-settings-text-muted); }
 .settings-quick-search:focus-within { border-color:var(--sd-settings-accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--sd-settings-accent) 14%,transparent); }
