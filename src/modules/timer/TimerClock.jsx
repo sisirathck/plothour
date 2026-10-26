@@ -88,7 +88,7 @@ export const AnalogueClockFace = ({ now }) => {
     ctx.scale(dpr, dpr);
 
     const isDark = theme === 'dark';
-    const accentColor = isDark ? '#f3957f' : '#8086d4';
+    const accentColor = isDark ? '#e58e54' : '#8086d4';
     const cx = S / 2;
     const cy = S / 2;
     const R = S / 2 - 12;
@@ -103,13 +103,14 @@ export const AnalogueClockFace = ({ now }) => {
     if (isDark) {
       // Obsidian titanium gradient
       const dialGrad = ctx.createRadialGradient(cx, cy - 20, 10, cx, cy, R);
-      dialGrad.addColorStop(0, '#131b2c');
-      dialGrad.addColorStop(1, '#0a0e17');
+      dialGrad.addColorStop(0, '#1c2433');
+      dialGrad.addColorStop(0.68, '#10141c');
+      dialGrad.addColorStop(1, '#0b0d12');
       ctx.fillStyle = dialGrad;
       ctx.fill();
 
       // Outer bezel ring
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     } else {
@@ -130,7 +131,7 @@ export const AnalogueClockFace = ({ now }) => {
     // 2. Bezel Inner Track
     ctx.beginPath();
     ctx.arc(cx, cy, R - 8, 0, Math.PI * 2);
-    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)';
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -248,7 +249,7 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
     ctx.scale(dpr, dpr);
 
     const isDark = theme === 'dark';
-    const accentColor = isDark ? '#f3957f' : '#8086d4';
+    const accentColor = isDark ? '#e58e54' : '#8086d4';
     const cx = S / 2;
     const cy = S / 2;
     const R = S / 2 - 12;
