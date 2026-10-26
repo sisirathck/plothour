@@ -17,6 +17,14 @@ import {
   Trophy,
   Flame,
   ChevronDown,
+  Calendar,
+  Activity,
+  Timer,
+  Compass,
+  Layers,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
@@ -50,12 +58,14 @@ const percentComparison = (current, previous, periodLabel) => {
     return {
       label: current > 0 ? `New · no time ${periodLabel}` : `No change ${periodLabel}`,
       tone: current > 0 ? 'positive' : 'neutral',
+      direction: current > 0 ? 'up' : 'neutral',
     };
   }
   const change = Math.round(((current - previous) / previous) * 100);
   return {
     label: `${change > 0 ? '+' : ''}${change}% ${periodLabel}`,
     tone: change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral',
+    direction: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral',
   };
 };
 
@@ -89,30 +99,142 @@ const useSvgChartTooltip = () => {
   return { show, hide, node };
 };
 
-const SnapshotPanel = ({ snapshotMetrics }) => (
-  <div className="db-chart-card db-card db-snapshot-card">
-    <div className="db-chart-heading db-chart-heading-stack">
-      <div>
-        <h3 className="db-section-title">Snapshot</h3>
-        <span className="db-section-meta">Weekly and monthly study overview</span>
+const SnapshotPanel = ({ snapshotMetrics }) => {
+  const weekMetric = snapshotMetrics.find((m) => m.id === 'time-week');
+  const weekSeconds = weekMetric ? (weekMetric.weekDays || []).reduce((s, d) => s + d.seconds, 0) : 0;
+  const weeklyPlanned = weekMetric?.weeklyPlannedSeconds || 0;
+  const weekDaysElapsed = weekMetric?.weekDays?.filter((d) => d.isPastOrToday).length || 1;
+  const weekDaysTotal = 7;
+  const weekDaysRemaining = Math.max(0, weekDaysTotal - weekDaysElapsed);
+
+  // Insight computation
+  let insightText = null;
+  let insightKind = 'neutral'; // 'good' | 'warn' | 'neutral'
+  if (weeklyPlanned > 0) {
+    const expectedByNow = (weeklyPlanned * weekDaysElapsed) / weekDaysTotal;
+    const deficit = weeklyPlanned - weekSeconds;
+    const pace = weekSeconds / Math.max(1, weekDaysElapsed);
+    const projectedEnd = pace * weekDaysTotal;
+
+    if (weekSeconds >= weeklyPlanned) {
+      insightKind = 'good';
+      insightText = 'Weekly goal reached — keep the momentum.';
+    } else if (weekSeconds >= expectedByNow * 0.92) {
+      insightKind = 'good';
+      const hoursPerDay = Math.ceil((pace / 3600) * 10) / 10;
+      insightText = `On pace · ${fmtDur(pace)}/day · projecting ${fmtDur(projectedEnd)} by week end`;
+    } else if (weekDaysRemaining > 0) {
+      const neededPerDay = deficit / weekDaysRemaining;
+      insightKind = 'warn';
+      insightText = `${fmtDur(deficit)} remaining · needs ${fmtDur(neededPerDay)}/day over ${weekDaysRemaining} day${weekDaysRemaining !== 1 ? 's' : ''}`;
+    } else {
+      insightKind = 'warn';
+      insightText = `${fmtDur(deficit)} short of weekly goal`;
+    }
+  }
+
+  return (
+    <div className="db-snapshot-card db-card">
+      <div className="db-snapshot-header">
+        <div className="db-snapshot-header-left">
+          <span className="db-snapshot-eyebrow">SNAPSHOT</span>
+          <h3 className="db-snapshot-title">Weekly &amp; Monthly Overview</h3>
+        </div>
+        {insightText && (
+          <div className={`db-snapshot-insight-chip db-snapshot-insight-chip--${insightKind}`}>
+            <span className={`db-snapshot-insight-dot db-snapshot-insight-dot--${insightKind}`} />
+            <span>{insightText}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="db-snapshot-grid" aria-label="Weekly and monthly study snapshot">
+        {snapshotMetrics.map((metric) => {
+          const isWeek = metric.id === 'time-week';
+          const isMonth = metric.id === 'time-month';
+          const isMost = metric.id === 'most-studied';
+          const isLeast = metric.id === 'least-studied';
+
+          // Compact comparison: only show percentage number, no label text
+          let compactDelta = null;
+          if (metric.comparison && metric.comparison.tone !== 'neutral') {
+            const raw = metric.comparison.label.match(/([+-]?\d+)%/);
+            if (raw) {
+              compactDelta = { value: raw[1] + '%', tone: metric.comparison.tone };
+            }
+          }
+
+          return (
+            <article className="db-snap-card" key={metric.label}>
+              <div className="db-snap-card-top">
+                <span className="db-snap-label">{metric.label}</span>
+                {compactDelta && (
+                  <span className={`db-snap-delta db-snap-delta--${compactDelta.tone}`}>
+                    {compactDelta.tone === 'positive' ? '↑' : '↓'} {compactDelta.value}
+                  </span>
+                )}
+              </div>
+
+              <div className="db-snap-value-row">
+                <strong className="db-snap-value">{metric.value}</strong>
+                {metric.subDetail && <span className="db-snap-badge">{metric.subDetail}</span>}
+              </div>
+
+              {isWeek && metric.weekDays && (
+                <div className="db-snap-days">
+                  {metric.weekDays.map((d) => (
+                    <div
+                      key={d.key}
+                      className={`db-snap-day${d.active ? ' is-active' : ''}${d.isToday ? ' is-today' : ''}${!d.isPastOrToday ? ' is-future' : ''}`}
+                      title={`${d.fullDay}: ${fmtDur(d.seconds)}`}
+                    >
+                      <span className="db-snap-day-label">{d.label}</span>
+                      <span className="db-snap-day-pip" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isMonth && (
+                <div className="db-snap-bar-wrap">
+                  <div className="db-snap-bar">
+                    <div className="db-snap-bar-fill" style={{ width: `${Math.min(100, Math.round((new Date().getDate() / 31) * 100))}%` }} />
+                  </div>
+                  <small className="db-snap-detail">{metric.detail}</small>
+                </div>
+              )}
+
+              {(metric.id === 'daily-avg' || metric.id === 'avg-session') && (
+                <small className="db-snap-detail">{metric.detail}</small>
+              )}
+
+              {(isMost || isLeast) && (
+                <div className="db-snap-focus">
+                  <div className="db-snap-bar">
+                    <div
+                      className={`db-snap-bar-fill${isMost ? ' is-primary' : ' is-secondary'}`}
+                      style={{ width: `${Math.max(4, metric.sharePct || (metric.isSingleProject ? 100 : 0))}%` }}
+                    />
+                  </div>
+                  <div className="db-snap-kv">
+                    <span className="db-snap-kv-key">Project</span>
+                    <span className="db-snap-kv-val">{metric.projectName || '—'} · {metric.durationLabel || '—'}</span>
+                  </div>
+                  {metric.subName && (
+                    <div className="db-snap-kv">
+                      <span className="db-snap-kv-key">Subject</span>
+                      <span className="db-snap-kv-val">{metric.subName} · {metric.subprojectDurationLabel || '—'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </article>
+          );
+        })}
       </div>
     </div>
-    <div className="db-snapshot-metrics" aria-label="Weekly and monthly study snapshot">
-      {snapshotMetrics.map((metric) => (
-        <article className="db-snapshot-metric" key={metric.label}>
-          <span className="db-snapshot-metric-label">{metric.label}</span>
-          <strong className="db-snapshot-metric-value" title={metric.value}>{metric.value}</strong>
-          {metric.details?.length ? (
-            <div className="db-snapshot-metric-details">
-              {metric.details.map((detail) => <small key={detail.label}><b>{detail.label}:</b> {detail.value}</small>)}
-            </div>
-          ) : metric.detail ? <small className="db-snapshot-metric-detail">{metric.detail}</small> : null}
-          {metric.comparison && <small className={`db-snapshot-metric-change is-${metric.comparison.tone}`}>{metric.comparison.label}</small>}
-        </article>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'week' }) => {
   const chartTooltip = useSvgChartTooltip();
@@ -842,15 +964,131 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       { label: 'Subproject', value: subject ? `${subject.name} · ${fmtDur(subject.seconds)}` : '—' },
     ] : [{ label: 'Study', value: 'No study logged this week' }];
 
+    const isSingleProject = projectTotals.size <= 1;
+    const topProjectShare = weekSeconds > 0 && topProject ? Math.min(100, Math.round((topProject.seconds / weekSeconds) * 100)) : 0;
+    const bottomProjectShare = weekSeconds > 0 && bottomProject ? Math.min(100, Math.round((bottomProject.seconds / weekSeconds) * 100)) : 0;
+
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekStartDate);
+      d.setDate(d.getDate() + i);
+      const k = dateKey(d);
+      const daySecs = currentWeekEntries
+        .filter((e) => dateKey(e.startedAt) === k)
+        .reduce((sum, e) => sum + (Number(e.durationSeconds) || 0), 0);
+      const dayNarrow = d.toLocaleDateString(undefined, { weekday: 'narrow' });
+      const dayShort = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const isToday = k === dateKey(now);
+      const isPastOrToday = d.getTime() < tomorrow.getTime();
+      return {
+        key: k,
+        label: dayNarrow,
+        fullDay: dayShort,
+        seconds: daySecs,
+        active: daySecs > 0,
+        isToday,
+        isPastOrToday,
+      };
+    });
+    const activeDaysCount = weekDays.filter((d) => d.active).length;
+
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dayOfMonth = now.getDate();
+    const monthPacingEstimateSeconds = dayOfMonth > 0 ? Math.round((monthSeconds / dayOfMonth) * daysInMonth) : 0;
+
+    const weeklyPlannedSeconds = projects.reduce((total, project) => {
+      if (project.archived) return total;
+      return total + (project.subjects || []).reduce((subTotal, sub) => subTotal + (Number(sub.goals?.weekly) || 0) * 3600, 0);
+    }, 0);
+
+    let sessionTierLabel = 'Quick Sprint';
+    if (averageSession >= 5400) sessionTierLabel = 'Marathon (90m+)';
+    else if (averageSession >= 2700) sessionTierLabel = 'Deep Flow (45m+)';
+    else if (averageSession >= 1200) sessionTierLabel = 'Standard Focus';
+
     return [
-      { label: 'TIME THIS WEEK', value: fmtDur(weekSeconds), comparison: percentComparison(weekSeconds, previousWeekSeconds, 'vs last week') },
-      { label: 'TIME THIS MONTH', value: fmtDur(monthSeconds), comparison: percentComparison(monthSeconds, previousMonthSeconds, 'vs same dates last month') },
-      { label: 'DAILY AVERAGE', value: fmtDur(averagePerDay), detail: 'Week to date · includes today', comparison: percentComparison(averagePerDay, previousAveragePerDay, 'vs same days last week') },
-      { label: 'AVERAGE SESSION', value: averageSession ? fmtDur(averageSession) : '—', detail: `${currentWeekEntries.length} ${currentWeekEntries.length === 1 ? 'session' : 'sessions'} this week`, comparison: averageSession ? percentComparison(averageSession, previousAverageSession, 'vs same days last week') : null },
-      { label: 'MOST STUDIED', value: topProject?.name || '—', details: rankingDetails(topProject, topSubject) },
-      { label: 'LEAST STUDIED', value: bottomProject?.name || '—', details: rankingDetails(bottomProject, bottomSubject) },
+      {
+        id: 'time-week',
+        label: 'TIME THIS WEEK',
+        value: fmtDur(weekSeconds),
+        comparison: percentComparison(weekSeconds, previousWeekSeconds, 'vs last week'),
+        weekDays,
+        activeDaysCount,
+        weeklyPlannedSeconds,
+        detail: weeklyPlannedSeconds > 0
+          ? `${fmtDur(weekSeconds)} of ${fmtDur(weeklyPlannedSeconds)} goal (${Math.round((weekSeconds / weeklyPlannedSeconds) * 100)}%)`
+          : `${activeDaysCount} of 7 days active this week`,
+        iconType: 'clock',
+        accent: 'accent',
+      },
+      {
+        id: 'time-month',
+        label: 'TIME THIS MONTH',
+        value: fmtDur(monthSeconds),
+        comparison: percentComparison(monthSeconds, previousMonthSeconds, 'vs same dates last month'),
+        detail: monthPacingEstimateSeconds > 0
+          ? `Pacing ~${fmtDur(monthPacingEstimateSeconds)} by month end`
+          : `Day ${dayOfMonth} of ${daysInMonth} · ${fmtDur(monthSeconds)} logged`,
+        subDetail: `Day ${dayOfMonth} of ${daysInMonth}`,
+        iconType: 'calendar',
+        accent: 'violet',
+      },
+      {
+        id: 'daily-avg',
+        label: 'DAILY AVERAGE',
+        value: fmtDur(averagePerDay),
+        detail: 'Week to date · includes today',
+        subDetail: `${elapsedDays} ${elapsedDays === 1 ? 'day' : 'days'} elapsed`,
+        comparison: percentComparison(averagePerDay, previousAveragePerDay, 'vs same days last week'),
+        iconType: 'activity',
+        accent: 'amber',
+      },
+      {
+        id: 'avg-session',
+        label: 'AVERAGE SESSION',
+        value: averageSession ? fmtDur(averageSession) : '—',
+        detail: `${currentWeekEntries.length} ${currentWeekEntries.length === 1 ? 'session' : 'sessions'} this week`,
+        subDetail: averageSession > 0 ? sessionTierLabel : null,
+        comparison: averageSession ? percentComparison(averageSession, previousAverageSession, 'vs same days last week') : null,
+        iconType: 'timer',
+        accent: 'teal',
+      },
+      {
+        id: 'most-studied',
+        label: 'MOST STUDIED',
+        value: topProject?.name || '—',
+        subName: topSubject?.name && topSubject.name !== 'No subproject' ? topSubject.name : null,
+        sharePct: topProjectShare,
+        projectName: topProject?.name,
+        projectSeconds: topProject?.seconds || 0,
+        durationLabel: topProject ? fmtDur(topProject.seconds) : null,
+        subjectSeconds: topSubject?.seconds || 0,
+        subprojectDurationLabel: topSubject && topSubject.seconds ? fmtDur(topSubject.seconds) : null,
+        details: rankingDetails(topProject, topSubject),
+        detail: topProject ? `${topProject.name} · ${fmtDur(topProject.seconds)}` : null,
+        iconType: 'trophy',
+        accent: 'gold',
+      },
+      {
+        id: 'least-studied',
+        label: 'LEAST STUDIED',
+        value: bottomProject?.name || '—',
+        subName: bottomSubject?.name && bottomSubject.name !== 'No subproject' ? bottomSubject.name : null,
+        isSingleProject,
+        sharePct: bottomProjectShare,
+        projectName: bottomProject?.name,
+        projectSeconds: bottomProject?.seconds || 0,
+        durationLabel: bottomProject ? fmtDur(bottomProject.seconds) : null,
+        subjectSeconds: bottomSubject?.seconds || 0,
+        subprojectDurationLabel: bottomSubject && bottomSubject.seconds ? fmtDur(bottomSubject.seconds) : null,
+        details: rankingDetails(bottomProject, bottomSubject),
+        detail: isSingleProject
+          ? (topProject ? `Solo focus · 100% volume in ${topProject.name}` : 'No study logged this week')
+          : (bottomProject ? `${bottomProject.name} · ${fmtDur(bottomProject.seconds)}` : null),
+        iconType: 'compass',
+        accent: 'rose',
+      },
     ];
-  }, [entries, now, weekStart]);
+  }, [entries, now, weekStart, projects]);
   const rangeTopProject = useMemo(() => {
     const totals = new Map();
     rangeEntries.forEach((entry) => {
