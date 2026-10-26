@@ -11,7 +11,7 @@ export const StudyDuelLogo = ({ className = '', size = 'medium' }) => {
   const { config } = useSiteCustomization();
   const isDark = theme === 'dark';
   const customLogo = config?.visuals?.logo?.[isDark ? 'dark' : 'light'];
-  const defaultLogo = isDark ? '/plothour-logo-dark.png' : '/plothour-logo-light.png';
+  const defaultLogo = isDark ? '/plothour-logo-dark-teal.png' : '/plothour-logo-light.png';
 
   return (
     <div
