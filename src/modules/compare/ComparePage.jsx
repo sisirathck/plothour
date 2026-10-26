@@ -205,7 +205,7 @@ export const ComparePage = ({ user, onNavigate }) => {
   const demoMode = !user?.id && localStorage.getItem('studyduel_demo_mode') === 'true';
   const profileId = user?.id ? String(user.id) : demoMode ? 'demo-profile' : '';
   const preferencesKey = user?.id ? `studyduel_user_${user.id}_preferences` : demoMode ? 'studyduel_demo_preferences' : '';
-  const rangeKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences_range_v2` : demoMode ? 'studyduel_demo_dashboard_preferences_range_v2' : '';
+  const rangeKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences_range_v2` : demoMode ? 'studyduel_demo_dashboard_preferences_range_v3' : '';
   const detailsKey = user?.id ? `studyduel_user_${user.id}_compare_details` : demoMode ? 'studyduel_demo_compare_details' : '';
   const compareSelectionKey = user?.id ? `studyduel_user_${user.id}_compare_profiles` : demoMode ? 'studyduel_demo_compare_profiles_selected' : '';
   const colorStorageKey = user?.id ? `studyduel_user_${user.id}_compare_profile_colors` : demoMode ? 'studyduel_demo_compare_profile_colors' : '';
@@ -218,7 +218,7 @@ export const ComparePage = ({ user, onNavigate }) => {
       return [profileId];
     } catch { return [profileId]; }
   });
-  const [manageViewOpen, setManageViewOpen] = useState(false); const [range, setRange] = useState(() => { const saved = rangeKey ? localStorage.getItem(rangeKey) : null; return RANGE_OPTIONS.some((item) => item.id === saved) ? saved : 'week'; });
+  const [manageViewOpen, setManageViewOpen] = useState(false); const [range, setRange] = useState(() => { const saved = rangeKey ? localStorage.getItem(rangeKey) : null; return RANGE_OPTIONS.some((item) => item.id === saved) ? saved : demoMode ? '90days' : 'week'; });
   const [showDetails, setShowDetails] = useState(() => readJson(detailsKey, {})?.expanded === true);
   const [shareStatus, setShareStatus] = useState('');
   const [shareOpen, setShareOpen] = useState(false);

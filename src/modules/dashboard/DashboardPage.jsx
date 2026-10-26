@@ -692,15 +692,17 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const { theme: currentTheme, toggleTheme } = useTheme();
   const { config, text } = useSiteCustomization();
   const isDark = currentTheme === 'dark';
+  const isDemoMode = !user?.id && localStorage.getItem('studyduel_demo_mode') === 'true';
 
   const [activeNav, setActiveNav] = useState('Dashboard');
   const preferenceKey = user?.id ? `studyduel_user_${user.id}_dashboard_preferences` : 'studyduel_demo_dashboard_preferences';
+  const rangePreferenceKey = isDemoMode ? `${preferenceKey}_range_v3` : `${preferenceKey}_range_v2`;
   const sectionDefaults = user?.id ? dashboardSectionDefaults : demoDashboardSectionDefaults;
   const [dateRange, setDateRange] = useState(() => {
     try {
-      const saved = localStorage.getItem(`${preferenceKey}_range_v2`);
-      return dashboardRangeOptions.some((option) => option.id === saved) ? saved : 'week';
-    } catch { return 'week'; }
+      const saved = localStorage.getItem(rangePreferenceKey);
+      return dashboardRangeOptions.some((option) => option.id === saved) ? saved : isDemoMode ? '90days' : 'week';
+    } catch { return isDemoMode ? '90days' : 'week'; }
   });
   const [customStart, setCustomStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
   const [customEnd, setCustomEnd] = useState(() => new Date().toLocaleDateString('en-CA'));
@@ -735,8 +737,8 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     return getSavedDashboardPreferences(preferenceKey, sectionDefaults);
   });
   useEffect(() => {
-    localStorage.setItem(`${preferenceKey}_range_v2`, dateRange);
-  }, [preferenceKey, dateRange]);
+    localStorage.setItem(rangePreferenceKey, dateRange);
+  }, [rangePreferenceKey, dateRange]);
   useEffect(() => {
     localStorage.setItem(preferenceKey, JSON.stringify(dashboardPreferences));
   }, [preferenceKey, dashboardPreferences]);
