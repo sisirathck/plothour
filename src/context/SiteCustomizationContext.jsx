@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 export const SITE_COPY_FIELDS = [
-  { page: 'login', key: 'tagline', label: 'Brand tagline', fallback: 'A little progress, every day' },
+  { page: 'login', key: 'tagline', label: 'Brand tagline', fallback: 'Turn time into progress' },
   { page: 'login', key: 'welcomeTitle', label: 'Login title', fallback: 'Welcome back' },
   { page: 'login', key: 'welcomeSubtitle', label: 'Login description', fallback: 'Sign in to your dashboard and keep your progress moving.' },
   { page: 'login', key: 'signUpTitle', label: 'Signup title', fallback: 'Create your account' },

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Pencil, Save, Trash2, X, Calendar, CalendarDays, Undo2 } from 'lucide-react';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
@@ -57,10 +58,42 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
   const [undoAction, setUndoAction] = useState(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const deleteCancelRef = useRef(null);
+  const deleteDialogRef = useRef(null);
+  const deleteTriggerRef = useRef(null);
   const activityKey = user?.id ? `studyduel_user_${user.id}_session_activity` : 'studyduel_demo_session_activity';
   const [recentChanges, setRecentChanges] = useState(() => { try { const value = JSON.parse(localStorage.getItem(activityKey) || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } });
   const undoTimerRef = useRef(null);
+  const closeDeleteDialog = useCallback(() => {
+    setPendingDeleteId(null);
+    window.requestAnimationFrame(() => deleteTriggerRef.current?.focus());
+  }, []);
   useEffect(() => () => window.clearTimeout(undoTimerRef.current), []);
+  useEffect(() => {
+    if (pendingDeleteId == null) return undefined;
+    deleteCancelRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDeleteDialog();
+      } else if (event.key === 'Tab') {
+        const controls = deleteDialogRef.current?.querySelectorAll('button:not(:disabled)');
+        if (!controls?.length) return;
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [pendingDeleteId, closeDeleteDialog]);
   const offerUndo = (message, undo) => {
     window.clearTimeout(undoTimerRef.current);
     setUndoAction({ message, undo });
@@ -137,12 +170,21 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
     if (previousEntry) { recordChange('Edited', previousEntry); offerUndo('Session updated', () => { setEntries((items) => items.map((entry) => entry.id === previousEntry.id ? previousEntry : entry)); recordChange('Restored', previousEntry); }); }
   };
 
-  const removeEntry = (id) => {
-    if (!window.confirm('Delete this tracked session?')) return;
+  const requestDelete = (id, trigger) => {
+    deleteTriggerRef.current = trigger;
+    setPendingDeleteId(id);
+  };
+
+  const removeEntry = () => {
+    const id = pendingDeleteId;
+    if (id == null) return;
     const previousEntry = entries.find((entry) => entry.id === id);
     setEntries((items) => items.filter((entry) => entry.id !== id));
     if (previousEntry) { recordChange('Deleted', previousEntry); offerUndo('Session deleted', () => { setEntries((items) => items.some((entry) => entry.id === id) ? items : [...items, previousEntry].sort((a, b) => Number(b.startedAt) - Number(a.startedAt))); recordChange('Restored', previousEntry); }); }
+    setPendingDeleteId(null);
   };
+
+  const pendingDeleteEntry = entries.find((entry) => entry.id === pendingDeleteId);
 
   return (
     <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}`} aria-label="Completed time entries">
@@ -157,7 +199,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
         >
             <span className="entries-heading-title">SESSION HISTORY</span>
             <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
-            <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />
+            {hideRangeControls && <ChevronDown size={16} className={`entries-heading-chevron${isExpanded ? ' is-open' : ''}`} />}
         </button>
         {!hideRangeControls && (
           <div className="entries-heading-actions">
@@ -254,7 +296,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                         <button type="button" className="entry-action-btn" onClick={() => startEdit(entry)} title="Edit session">
                           <Pencil size={13} />
                         </button>
-                        <button type="button" className="entry-action-btn delete" onClick={() => removeEntry(entry.id)} title="Delete session">
+                        <button type="button" className="entry-action-btn delete" onClick={(event) => requestDelete(entry.id, event.currentTarget)} title="Delete session" aria-label={`Delete ${entry.projectName || 'study'} session`}>
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -399,6 +441,24 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
         </div>
         </div>
       </div>
+      {pendingDeleteEntry && createPortal(
+        <div className="entries-delete-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDeleteDialog(); }}>
+          <section ref={deleteDialogRef} className="entries-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="entries-delete-title" aria-describedby="entries-delete-description">
+            <button type="button" className="entries-delete-close" onClick={closeDeleteDialog} aria-label="Cancel delete">
+              <X size={17} />
+            </button>
+            <span className="entries-delete-icon"><Trash2 size={18} /></span>
+            <span className="entries-delete-eyebrow">SESSION HISTORY</span>
+            <h2 id="entries-delete-title">Delete this session?</h2>
+            <p className="entries-delete-session-name">{pendingDeleteEntry.projectName || 'Study session'}{pendingDeleteEntry.subjectName ? ` · ${pendingDeleteEntry.subjectName}` : ''}</p>
+            <p id="entries-delete-description">This session will be removed from your history and study totals. You can undo the change right after deleting it.</p>
+            <div className="entries-delete-actions">
+              <button ref={deleteCancelRef} type="button" className="entries-delete-cancel" onClick={closeDeleteDialog}>Cancel</button>
+              <button type="button" className="entries-delete-confirm" onClick={removeEntry}><Trash2 size={14} /> Delete session</button>
+            </div>
+          </section>
+        </div>, document.body
+      )}
     </section>
   );
 };

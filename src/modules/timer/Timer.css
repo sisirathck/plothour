@@ -1247,6 +1247,7 @@
 .entries-expand-toggle { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid transparent; border-radius: 50%; color: var(--sd-text-muted); background: transparent; cursor: pointer; transition: color 160ms ease, background 160ms ease, border-color 160ms ease; }
 .entries-expand-toggle:hover { color: var(--sd-text-primary); background: var(--sd-bg-subtle); border-color: var(--sd-border-glass); }
 .entries-expand-toggle:focus-visible { outline: 2px solid #7981cc; outline-offset: 2px; }
+.entries-expand-toggle .entries-heading-chevron { position: relative; top: -1px; margin-left: 0; }
 .entries-heading-actions .entries-calendar-btn { flex: 0 0 auto; }
 
 .entries-collapse-btn.is-static { cursor: default; }
@@ -1931,4 +1932,65 @@
   .timer-insights-tab { padding-inline: 5px; font-size: 7.5px; }
   .entries-panel-heading > .entries-collapse-btn:not(.is-static) { flex-basis: 100%; }
   .entries-heading-actions { width: 100%; justify-content: space-between; }
+}
+
+/* In-app confirmation for deleting a tracked session. */
+.entries-delete-backdrop {
+  position: fixed;
+  z-index: 1600;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(7, 10, 16, .62);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.entries-delete-dialog {
+  position: relative;
+  box-sizing: border-box;
+  width: min(100%, 430px);
+  padding: 26px;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: 22px;
+  background: var(--sd-bg-surface);
+  color: var(--sd-text-primary);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+
+.entries-delete-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: 50%;
+  background: var(--sd-bg-subtle);
+  color: var(--sd-text-muted);
+  cursor: pointer;
+}
+
+.entries-delete-close:hover { color: var(--sd-text-primary); border-color: var(--sd-text-muted); }
+.entries-delete-icon { display: grid; width: 42px; height: 42px; margin-bottom: 18px; place-items: center; border: 1px solid rgba(203, 105, 119, .28); border-radius: 14px; background: rgba(203, 105, 119, .12); color: #d77c89; }
+.entries-delete-eyebrow { color: var(--sd-text-muted); font-size: 9px; font-weight: 800; letter-spacing: .14em; }
+.entries-delete-dialog h2 { margin: 7px 0 8px; font-size: 21px; letter-spacing: -.03em; }
+.entries-delete-session-name { margin: 0 0 9px !important; color: var(--sd-text-primary) !important; font-weight: 650; }
+.entries-delete-dialog p { margin: 0; color: var(--sd-text-muted); font-size: 12px; line-height: 1.65; }
+.entries-delete-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 24px; }
+.entries-delete-actions button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; padding: 0 15px; border-radius: 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: transform 160ms ease, background 160ms ease, border-color 160ms ease; }
+.entries-delete-cancel { border: 1px solid var(--sd-border-glass); background: var(--sd-bg-subtle); color: var(--sd-text-primary); }
+.entries-delete-cancel:hover { border-color: var(--sd-text-muted); transform: translateY(-1px); }
+.entries-delete-confirm { border: 1px solid #a94f5e; background: #a94f5e; color: #fff; box-shadow: 0 4px 14px rgba(169, 79, 94, .22); }
+.entries-delete-confirm:hover { border-color: #b85f6e; background: #b85f6e; transform: translateY(-1px); }
+.entries-delete-dialog :focus-visible { outline: 2px solid var(--sd-coral); outline-offset: 3px; }
+
+@media (max-width: 540px) {
+  .entries-delete-backdrop { align-items: end; padding: 10px; }
+  .entries-delete-dialog { width: 100%; padding: 22px 19px; border-radius: 20px 20px 14px 14px; }
+  .entries-delete-actions { flex-direction: column-reverse; }
+  .entries-delete-actions button { width: 100%; min-height: 44px; }
 }

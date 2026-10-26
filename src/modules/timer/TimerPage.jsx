@@ -294,7 +294,17 @@ export const TimerPage = ({ user }) => {
     return entries.filter((e) => new Date(e.startedAt).toDateString() === today).length;
   }, [entries]);
 
-  const dailyGoalSecs = Math.max(1, Number(timerPreferences.dailyGoalHours) || 4) * 3600;
+  const dailyGoalSecs = useMemo(() => {
+    const weekday = now.getDay();
+    const plannedHours = projects.reduce((total, project) => {
+      if (project.archived) return total;
+      return total + (project.subjects || []).reduce((subjectTotal, subject) => {
+        const schedule = getSubjectStudySchedule(subject);
+        return schedule.studyDays.includes(weekday) ? subjectTotal + schedule.targetHours : subjectTotal;
+      }, 0);
+    }, 0);
+    return Math.max(1, plannedHours || 4) * 3600;
+  }, [projects, now]);
   const todayProgressSecs = todaySecs + (activeTimer ? elapsed : 0);
   const goalPct = Math.min(100, Math.round((todayProgressSecs / dailyGoalSecs) * 100));
   const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch';

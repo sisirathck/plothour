@@ -111,6 +111,12 @@
   opacity: 0.9;
 }
 
+.dashboard-tab:focus { outline: none; }
+.dashboard-tab:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--sd-text-muted) 55%, transparent);
+  outline-offset: 2px;
+}
+
 .dashboard-tab.active {
   background: var(--sd-card-bg);
   color: var(--sd-text-primary);

@@ -32,13 +32,15 @@
 }
 
 .backdrop-layer.light-layer:not(.has-custom-background) {
-  --login-orbit: rgba(87, 98, 153, .12);
-  --login-orbit-highlight: rgba(105, 123, 190, .21);
-  background-color: #f3f5fa;
+  --login-orbit: rgba(83, 92, 153, .17);
+  --login-orbit-highlight: rgba(103, 112, 202, .29);
+  background-color: #f2f2fa;
   background-image:
-    radial-gradient(ellipse at 78% 44%, rgba(128, 134, 212, .11), transparent 38%),
-    radial-gradient(ellipse at 92% 87%, rgba(112, 199, 176, .09), transparent 32%),
-    linear-gradient(118deg, #f8f9fc 0%, #f1f3f8 56%, #e9edf4 100%);
+    radial-gradient(ellipse at 77% 43%, rgba(126, 133, 221, .28) 0%, rgba(126, 133, 221, .12) 25%, transparent 49%),
+    radial-gradient(ellipse at 92% 83%, rgba(94, 190, 166, .24), transparent 36%),
+    radial-gradient(ellipse at 61% 9%, rgba(231, 171, 157, .17), transparent 35%),
+    radial-gradient(ellipse at 10% 4%, rgba(255, 255, 255, .98), transparent 40%),
+    linear-gradient(118deg, #faf9fe 0%, #f0effb 50%, #e6f0ef 100%);
 }
 
 .backdrop-layer.dark-layer:not(.has-custom-background) {
@@ -46,8 +48,8 @@
   --login-orbit-highlight: rgba(112, 199, 176, .2);
   background-color: #0c1016;
   background-image:
-    radial-gradient(ellipse at 78% 44%, rgba(112, 199, 176, .13), transparent 39%),
-    radial-gradient(ellipse at 94% 8%, rgba(89, 113, 132, .1), transparent 35%),
+    radial-gradient(ellipse at 78% 44%, rgba(112, 199, 176, .16), transparent 40%),
+    radial-gradient(ellipse at 94% 8%, rgba(89, 113, 132, .12), transparent 35%),
     linear-gradient(118deg, #0c1016 0%, #111720 57%, #0b0e13 100%);
 }
 

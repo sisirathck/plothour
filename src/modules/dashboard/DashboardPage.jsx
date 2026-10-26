@@ -270,6 +270,7 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
 
 const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'week' }) => {
   const chartTooltip = useSvgChartTooltip();
+  const chartScrollRef = useRef(null);
   const width = Math.max(520, weeks.length * 64);
   const height = 300;
   const margin = { top: 20, right: 22, bottom: 42, left: 48 };
@@ -281,6 +282,13 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'w
   const xFor = (index) => margin.left + ((index + 0.5) / Math.max(1, weeks.length)) * plotWidth;
   const yFor = (seconds) => margin.top + plotHeight - (seconds / (maxHours * 3600)) * plotHeight;
   const linePoints = weeks.map((week, index) => `${xFor(index)},${yFor(week.averageSeconds)}`).join(' ');
+
+  useEffect(() => {
+    const scroller = chartScrollRef.current;
+    if (!scroller) return undefined;
+    const frame = window.requestAnimationFrame(() => { scroller.scrollLeft = scroller.scrollWidth; });
+    return () => window.cancelAnimationFrame(frame);
+  }, [width, weeks]);
 
   return (
     <div className="db-chart-card db-card">
@@ -294,7 +302,7 @@ const WeeklyTrendGraph = ({ weeks, hasData, onStart, rangeLabel, periodUnit = 'w
           <span><i className="db-legend-line" /> 4-{periodUnit} average</span>
         </div>
       </div>
-      {!hasData ? <QuietEmptyState message="No weekly activity to chart in this range." onStart={onStart} /> : <div className="db-chart-scroll">
+      {!hasData ? <QuietEmptyState message="No weekly activity to chart in this range." onStart={onStart} /> : <div className="db-chart-scroll" ref={chartScrollRef}>
         <svg className="db-svg-chart db-trend-chart" style={{ width: `${width}px` }} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Study hours and four-${periodUnit} moving average`}>
           {hourTicks.map((value) => {
             const y = margin.top + plotHeight - (value / maxHours) * plotHeight;
@@ -824,17 +832,13 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }, [preferencesKey]);
 
   const dailyGoalHours = useMemo(() => {
-    if (preferences.dailyGoalHours !== undefined && preferences.dailyGoalHours !== null && preferences.dailyGoalHours !== '') {
-      const parsed = Number(preferences.dailyGoalHours);
-      if (!Number.isNaN(parsed) && parsed > 0) return parsed;
-    }
     const projectTotal = projects.reduce(
       (total, project) => total + (project.archived ? 0 : (project.subjects || []).reduce(
         (subjectTotal, subject) => subjectTotal + (Number(subject.goals?.daily) || 0), 0
       )), 0
     );
     return projectTotal > 0 ? projectTotal : 4;
-  }, [projects, preferences.dailyGoalHours]);
+  }, [projects]);
 
   const [entries, setEntries] = useState(() => {
     try {
@@ -952,8 +956,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         return subjectTotal + targetHours;
       }, 0);
     }, 0);
-    const globalGoalHours = Number(preferences.dailyGoalHours) || 0;
-    const targetSeconds = (plannedGoalHours || globalGoalHours) * 3600;
+    const targetSeconds = plannedGoalHours * 3600;
     return {
       loggedSeconds,
       sessionCount: todayEntries.length,
@@ -961,7 +964,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       remainingSeconds: Math.max(0, targetSeconds - loggedSeconds),
       progress: targetSeconds ? Math.min(100, Math.round((loggedSeconds / targetSeconds) * 100)) : 0,
     };
-  }, [entries, projects, now, preferences.dailyGoalHours]);
+  }, [entries, projects, now]);
   const snapshotMetrics = useMemo(() => {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(todayStart);

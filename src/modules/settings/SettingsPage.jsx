@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Check,
-  Clock3,
   Copy,
   ChevronDown,
   Download,
@@ -453,9 +452,11 @@ export const SettingsPage = ({ onBack, user }) => {
   // Tab 1: Preferences State
   const [preferences, setPreferences] = useState(() => {
     const saved = readJson(preferencesKey, {});
+    // Daily targets are configured on each project/subproject plan now.
+    // Drop the former global setting so it cannot override those schedules.
+    delete saved.dailyGoalHours;
     const isLegacyTimerDefault = !saved.timerDefaultModeVersion && saved.defaultTimerMode === '50m';
     return {
-      dailyGoalHours: 4,
       weekStart: weekDays[Number.isInteger(user?.week_starts_on) ? user.week_starts_on : 1] || 'monday',
       timezone: systemTimezone,
       dateFormat: 'system',
@@ -893,28 +894,6 @@ export const SettingsPage = ({ onBack, user }) => {
     setFriendPendingRemoval(null);
   };
 
-  // Timer mode definitions
-  const timerModes = [
-    {
-      id: '25m',
-      title: '25m Pomodoro',
-      description: 'Short bursts + 5m break',
-      badge: null,
-    },
-    {
-      id: '50m',
-      title: '50m Deep Work',
-      description: 'Ideal for coding & math flow + 10m break',
-      badge: 'Recommended',
-    },
-    {
-      id: 'stopwatch',
-      title: 'Open Stopwatch',
-      description: 'Count-up open flow session',
-      badge: null,
-    },
-  ];
-
   return (
     <div className="demo-settings-page" aria-label="PlotHour Settings" style={getSiteFontStyle(config, 'settings')}>
       {/* Back navigation */}
@@ -1014,29 +993,6 @@ export const SettingsPage = ({ onBack, user }) => {
                 className="settings-text-input"
                 aria-label="Display Name"
               />
-            </div>
-
-            {/* Daily Study Goal Slider (1h to 12h, 0.5h steps, default 4h) */}
-            <div className="settings-row">
-              <div className="settings-row-info">
-                <strong>Daily Study Goal</strong>
-                <span>Target focus hours per day. Instantly updates your Dashboard progress ring.</span>
-              </div>
-              <div className="settings-slider-group">
-                <input
-                  type="range"
-                  min="1"
-                  max="12"
-                  step="0.5"
-                  value={preferences.dailyGoalHours}
-                  onChange={(e) => updatePreference('dailyGoalHours', parseFloat(e.target.value))}
-                  className="settings-range-slider"
-                  aria-label="Daily study goal in hours"
-                />
-                <span className="settings-range-badge">
-                  {preferences.dailyGoalHours}h
-                </span>
-              </div>
             </div>
 
             {/* Theme Appearance (3-Way Segmented Pill: Light, Dark, Auto-Daylight) */}
@@ -1245,46 +1201,15 @@ export const SettingsPage = ({ onBack, user }) => {
             )}
           </section>
 
-          {/* CARD 2: Default Timer Mode & Sound Effects Card */}
+          {/* CARD 2: Session notification sound */}
           <section className="settings-bento-card" aria-labelledby="card-timer-title">
             <div className="settings-card-header">
               <div className="settings-card-title-group">
                 <span className="settings-card-icon">
-                  <Clock3 size={17} />
+                  <Volume2 size={17} />
                 </span>
-                <h2 id="card-timer-title">Default Timer Mode & Sound Effects</h2>
+                <h2 id="card-timer-title">Notification Sound</h2>
               </div>
-              <span className="settings-badge-pill">Session Defaults</span>
-            </div>
-
-            {/* Default Session Length (3 Selectable Bento Cards) */}
-            <div className="settings-mode-grid" role="radiogroup" aria-label="Default timer session length">
-              {timerModes.map((mode) => {
-                const isSelected = preferences.defaultTimerMode === mode.id;
-                return (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    className={`settings-mode-card ${isSelected ? 'active' : ''}`}
-                    onClick={() => updatePreference('defaultTimerMode', mode.id)}
-                  >
-                    <div>
-                      <div className="settings-mode-header">
-                        <span className="settings-mode-title">{mode.title}</span>
-                        {isSelected && (
-                          <span className="settings-mode-check">
-                            <Check size={12} strokeWidth={3} />
-                          </span>
-                        )}
-                      </div>
-                      <p className="settings-mode-desc">{mode.description}</p>
-                    </div>
-                    {mode.badge && <span className="settings-mode-rec-tag">{mode.badge}</span>}
-                  </button>
-                );
-              })}
             </div>
 
             {/* Subtle Completion Chime (Web Audio API Synthesizer) */}
@@ -1294,8 +1219,8 @@ export const SettingsPage = ({ onBack, user }) => {
                   {preferences.soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
                 </span>
                 <div>
-                  <strong>Completion Chime (Zen Bell)</strong>
-                  <span>Synthesizes a calm 528Hz harmonic sine bell with a 1.3s exponential decay.</span>
+                  <strong>Completion Chime</strong>
+                  <span>Play a gentle chime when a study session ends.</span>
                 </div>
               </div>
               <div className="settings-sound-actions">
