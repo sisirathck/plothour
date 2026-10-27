@@ -75,9 +75,20 @@
 .calendar-modal-dialog { --calendar-modal-base: #fff; --calendar-modal-surface: #fff; width: min(1080px, 100%); height: min(90vh, 900px); max-height: min(90vh, 900px); min-height: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(124, 131, 208, .18); border-radius: 22px; background: var(--calendar-modal-base); box-shadow: 0 24px 64px -16px rgba(30, 34, 70, .1), 0 4px 16px -2px rgba(124, 131, 208, .08); animation: calendar-dialog-in .26s cubic-bezier(.2, .75, .25, 1) both; }
 :root[data-theme='light'] .calendar-modal-dialog { --calendar-modal-base: #fff; --calendar-modal-surface: #fff; }
 :root[data-theme='dark'] .calendar-modal-dialog { --calendar-modal-base: var(--sd-bg-surface); --calendar-modal-surface: var(--sd-bg-subtle); }
-.calendar-modal-topbar { position: relative; z-index: 2; flex: 0 0 auto; min-height: 62px; display: flex; align-items: center; justify-content: space-between; margin: -1px -1px 0; padding: 0 24px; border: 0; border-radius: 21px 21px 0 0; background: linear-gradient(100deg, rgba(121, 129, 204, .19) 0%, rgba(121, 129, 204, .12) 48%, rgba(121, 129, 204, .075) 100%); color: #25294d; }
+.calendar-modal-topbar { position: relative; z-index: 2; flex: 0 0 auto; min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: -1px -1px 0; padding: 0 24px; border: 0; border-radius: 21px 21px 0 0; background: linear-gradient(105deg, #edf0ff 0%, #f2f3fc 52%, #edf6f3 100%); color: #25294d; }
 .calendar-modal-topbar > span { display: inline-flex; align-items: center; gap: 10px; color: #25294d; font-size: 13px; font-weight: 750; letter-spacing: .01em; }
 .calendar-modal-topbar > span svg { box-sizing: content-box; padding: 7px; border: 1px solid rgba(121, 129, 204, .2); border-radius: 10px; background: rgba(121, 129, 204, .12); color: #626ab4; }
+.calendar-modal-topbar > .calendar-month-toolbar--modal { flex: 1 1 auto; min-width: 0; gap: 14px; margin: 0 2px 0 12px; }
+.calendar-month-toolbar--modal .calendar-month-title { flex: 0 0 auto; }
+.calendar-month-toolbar--modal .calendar-month-title h2 { margin: 0 0 5px; font-size: 19px; }
+.calendar-month-toolbar--modal .calendar-month-metrics { gap: 5px; font-size: 10px; }
+.calendar-month-toolbar--modal .calendar-month-metrics > span { min-height: 21px; padding-inline: 7px; }
+.calendar-month-toolbar--modal .calendar-month-actions { min-width: 0; flex: 1 1 auto; justify-content: flex-end; gap: 6px; }
+.calendar-month-toolbar--modal .calendar-command-controls { min-width: 0; flex: 0 1 auto; margin-right: 2px; }
+.calendar-month-toolbar--modal .calendar-filter-trigger { width: 148px; }
+.calendar-month-toolbar--modal .calendar-jump-control { width: 134px; }
+.calendar-month-toolbar--modal .calendar-today-btn,
+.calendar-month-toolbar--modal .calendar-nav-btn { flex: 0 0 auto; }
 .calendar-modal-close { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(121, 129, 204, .2); border-radius: 50%; background: rgba(255, 255, 255, .78); color: #626783; cursor: pointer; box-shadow: 0 1px 3px rgba(30, 34, 70, .06); transition: transform .18s ease, color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease; }
 .calendar-modal-close:hover { transform: rotate(90deg); color: #4f58a5; border-color: rgba(121, 129, 204, .48); background: #fff; box-shadow: 0 3px 9px rgba(121, 129, 204, .14); }
 .calendar-modal-close:focus-visible { outline: 2px solid var(--sd-coral); outline-offset: 2px; }
@@ -86,8 +97,9 @@
 .calendar-modal-scroll::-webkit-scrollbar-track { background: transparent; }
 .calendar-modal-scroll::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 99px; background: color-mix(in srgb, var(--sd-coral) 36%, transparent); background-clip: padding-box; }
 .calendar-modal-scroll::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--sd-coral) 58%, transparent); background-clip: padding-box; }
-.calendar-modal-scroll .calendar-page { width: 100%; margin: 0; padding: 22px 24px 28px; }
+.calendar-modal-scroll .calendar-page { width: 100%; margin: 0; padding: 0 24px 28px; }
 .calendar-modal-scroll .calendar-month-card { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.calendar-modal-scroll .calendar-month-card { padding-top: 8px; }
 .calendar-modal-scroll .calendar-entries-section { margin-top: 8px; }
 
 /* Scheduled goals are displayed alongside recorded study time in each day. */
@@ -238,8 +250,14 @@
 @media (max-width: 700px) {
   .calendar-modal-backdrop { padding: 0; }
   .calendar-modal-dialog { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
-  .calendar-modal-topbar { min-height: 54px; padding-inline: 14px; }
-  .calendar-modal-scroll .calendar-page { width: 100%; padding: 14px 12px calc(24px + env(safe-area-inset-bottom)); }
+  .calendar-modal-topbar { min-height: 54px; flex-wrap: wrap; gap: 8px; padding: 9px 14px 10px; }
+  .calendar-modal-topbar > .calendar-month-toolbar--modal { flex: 1 0 100%; order: 3; gap: 8px; margin: 0; }
+  .calendar-month-toolbar--modal .calendar-month-title h2 { font-size: 18px; }
+  .calendar-month-toolbar--modal .calendar-month-actions { flex-wrap: wrap; justify-content: flex-start; }
+  .calendar-month-toolbar--modal .calendar-command-controls { flex: 1 1 100%; order: 2; margin: 2px 0 0; }
+  .calendar-month-toolbar--modal .calendar-filter-trigger,
+  .calendar-month-toolbar--modal .calendar-jump-control { width: auto; flex: 1 1 0; }
+  .calendar-modal-scroll .calendar-page { width: 100%; padding: 0 12px calc(24px + env(safe-area-inset-bottom)); }
   .calendar-page { width: 100%; padding: 16px 12px calc(26px + env(safe-area-inset-bottom)); }
   .calendar-month-toolbar { gap: 10px; margin-bottom: 12px; }
   .calendar-month-title { width: 100%; }

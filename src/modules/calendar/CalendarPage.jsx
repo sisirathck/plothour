@@ -182,6 +182,50 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
     setJumpDate(dateKey(new Date(next.getFullYear(), next.getMonth(), 1)));
   };
 
+  const calendarToolbar = (
+    <div className={`calendar-month-toolbar${onClose ? ' calendar-month-toolbar--modal' : ''}`}>
+      <div className="calendar-month-title">
+        <h2>{calendarView === 'week'
+          ? `${formatDisplayDate(weekCells[0], { month: 'short', day: 'numeric' })} – ${formatDisplayDate(weekCells[6], { month: 'short', day: 'numeric', year: 'numeric' })}`
+          : viewMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
+        <div className="calendar-month-metrics" aria-label={`${formatDuration(periodSeconds)} studied across ${periodSessions} sessions`}>
+          <span><Clock3 size={13} /> {formatDuration(periodSeconds)}</span>
+          <span>{periodSessions} {periodSessions === 1 ? 'session' : 'sessions'}</span>
+        </div>
+      </div>
+      <div className="calendar-month-actions">
+        <div className="calendar-command-controls">
+          <label className="calendar-view-select" aria-label="Calendar view">
+            <select value={calendarView} onChange={(event) => setCalendarView(event.target.value)}>
+              <option value="month">Month</option>
+              <option value="week">Week</option>
+            </select>
+            <ChevronDown size={14} aria-hidden="true" />
+          </label>
+          <div className="calendar-filter-field calendar-filter-select" ref={projectFilterRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setProjectFilterOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setProjectFilterOpen(false); }}>
+            <button type="button" className="calendar-filter-trigger" aria-label="Filter calendar by project or subproject" aria-haspopup="listbox" aria-expanded={projectFilterOpen} onClick={() => setProjectFilterOpen((open) => !open)}><span>{projectFilterLabel}</span><ChevronDown size={14} aria-hidden="true" /></button>
+            {projectFilterOpen && <div className="calendar-filter-menu" role="listbox" aria-label="Study areas">
+              <button type="button" role="option" aria-selected={projectFilter === 'all'} onClick={() => { setProjectFilter('all'); setProjectFilterOpen(false); }}><span>All study areas</span>{projectFilter === 'all' && <Check size={15} />}</button>
+              {projects.map((project) => <div className="calendar-filter-group" key={project.id}><span>{project.name}</span><button type="button" role="option" aria-selected={projectFilter === `project:${project.id}`} onClick={() => { setProjectFilter(`project:${project.id}`); setProjectFilterOpen(false); }}><span>{project.name}</span>{projectFilter === `project:${project.id}` && <Check size={15} />}</button>{(project.subjects || []).map((subject) => <button className="is-nested" type="button" role="option" aria-selected={projectFilter === `subject:${subject.id}`} key={subject.id} onClick={() => { setProjectFilter(`subject:${subject.id}`); setProjectFilterOpen(false); }}><span>{subject.name}</span>{projectFilter === `subject:${subject.id}` && <Check size={15} />}</button>)}</div>)}
+            </div>}
+          </div>
+          <label className="calendar-jump-control" aria-label="Jump to date">
+            <CalendarDays size={14} aria-hidden="true" />
+            <input aria-label="Jump to date" type="date" value={jumpDate} onChange={(event) => { const value = event.target.value; setJumpDate(value); if (!value) return; const date = new Date(`${value}T12:00:00`); if (Number.isFinite(date.getTime())) { setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1)); setSelectedDate(date); } }} />
+          </label>
+        </div>
+        <button type="button" className="calendar-today-btn" onClick={() => {
+          const today = new Date();
+          setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+          setSelectedDate(today);
+          setJumpDate(dateKey(today));
+        }}>Today</button>
+        <button type="button" className="calendar-nav-btn" aria-label="Previous month" onClick={() => changeMonth(-1)}><ChevronLeft size={18} /></button>
+        <button type="button" className="calendar-nav-btn" aria-label="Next month" onClick={() => changeMonth(1)}><ChevronRight size={18} /></button>
+      </div>
+    </div>
+  );
+
   const calendarContent = (
     <div className="calendar-page" style={getSiteFontStyle(config, 'calendar')}>
       {!onClose && (
@@ -194,47 +238,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
       )}
 
       <section className="calendar-month-card" aria-label={`${calendarView === 'month' ? 'Monthly' : 'Weekly'} study calendar`}>
-        <div className="calendar-month-toolbar">
-          <div className="calendar-month-title">
-            <h2>{calendarView === 'week'
-              ? `${formatDisplayDate(weekCells[0], { month: 'short', day: 'numeric' })} – ${formatDisplayDate(weekCells[6], { month: 'short', day: 'numeric', year: 'numeric' })}`
-              : viewMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
-            <div className="calendar-month-metrics" aria-label={`${formatDuration(periodSeconds)} studied across ${periodSessions} sessions`}>
-              <span><Clock3 size={13} /> {formatDuration(periodSeconds)}</span>
-              <span>{periodSessions} {periodSessions === 1 ? 'session' : 'sessions'}</span>
-            </div>
-          </div>
-          <div className="calendar-month-actions">
-            <div className="calendar-command-controls">
-              <label className="calendar-view-select" aria-label="Calendar view">
-                <select value={calendarView} onChange={(event) => setCalendarView(event.target.value)}>
-                  <option value="month">Month</option>
-                  <option value="week">Week</option>
-                </select>
-                <ChevronDown size={14} aria-hidden="true" />
-              </label>
-              <div className="calendar-filter-field calendar-filter-select" ref={projectFilterRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setProjectFilterOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setProjectFilterOpen(false); }}>
-                <button type="button" className="calendar-filter-trigger" aria-label="Filter calendar by project or subproject" aria-haspopup="listbox" aria-expanded={projectFilterOpen} onClick={() => setProjectFilterOpen((open) => !open)}><span>{projectFilterLabel}</span><ChevronDown size={14} aria-hidden="true" /></button>
-                {projectFilterOpen && <div className="calendar-filter-menu" role="listbox" aria-label="Study areas">
-                  <button type="button" role="option" aria-selected={projectFilter === 'all'} onClick={() => { setProjectFilter('all'); setProjectFilterOpen(false); }}><span>All study areas</span>{projectFilter === 'all' && <Check size={15} />}</button>
-                  {projects.map((project) => <div className="calendar-filter-group" key={project.id}><span>{project.name}</span><button type="button" role="option" aria-selected={projectFilter === `project:${project.id}`} onClick={() => { setProjectFilter(`project:${project.id}`); setProjectFilterOpen(false); }}><span>{project.name}</span>{projectFilter === `project:${project.id}` && <Check size={15} />}</button>{(project.subjects || []).map((subject) => <button className="is-nested" type="button" role="option" aria-selected={projectFilter === `subject:${subject.id}`} key={subject.id} onClick={() => { setProjectFilter(`subject:${subject.id}`); setProjectFilterOpen(false); }}><span>{subject.name}</span>{projectFilter === `subject:${subject.id}` && <Check size={15} />}</button>)}</div>)}
-                </div>}
-              </div>
-              <label className="calendar-jump-control" aria-label="Jump to date">
-                <CalendarDays size={14} aria-hidden="true" />
-                <input aria-label="Jump to date" type="date" value={jumpDate} onChange={(event) => { const value = event.target.value; setJumpDate(value); if (!value) return; const date = new Date(`${value}T12:00:00`); if (Number.isFinite(date.getTime())) { setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1)); setSelectedDate(date); } }} />
-              </label>
-            </div>
-            <button type="button" className="calendar-today-btn" onClick={() => {
-              const today = new Date();
-              setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-              setSelectedDate(today);
-              setJumpDate(dateKey(today));
-            }}>Today</button>
-            <button type="button" className="calendar-nav-btn" aria-label="Previous month" onClick={() => changeMonth(-1)}><ChevronLeft size={18} /></button>
-            <button type="button" className="calendar-nav-btn" aria-label="Next month" onClick={() => changeMonth(1)}><ChevronRight size={18} /></button>
-          </div>
-        </div>
+        {!onClose && calendarToolbar}
 
         <div className={`calendar-weekdays${calendarView === 'week' ? ' is-week-view' : ''}`} aria-hidden="true">
           {(calendarView === 'week' ? weekCells.map((day) => WEEK_DAYS[day.getDay()]) : WEEK_DAYS).map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
@@ -292,6 +296,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
       <section className="calendar-modal-dialog" role="dialog" aria-modal="true" aria-label="Calendar">
         <div className="calendar-modal-topbar">
           <span><CalendarDays size={15} /> Calendar</span>
+          {calendarToolbar}
           <button type="button" className="calendar-modal-close" onClick={onClose} aria-label="Close calendar"><X size={18} /></button>
         </div>
         <div className="calendar-modal-scroll">{calendarContent}</div>
