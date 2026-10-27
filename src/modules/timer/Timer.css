@@ -308,6 +308,17 @@
 @media (min-width: 1081px) {
   .timer-insights-panel { display: flex; flex: 1 1 0; flex-direction: column; min-height: 0; }
   .timer-insights-pane { height: auto; flex: 1 1 0; }
+  .timer-insights-pane > .t-combos-grid {
+    display: grid;
+    min-height: 100%;
+    grid-auto-rows: minmax(66px, 1fr);
+  }
+  .timer-insights-pane > .timer-study-plan-content-embedded {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .timer-insights-pane .timer-study-plan-row { flex: 1 1 0; min-height: 0; }
   .horology-metrics-strip { margin-bottom: 26px; }
 }
 .timer-insights-pane::-webkit-scrollbar { width: 7px; }
