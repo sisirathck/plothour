@@ -1,108 +1,59 @@
 <div align="center">
-  <img src="public/plothour-logo-light.png" alt="PlotHour" width="300" />
+  <img src="public/plothour-logo-light.png" alt="PlotHour" width="260" />
 
   <h1>PlotHour</h1>
-  <p><strong>Make study time visible. Build momentum with friends.</strong></p>
-  <p>Track focused work across projects and subjects, understand your habits, and compare progress with people you choose.</p>
+  <p><strong>Turn time into progress.</strong></p>
+  <p>A focused study tracker for building a steady rhythm, understanding your habits, and reaching your goals.</p>
 
   <p>
-    <a href="https://github.com/sisirathck/studyduel-2.0">GitHub repository</a>
-    · <a href="#getting-started">Run locally</a>
-    · <a href="extension/README.md">Browser extension</a>
+    <a href="https://plothour.com"><img src="https://img.shields.io/badge/OPEN_PLOTHOUR-2FAF96?style=for-the-badge&logoColor=white" alt="Open PlotHour" /></a>
+    <a href="https://github.com/sisirathck/studyduel-2.0"><img src="https://img.shields.io/badge/SOURCE_CODE-171923?style=for-the-badge&logo=github&logoColor=white" alt="View source on GitHub" /></a>
   </p>
+
+  <p><sub>React · Vite · Express · PostgreSQL</sub></p>
 </div>
 
-> **Website:** [study.thoughtpolice.space](https://study.thoughtpolice.space/)
+---
 
-## See PlotHour
+## A look inside
 
-These screenshots show the app in dark mode with sample demo data. The same screens support the light theme.
+Recent mobile captures from the app. Demo profiles and study sessions use sample data.
 
-<table>
-  <tr>
-    <td width="50%"><strong>Focus timer</strong><br /><img src="docs/screenshots/timer-demo-dark.png" alt="PlotHour focus timer showing project search, frequent sessions, and a running-time dial" /></td>
-    <td width="50%"><strong>Progress dashboard</strong><br /><img src="docs/screenshots/dashboard-demo-dark.png" alt="PlotHour dashboard with weekly progress, study totals, and project portfolio" /></td>
-  </tr>
-  <tr>
-    <td width="50%"><strong>Compare progress</strong><br /><img src="docs/screenshots/compare-demo-dark.png" alt="PlotHour comparison view with period standings and study-time charts" /></td>
-    <td width="50%"><strong>Project library</strong><br /><img src="docs/screenshots/manage-demo-dark.png" alt="PlotHour project library with projects, subprojects, and study goals" /></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/screenshots/mobile-dashboard-charts.png" alt="PlotHour mobile dashboard with weekly study trend and session length charts" width="31%" />
+  <img src="docs/screenshots/mobile-compare-profiles.png" alt="PlotHour mobile profile selector for choosing study partners to compare" width="31%" />
+  <img src="docs/screenshots/mobile-dashboard-customize.png" alt="PlotHour mobile dashboard personalization controls" width="31%" />
+</p>
 
-### Light theme
+<p align="center"><sub>Study analytics · Compare profiles · Personalize your dashboard</sub></p>
 
-These additional captures show the light theme. Dashboard, Compare, and Project library are scrolled to their middle sections; the Timer fits in one viewport, so its capture shows the complete timer layout.
+## Make study time visible
 
-<table>
-  <tr>
-    <td width="50%"><strong>Focus timer · light</strong><br /><img src="docs/screenshots/timer-demo-light.png" alt="PlotHour focus timer in light theme" /></td>
-    <td width="50%"><strong>Progress dashboard · light</strong><br /><img src="docs/screenshots/dashboard-demo-light.png" alt="Middle of the light theme PlotHour dashboard showing project plans, focus distribution, and study charts" /></td>
-  </tr>
-  <tr>
-    <td width="50%"><strong>Compare progress · light</strong><br /><img src="docs/screenshots/compare-demo-light.png" alt="Middle of the light theme PlotHour compare page showing study patterns by profile" /></td>
-    <td width="50%"><strong>Project library · light</strong><br /><img src="docs/screenshots/manage-demo-light.png" alt="Middle of the light theme PlotHour project library showing projects, goals, and subjects" /></td>
-  </tr>
-</table>
+PlotHour brings planning, focus sessions, and progress review into one workspace. Use it for solo study or invite study partners when a little shared accountability helps.
 
-## What you can do
+| Focus | Understand | Plan | Compare |
+|---|---|---|---|
+| Run a stopwatch, Pomodoro, or deep-work session. Start from a project, subject, or recent combination. | Explore weekly and monthly summaries, trends, streaks, session patterns, and time-of-day insights. | Set project and subject goals by day, week, or month, choose study days, and follow goal pace. | Compare selected periods with connected partners, choose profile colors, and share a recap of your own selected metrics. |
 
-### Track focused study time
+### Built for a real study routine
 
-- Start and stop sessions against a project and subject, or use the stopwatch for an open-ended session.
-- Choose a Pomodoro, deep-work, or open stopwatch timer mode.
-- Find projects and subjects from the timer search, then launch a recent project/subject combination with one click.
-- Review, edit, and organize completed sessions. Browse history in the calendar and filter by study area.
-- Use the browser extension to start and stop a timer from the toolbar. See the [extension guide](extension/README.md) for setup and browser-specific details.
+- **Timer and history:** track focused work, add session notes, edit entries, and browse activity in a calendar.
+- **Flexible dashboard:** choose a reporting period, rearrange or pin sections, and follow progress against your goals.
+- **Project library:** organize projects and subjects, set recurring goals, and archive completed work.
+- **Accountability with control:** connect partners by invite, choose who appears in comparisons, and share only the recap details you select.
+- **Your workspace, your theme:** choose light, dark, or automatic daylight appearance, plus your preferred time zone, date format, and week start.
+- **Mobile-friendly layouts:** access the timer, dashboard, and comparison tools on smaller screens.
+- **Optional browser extension:** manage sessions from a browser toolbar. See the [extension guide](extension/README.md).
 
-### Understand your progress
-
-- Review total study time, sessions, active days, daily goals, and average session length.
-- See weekly summaries, daily charts, project breakdowns, streaks, and personal records.
-- Choose a reporting period, customize dashboard sections, and set your preferred week start.
-- Keep a weekly target in view and compare this period with the previous one.
-
-### Study alongside friends
-
-- Connect study partners using invite codes in Settings.
-- Choose which connected profiles appear in Compare and customize their chart colors.
-- Compare a selected period using standings, study-time trends, active days, sessions, project patterns, and personal records.
-- Share a recap containing only your own selected metrics, as text or as a PNG image. On devices that support file sharing, the image opens the native share sheet; otherwise it downloads for you to share.
-
-### Plan projects and personalize your workspace
-
-- Organize projects into subjects, set daily/weekly/monthly goals, reorder or favorite active work, and archive completed projects.
-- Configure timer defaults, reminder preferences, chimes, theme, time zone, date format, and display name.
-- Import or export workspace data from Settings.
-- Choose light, dark, or automatic daylight themes.
-
-## Data and accounts
-
-PlotHour has two workspace modes:
-
-- **Demo mode** uses sample profiles and sample study history stored in this browser. It does not connect demo activity to real accounts.
-- **Signed-in mode** uses PostgreSQL for account and connection records. The app keeps an account-scoped working copy in browser storage and syncs it to the server's workspace-state table, so workspace data can be restored after signing in on another browser. Study-partner comparisons are loaded through the API and limited to connected profiles.
-
-Password registration uses email verification. Configure SMTP or Resend to deliver verification and password-reset codes. Google sign-in is available when Google OAuth credentials are configured. For local exploration, use **Try demo** without configuring an email provider.
-
-## Technology
-
-| Area | Stack |
-|---|---|
-| Web app | React 19, Vite 8, Lucide React, CSS |
-| API | Node.js, Express 5 |
-| Database | PostgreSQL, `pg` |
-| Accounts | Argon2id password hashing, JWT session cookies, email verification, optional Google sign-in |
-| Browser add-on | Manifest V3 extension for Chromium-based browsers and Safari-compatible WebExtensions |
-
-## Getting started
+## Run PlotHour locally
 
 ### Requirements
 
 - Node.js `^20.19.0` or `>=22.12.0`
 - npm
-- Docker Compose with PostgreSQL, or a PostgreSQL instance you can connect to
+- Docker Compose and PostgreSQL, or an existing PostgreSQL database
 
-### Install and configure
+### Start the app
 
 ```bash
 git clone https://github.com/sisirathck/studyduel-2.0.git
@@ -111,101 +62,68 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` with your local database credentials. For the included Docker Compose database, set `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`, then make `DATABASE_URL` match those values. Replace the example password before using the database.
-
-Start PostgreSQL and the app:
+Set a local database password in `.env` and make sure `DATABASE_URL` uses the same database, user, and password. Then start PostgreSQL and PlotHour:
 
 ```bash
 docker compose up -d db
 npm run dev
 ```
 
-Open <http://localhost:5173>. Vite serves the React app and forwards `/api` requests to Express on port `3001`. The server applies the numbered SQL migrations on startup. Use **Try demo** to explore immediately; email delivery is only needed to register a password-based account.
+Open <http://localhost:5173>. The development command starts Vite and the Express API; Vite forwards `/api` requests to the API on port `3001`. Database schema updates are applied by the server at startup. Choose **Try demo** to explore with sample data. Email delivery and OAuth credentials are only needed when configuring those account sign-in options.
 
-### Environment variables
+### Configuration
 
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `AUTH_SECRET` | Yes for deployment | Random secret of at least 32 characters for signed sessions. Do not use the development fallback in production. |
-| `PORT` | No | Express port; defaults to `3001` |
-| `NODE_ENV` | No | Set to `production` in deployment so secure cookie settings are used. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | For SMTP email | SMTP settings for verification and reset emails |
-| `EMAIL_FROM` | For email delivery | Sender address accepted by your mail provider |
-| `RESEND_API_KEY` | Alternative email provider | Resend API key; configure `EMAIL_FROM` as a verified sender |
-| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID used to enable Google sign-in |
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | For Docker Compose | Initial local PostgreSQL container settings |
-
-Never commit `.env`, OAuth credentials, SMTP passwords, API keys, or production user data.
-
-## Commands
-
-| Command | What it does |
+| Variable | Purpose |
 |---|---|
-| `npm run dev` | Start the Vite development server and Express API |
-| `npm run build` | Create the production frontend in `dist/` |
-| `npm start` | Start Express and serve `dist/` when it exists |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Local database settings for Docker Compose |
+| `AUTH_SECRET` | Random secret of at least 32 characters for account sessions; set it locally for account sign-in and in production |
+| `PORT` | Express port; defaults to `3001` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | SMTP delivery for verification and password-reset email |
+| `RESEND_API_KEY` | Alternative email provider; use a verified `EMAIL_FROM` sender |
+| `GOOGLE_CLIENT_ID` | Optional Google sign-in configuration |
+
+Keep `.env`, database credentials, OAuth settings, and mail-provider keys out of version control. The included `.env.example` is for local development; replace its placeholder values before use.
+
+## Useful commands
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite frontend and watched Express API for development |
+| `npm run build` | Build the frontend into `dist/` |
+| `npm start` | Start Express; serve `dist/` when a production build exists |
 | `npm run build:start` | Build the frontend, then start Express |
-| `npm run server` | Start only the Express server |
+| `npm run server` | Start the Express API server |
 | `npm run lint` | Run Oxlint |
-| `npm run preview` | Preview the Vite build locally |
+| `npm run preview` | Preview the Vite production build locally |
 
-## API and database
+## Demo, accounts, and data
 
-The Express API currently mounts these route groups:
+- **Demo mode** is an instant product tour with generated sample profiles and history stored in the current browser.
+- **Signed-in mode** uses PostgreSQL for accounts, timers, projects, goals, and per-user workspace sync. Your personal workspace is scoped to your account.
+- **Study partners** are connected by invite. Comparison views use the profiles you select; disconnecting a partner removes that connection from your comparison.
 
-| Route | Purpose |
-|---|---|
-| `/api/health` | Health response |
-| `/api/auth` | Registration, email verification, login, password reset, profile, Google sign-in, and logout |
-| `/api/workspace` | Signed-in workspace-state sync |
-| `/api/connections` | Invite codes, partner connections, and comparison data |
-| `/api/projects` | Project API endpoints |
-| `/api/timer` | Timer API endpoints |
+The API health check is available at `/api/health`. API route groups include `/api/auth`, `/api/projects`, `/api/timer`, `/api/workspace`, `/api/connections`, `/api/analytics`, and `/api/admin`.
 
-Database schema and migrations are in [`database/`](database/). The numbered migrations add account/workspace persistence, invites, email verification, and password reset support. The app's signed-in workspace is synchronized as account-scoped browser-storage items, while account credentials and relationships are stored in PostgreSQL.
-
-## Deployment and domain
-
-The public PlotHour website is [study.thoughtpolice.space](https://study.thoughtpolice.space/). This repository does not declare its hosting provider or an automatic deployment workflow. To deploy or update an instance:
-
-1. Provision a host, PostgreSQL database, and a domain you control.
-2. Point the domain's DNS records at the host and configure HTTPS.
-3. Set production environment variables, including a strong `AUTH_SECRET`, database credentials, and email-provider settings.
-4. Build and launch the app with `npm run build` and `npm start` (or your process manager of choice).
-5. Configure your reverse proxy to forward application traffic to Express on port `3001`, preserving `/api` and SPA routes.
-6. Configure OAuth and email-provider settings for the domain you deploy to, including `https://study.thoughtpolice.space/` for this public instance where applicable.
-
-For a manual VPS update after deployment, the basic application steps are:
-
-```bash
-git pull origin main
-npm install
-npm run build
-pm2 restart studyduel --update-env
-```
-
-For a first PM2 launch, use `pm2 start npm --name studyduel -- start` and `pm2 save`. Adapt the branch, process name, database migrations, and reverse-proxy configuration to your host. A GitHub push alone does not deploy the app.
-
-## Repository map
+## Project layout
 
 ```text
-database/             PostgreSQL schema and migrations
-docs/screenshots/     README screenshots captured from demo mode
-extension/            Browser extension source and install guide
-public/               Static app images, logos, and icons
-scripts/              Development and asset scripts
-server/               Express API, authentication, and database access
-src/components/       Shared React components
-src/context/           Theme context
-src/data/              Demo workspace and account workspace sync
-src/modules/           Timer, dashboard, compare, manage, settings, calendar
+database/          PostgreSQL schema and migrations
+docs/screenshots/  README product captures
+extension/         Browser extension and setup guide
+public/            Logos, icons, and static assets
+scripts/           Development scripts
+server/            Express API, authentication, and database access
+src/components/    Shared React components
+src/context/       Theme and application contexts
+src/data/          Demo workspace and account workspace sync
+src/modules/       Timer, dashboard, compare, manage, settings, and calendar
 ```
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep screenshots and examples synthetic, label planned work as planned, and never include credentials or personal study histories in commits.
+Bug reports and pull requests are welcome. Keep demo data synthetic, avoid committing secrets or personal study histories, and include screenshots when a change affects the interface.
 
 ## License
 
-This repository does not currently include a license file. Until a license is added, the source remains all rights reserved by its owner; please ask before redistributing or using it outside the rights granted by GitHub's default repository terms.
+This repository does not currently include a license file. Unless you have separate permission, the source is not licensed for redistribution or reuse.
