@@ -47,14 +47,22 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [projectFilter, setProjectFilter] = useState('all');
   const [projectFilterOpen, setProjectFilterOpen] = useState(false);
+  const [calendarViewOpen, setCalendarViewOpen] = useState(false);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [monthPickerYear, setMonthPickerYear] = useState(() => new Date().getFullYear());
   const projectFilterRef = useRef(null);
+  const calendarViewRef = useRef(null);
+  const monthPickerRef = useRef(null);
   useEffect(() => {
-    if (!projectFilterOpen) return undefined;
-    const closeOnOutsideClick = (event) => { if (!projectFilterRef.current?.contains(event.target)) setProjectFilterOpen(false); };
+    if (!projectFilterOpen && !calendarViewOpen && !monthPickerOpen) return undefined;
+    const closeOnOutsideClick = (event) => {
+      if (!projectFilterRef.current?.contains(event.target)) setProjectFilterOpen(false);
+      if (!calendarViewRef.current?.contains(event.target)) setCalendarViewOpen(false);
+      if (!monthPickerRef.current?.contains(event.target)) setMonthPickerOpen(false);
+    };
     document.addEventListener('pointerdown', closeOnOutsideClick);
     return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
-  }, [projectFilterOpen]);
-  const [jumpDate, setJumpDate] = useState(dateKey(new Date()));
+  }, [projectFilterOpen, calendarViewOpen, monthPickerOpen]);
 
   useEffect(() => {
     if (!onClose) return undefined;
@@ -173,13 +181,11 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
       const nextDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + delta * 7);
       setSelectedDate(nextDate);
       setViewMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
-      setJumpDate(dateKey(nextDate));
       return;
     }
     const next = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + delta, 1);
     setViewMonth(next);
     setSelectedDate(new Date(next.getFullYear(), next.getMonth(), 1));
-    setJumpDate(dateKey(new Date(next.getFullYear(), next.getMonth(), 1)));
   };
 
   const calendarToolbar = (
@@ -195,13 +201,12 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
       </div>
       <div className="calendar-month-actions">
         <div className="calendar-command-controls">
-          <label className="calendar-view-select" aria-label="Calendar view">
-            <select value={calendarView} onChange={(event) => setCalendarView(event.target.value)}>
-              <option value="month">Month</option>
-              <option value="week">Week</option>
-            </select>
-            <ChevronDown size={14} aria-hidden="true" />
-          </label>
+          <div className="calendar-filter-field calendar-filter-select calendar-view-select" ref={calendarViewRef} onKeyDown={(event) => { if (event.key === 'Escape') setCalendarViewOpen(false); }}>
+            <button type="button" className="calendar-filter-trigger" aria-label="Calendar view" aria-haspopup="listbox" aria-expanded={calendarViewOpen} onClick={() => setCalendarViewOpen((open) => !open)}><span>{calendarView === 'month' ? 'Month' : 'Week'}</span><ChevronDown size={14} aria-hidden="true" /></button>
+            {calendarViewOpen && <div className="calendar-filter-menu" role="listbox" aria-label="Calendar view">
+              {[['month', 'Month'], ['week', 'Week']].map(([value, label]) => <button type="button" role="option" aria-selected={calendarView === value} key={value} onClick={() => { setCalendarView(value); setCalendarViewOpen(false); }}><span>{label}</span>{calendarView === value && <Check size={15} />}</button>)}
+            </div>}
+          </div>
           <div className="calendar-filter-field calendar-filter-select" ref={projectFilterRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setProjectFilterOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setProjectFilterOpen(false); }}>
             <button type="button" className="calendar-filter-trigger" aria-label="Filter calendar by project or subproject" aria-haspopup="listbox" aria-expanded={projectFilterOpen} onClick={() => setProjectFilterOpen((open) => !open)}><span>{projectFilterLabel}</span><ChevronDown size={14} aria-hidden="true" /></button>
             {projectFilterOpen && <div className="calendar-filter-menu" role="listbox" aria-label="Study areas">
@@ -209,16 +214,38 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
               {projects.map((project) => <div className="calendar-filter-group" key={project.id}><span>{project.name}</span><button type="button" role="option" aria-selected={projectFilter === `project:${project.id}`} onClick={() => { setProjectFilter(`project:${project.id}`); setProjectFilterOpen(false); }}><span>{project.name}</span>{projectFilter === `project:${project.id}` && <Check size={15} />}</button>{(project.subjects || []).map((subject) => <button className="is-nested" type="button" role="option" aria-selected={projectFilter === `subject:${subject.id}`} key={subject.id} onClick={() => { setProjectFilter(`subject:${subject.id}`); setProjectFilterOpen(false); }}><span>{subject.name}</span>{projectFilter === `subject:${subject.id}` && <Check size={15} />}</button>)}</div>)}
             </div>}
           </div>
-          <label className="calendar-jump-control" aria-label="Jump to date">
+          <div className="calendar-month-picker-wrap" ref={monthPickerRef} onKeyDown={(event) => { if (event.key === 'Escape') setMonthPickerOpen(false); }}>
+            <button type="button" className="calendar-jump-control" aria-label="Choose month and year" aria-haspopup="dialog" aria-expanded={monthPickerOpen} onClick={() => { setMonthPickerYear(viewMonth.getFullYear()); setMonthPickerOpen((open) => !open); }}>
             <CalendarDays size={14} aria-hidden="true" />
-            <input aria-label="Jump to date" type="date" value={jumpDate} onChange={(event) => { const value = event.target.value; setJumpDate(value); if (!value) return; const date = new Date(`${value}T12:00:00`); if (Number.isFinite(date.getTime())) { setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1)); setSelectedDate(date); } }} />
-          </label>
+              <span>{viewMonth.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+              <ChevronDown size={14} aria-hidden="true" />
+            </button>
+            {monthPickerOpen && <div className="calendar-month-picker" role="dialog" aria-label="Choose month and year">
+              <div className="calendar-month-picker-heading">
+                <button type="button" aria-label="Previous year" onClick={() => setMonthPickerYear((year) => year - 1)}><ChevronLeft size={15} /></button>
+                <strong>{monthPickerYear}</strong>
+                <button type="button" aria-label="Next year" onClick={() => setMonthPickerYear((year) => year + 1)}><ChevronRight size={15} /></button>
+              </div>
+              <div className="calendar-month-picker-grid">
+                {Array.from({ length: 12 }, (_, month) => {
+                  const label = new Date(2020, month, 1).toLocaleDateString(undefined, { month: 'short' });
+                  const selected = viewMonth.getFullYear() === monthPickerYear && viewMonth.getMonth() === month;
+                  return <button type="button" key={label} className={selected ? 'is-selected' : ''} aria-pressed={selected} onClick={() => {
+                    const nextMonth = new Date(monthPickerYear, month, 1);
+                    setViewMonth(nextMonth);
+                    setSelectedDate(nextMonth);
+                    setMonthPickerOpen(false);
+                  }}>{label}</button>;
+                })}
+              </div>
+            </div>}
+          </div>
         </div>
         <button type="button" className="calendar-today-btn" onClick={() => {
           const today = new Date();
           setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
           setSelectedDate(today);
-          setJumpDate(dateKey(today));
+          setMonthPickerOpen(false);
         }}>Today</button>
         <button type="button" className="calendar-nav-btn" aria-label="Previous month" onClick={() => changeMonth(-1)}><ChevronLeft size={18} /></button>
         <button type="button" className="calendar-nav-btn" aria-label="Next month" onClick={() => changeMonth(1)}><ChevronRight size={18} /></button>
@@ -254,16 +281,17 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
               : seconds < 3600 ? 1
                 : seconds < 7200 ? 2
                   : seconds < 10800 ? 3 : 4;
-            const today = key === dateKey(new Date());
+            const todayKey = dateKey(new Date());
+            const today = key === todayKey;
+            const unstudied = seconds === 0 && key <= todayKey;
             return (
               <button
                 key={key}
                 type="button"
-                className={`calendar-day-cell heat-${intensity}${!inViewMonth ? ' adjacent' : ''}${planned.length ? ' has-plan' : ''}${calendarView === 'week' ? ' week-cell' : ''}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}`}
+                className={`calendar-day-cell heat-${intensity}${!inViewMonth ? ' adjacent' : ''}${planned.length ? ' has-plan' : ''}${calendarView === 'week' ? ' week-cell' : ''}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}${unstudied ? ' unstudied' : ''}`}
                 onClick={() => {
                   if (!inViewMonth) setViewMonth(new Date(day.getFullYear(), day.getMonth(), 1));
                   setSelectedDate(day);
-                  setJumpDate(key);
                 }}
                 aria-pressed={selectedKey === key}
                 aria-label={`${formatDisplayDate(day, { month: 'long', day: 'numeric', year: 'numeric' })}${inViewMonth ? `: ${formatDuration(seconds)} studied` : ''}${planned.length ? `. Planned: ${planned.map((item) => `${item.project}, ${item.subject}, ${formatDuration(item.targetSeconds)}`).join('; ')}` : ''}`}
