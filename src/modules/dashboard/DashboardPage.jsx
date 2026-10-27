@@ -157,6 +157,9 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
         {snapshotMetrics.map((metric) => {
           const isWeek = metric.id === 'time-week';
           const isMonth = metric.id === 'time-month';
+          const weekDayMax = isWeek && metric.weekDays
+            ? Math.max(...metric.weekDays.map((day) => day.seconds), 1)
+            : 1;
 
           // Compact comparison: only show percentage number, no label text
           let compactDelta = null;
@@ -189,15 +192,21 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
               </div>
 
               {isWeek && metric.weekDays && (
-                <div className="db-snap-days">
+                <div className="db-snap-week-chart" aria-label="Study time by day this week">
                   {metric.weekDays.map((d) => (
                     <div
                       key={d.key}
-                      className={`db-snap-day${d.active ? ' is-active' : ''}${d.isToday ? ' is-today' : ''}${!d.isPastOrToday ? ' is-future' : ''}`}
-                      title={`${d.fullDay}: ${fmtDur(d.seconds)}`}
+                      className={`db-snap-week-column${d.active ? ' is-active' : ''}${d.isToday ? ' is-today' : ''}${!d.isPastOrToday ? ' is-future' : ''}`}
+                      aria-label={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
                     >
+                      <span
+                        className="db-snap-week-bar"
+                        title={`${d.fullDay}: ${fmtDur(d.seconds)}`}
+                        aria-label={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
+                        role="img"
+                        style={{ height: `${(d.seconds / weekDayMax) * 100}%` }}
+                      />
                       <span className="db-snap-day-label">{d.label}</span>
-                      <span className="db-snap-day-pip" />
                     </div>
                   ))}
                 </div>
