@@ -27,6 +27,8 @@ const formatDuration = (seconds) => {
   if (hours) return `${hours}h`;
   return minutes ? `${minutes}m` : '—';
 };
+const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKS_PER_MONTH = 365.25 / 7 / 12;
 
 export const CalendarPage = ({ user, entries: providedEntries, setEntries: setProvidedEntries, projects: providedProjects, onClose }) => {
   const { config } = useSiteCustomization();
@@ -41,6 +43,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [calendarView, setCalendarView] = useState('month');
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [projectFilter, setProjectFilter] = useState('all');
   const [projectFilterOpen, setProjectFilterOpen] = useState(false);
@@ -103,10 +106,50 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
     return totals;
   }, {}), [filteredEntries]);
 
+  const plannedByDay = useMemo(() => {
+    const scheduled = {};
+    projects.filter((project) => !project.archived).forEach((project) => {
+      (project.subjects || []).forEach((subject) => {
+        const goals = subject.goals || {};
+        const daily = Number(goals.daily) || 0;
+        const weekly = Number(goals.weekly) || 0;
+        const monthly = Number(goals.monthly) || 0;
+        const days = Array.isArray(subject.studyDays)
+          ? subject.studyDays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+          : [];
+        const studyDays = days.length ? days : (daily || weekly || monthly) ? [0, 1, 2, 3, 4, 5, 6] : [];
+        const dayCount = studyDays.length || 7;
+        const basis = ['daily', 'weekly', 'monthly'].includes(goals.basis)
+          ? goals.basis
+          : daily > 0 ? 'daily' : weekly > 0 ? 'weekly' : 'monthly';
+        const targetHours = basis === 'daily' ? daily : basis === 'weekly' ? weekly / dayCount : monthly / WEEKS_PER_MONTH / dayCount;
+        if (!targetHours || !studyDays.length) return;
+        if (projectFilter !== 'all') {
+          const [kind, id] = projectFilter.split(':');
+          if (kind === 'project' && project.id !== id) return;
+          if (kind === 'subject' && subject.id !== id) return;
+        }
+        studyDays.forEach((weekday) => {
+          (scheduled[weekday] ||= []).push({
+            id: `${project.id}:${subject.id}`,
+            project: project.name,
+            subject: subject.name,
+            color: subject.color || project.color || '#7c83d0',
+            targetSeconds: targetHours * 3600,
+          });
+        });
+      });
+    });
+    Object.values(scheduled).forEach((items) => items.sort((a, b) => a.project.localeCompare(b.project) || a.subject.localeCompare(b.subject)));
+    return scheduled;
+  }, [projects, projectFilter]);
+
   const monthCells = useMemo(() => {
     const first = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
     const offset = first.getDay();
-    const cellCount = 42;
+    // Render only the rows this month needs. A fixed six-week grid leaves an
+    // entire empty row on most months, which makes the calendar feel sparse.
+    const cellCount = Math.ceil((offset + new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate()) / 7) * 7;
     const gridStart = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1 - offset);
     return Array.from({ length: cellCount }, (_, index) => new Date(
       gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index,
@@ -114,19 +157,26 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   }, [viewMonth]);
 
   const isInViewMonth = (day) => day.getFullYear() === viewMonth.getFullYear() && day.getMonth() === viewMonth.getMonth();
-  const viewMonthDays = monthCells.filter(isInViewMonth);
-  const monthSeconds = viewMonthDays.reduce((sum, day) => sum + (totalsByDay[dateKey(day)] || 0), 0);
-  const monthSessions = filteredEntries.filter((entry) => {
-    const date = new Date(entry.startedAt);
-    return date.getFullYear() === viewMonth.getFullYear() && date.getMonth() === viewMonth.getMonth();
-  }).length;
+  const firstWeekDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - selectedDate.getDay());
+  const weekCells = Array.from({ length: 7 }, (_, index) => new Date(firstWeekDay.getFullYear(), firstWeekDay.getMonth(), firstWeekDay.getDate() + index));
+  const visibleDays = calendarView === 'week' ? weekCells : monthCells.filter(isInViewMonth);
+  const periodSeconds = visibleDays.reduce((sum, day) => sum + (totalsByDay[dateKey(day)] || 0), 0);
+  const periodSessions = filteredEntries.filter((entry) => visibleDays.some((day) => dateKey(day) === entryDateKey(entry.startedAt))).length;
   const selectedKey = dateKey(selectedDate);
+  const selectedSchedule = plannedByDay[selectedDate.getDay()] || [];
   const projectFilterLabel = projectFilter === 'all' ? 'All study areas' : (() => {
     const [kind, id] = projectFilter.split(':');
     if (kind === 'project') return projects.find((project) => project.id === id)?.name || 'All study areas';
     return projects.flatMap((project) => project.subjects || []).find((subject) => subject.id === id)?.name || 'All study areas';
   })();
   const changeMonth = (delta) => {
+    if (calendarView === 'week') {
+      const nextDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + delta * 7);
+      setSelectedDate(nextDate);
+      setViewMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+      setJumpDate(dateKey(nextDate));
+      return;
+    }
     const next = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + delta, 1);
     setViewMonth(next);
     setSelectedDate(new Date(next.getFullYear(), next.getMonth(), 1));
@@ -144,17 +194,26 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
         </header>
       )}
 
-      <section className="calendar-month-card" aria-label="Monthly study calendar">
+      <section className="calendar-month-card" aria-label={`${calendarView === 'month' ? 'Monthly' : 'Weekly'} study calendar`}>
         <div className="calendar-month-toolbar">
           <div className="calendar-month-title">
-            <h2>{viewMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
-            <div className="calendar-month-metrics" aria-label={`${formatDuration(monthSeconds)} studied across ${monthSessions} sessions`}>
-              <span><Clock3 size={13} /> {formatDuration(monthSeconds)}</span>
-              <span>{monthSessions} {monthSessions === 1 ? 'session' : 'sessions'}</span>
+            <h2>{calendarView === 'week'
+              ? `${formatDisplayDate(weekCells[0], { month: 'short', day: 'numeric' })} – ${formatDisplayDate(weekCells[6], { month: 'short', day: 'numeric', year: 'numeric' })}`
+              : viewMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
+            <div className="calendar-month-metrics" aria-label={`${formatDuration(periodSeconds)} studied across ${periodSessions} sessions`}>
+              <span><Clock3 size={13} /> {formatDuration(periodSeconds)}</span>
+              <span>{periodSessions} {periodSessions === 1 ? 'session' : 'sessions'}</span>
             </div>
           </div>
           <div className="calendar-month-actions">
             <div className="calendar-command-controls">
+              <label className="calendar-view-select" aria-label="Calendar view">
+                <select value={calendarView} onChange={(event) => setCalendarView(event.target.value)}>
+                  <option value="month">Month</option>
+                  <option value="week">Week</option>
+                </select>
+                <ChevronDown size={14} aria-hidden="true" />
+              </label>
               <div className="calendar-filter-field calendar-filter-select" ref={projectFilterRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setProjectFilterOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') setProjectFilterOpen(false); }}>
                 <button type="button" className="calendar-filter-trigger" aria-label="Filter calendar by project or subproject" aria-haspopup="listbox" aria-expanded={projectFilterOpen} onClick={() => setProjectFilterOpen((open) => !open)}><span>{projectFilterLabel}</span><ChevronDown size={14} aria-hidden="true" /></button>
                 {projectFilterOpen && <div className="calendar-filter-menu" role="listbox" aria-label="Study areas">
@@ -178,15 +237,16 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
           </div>
         </div>
 
-        <div className="calendar-weekdays" aria-hidden="true">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}
+        <div className={`calendar-weekdays${calendarView === 'week' ? ' is-week-view' : ''}`} aria-hidden="true">
+          {(calendarView === 'week' ? weekCells.map((day) => WEEK_DAYS[day.getDay()]) : WEEK_DAYS).map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
         </div>
         <div className="calendar-grid-tray">
-          <div className="calendar-month-grid">
-            {monthCells.map((day) => {
+          <div className={`calendar-month-grid${calendarView === 'week' ? ' is-week-view' : ''}`}>
+            {visibleDays.map((day) => {
             const key = dateKey(day);
             const seconds = totalsByDay[key] || 0;
-            const inViewMonth = isInViewMonth(day);
+            const inViewMonth = calendarView === 'week' || isInViewMonth(day);
+            const planned = plannedByDay[day.getDay()] || [];
             const intensity = !inViewMonth || seconds === 0 ? 0
               : seconds < 3600 ? 1
                 : seconds < 7200 ? 2
@@ -196,20 +256,24 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
               <button
                 key={key}
                 type="button"
-                className={`calendar-day-cell heat-${intensity}${!inViewMonth ? ' adjacent' : ''}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}`}
+                className={`calendar-day-cell heat-${intensity}${!inViewMonth ? ' adjacent' : ''}${planned.length ? ' has-plan' : ''}${calendarView === 'week' ? ' week-cell' : ''}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}`}
                 onClick={() => {
                   if (!inViewMonth) setViewMonth(new Date(day.getFullYear(), day.getMonth(), 1));
                   setSelectedDate(day);
                   setJumpDate(key);
                 }}
                 aria-pressed={selectedKey === key}
-                aria-label={`${formatDisplayDate(day, { month: 'long', day: 'numeric', year: 'numeric' })}${inViewMonth ? `: ${formatDuration(seconds)} study` : ''}`}
-                title={inViewMonth ? `${formatDisplayDate(day, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)}` : `Go to ${formatDisplayDate(day, { month: 'long', year: 'numeric' })}`}
+                aria-label={`${formatDisplayDate(day, { month: 'long', day: 'numeric', year: 'numeric' })}${inViewMonth ? `: ${formatDuration(seconds)} studied` : ''}${planned.length ? `. Planned: ${planned.map((item) => `${item.project}, ${item.subject}, ${formatDuration(item.targetSeconds)}`).join('; ')}` : ''}`}
+                title={`${formatDisplayDate(day, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)} studied${planned.length ? ` · Planned: ${planned.map((item) => `${item.subject} ${formatDuration(item.targetSeconds)}`).join(', ')}` : ''}`}
               >
                 <span className="calendar-day-number">{day.getDate()}</span>
                 {today && <span className="calendar-today-mark">Today</span>}
                 {!today && inViewMonth && intensity === 4 && <span className="calendar-day-mark" aria-hidden="true" />}
-                {inViewMonth && seconds > 0 && <span className="calendar-day-total">{formatDuration(seconds)}</span>}
+                {planned.length > 0 && <span className="calendar-day-plan-list">
+                  {planned.slice(0, calendarView === 'week' ? 8 : 2).map((item) => <span className="calendar-day-plan" key={`${key}-${item.id}`} style={{ '--plan-color': item.color }}><span>{item.project} · {item.subject}</span><strong>{formatDuration(item.targetSeconds)}</strong></span>)}
+                  {planned.length > (calendarView === 'week' ? 8 : 2) && <span className="calendar-day-plan-more">+{planned.length - (calendarView === 'week' ? 8 : 2)} more</span>}
+                </span>}
+                {inViewMonth && seconds > 0 && <span className="calendar-day-total"><span>Studied</span>{formatDuration(seconds)}</span>}
               </button>
             );
           })}
@@ -226,6 +290,14 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
           </div>
           <span className="calendar-selected-total">{formatDuration(totalsByDay[selectedKey] || 0)} studied</span>
         </div>
+        {selectedSchedule.length > 0 && <div className="calendar-day-agenda" aria-label="Planned study for selected day">
+          <div className="calendar-day-agenda-heading"><strong>Planned for this day</strong><span>{selectedSchedule.length} {selectedSchedule.length === 1 ? 'study block' : 'study blocks'}</span></div>
+          <div className="calendar-day-agenda-list">{selectedSchedule.map((item) => <div className="calendar-day-agenda-item" key={item.id} style={{ '--plan-color': item.color }}>
+            <span className="calendar-agenda-color" />
+            <span className="calendar-agenda-name"><strong>{item.subject}</strong><small>{item.project}</small></span>
+            <strong className="calendar-agenda-duration">{formatDuration(item.targetSeconds)}</strong>
+          </div>)}</div>
+        </div>}
         <TimerEntriesList entries={filteredEntries} setEntries={setEntries} projects={projects} user={user} selectedDate={selectedDate} hideRangeControls />
       </section>
     </div>

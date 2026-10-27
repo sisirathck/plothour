@@ -2696,9 +2696,9 @@
   width: max-content;
   max-width: 150px;
   padding: 6px 8px;
-  border: 1px solid var(--db-border, rgba(100, 105, 150, .22));
+  border: 1px solid var(--db-card-border, rgba(100, 105, 150, .22));
   border-radius: 7px;
-  background: var(--db-card, #fff);
+  background: var(--db-card-bg, #fff);
   color: var(--db-text, #252744);
   box-shadow: 0 6px 18px rgba(20, 24, 48, .16);
   content: attr(data-tooltip);
