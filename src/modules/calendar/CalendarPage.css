@@ -98,6 +98,7 @@
 .calendar-day-cell { min-height: 112px; justify-content: flex-start; gap: 9px; padding: 9px; }
 .calendar-day-cell.adjacent { min-height: 112px; }
 .calendar-day-plan-list { width: 100%; display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.calendar-day-cell:not(.week-cell) .calendar-day-plan-list { flex: 1 1 auto; justify-content: space-evenly; padding-block: 2px; }
 .calendar-day-plan { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 5px; border-left: 2px solid var(--plan-color); padding-left: 5px; color: inherit; font-size: 9px; line-height: 1.25; }
 .calendar-day-plan > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-day-plan strong { flex: 0 0 auto; font-size: 8px; font-weight: 750; font-variant-numeric: tabular-nums; }
