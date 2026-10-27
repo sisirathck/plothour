@@ -167,9 +167,11 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   const isInViewMonth = (day) => day.getFullYear() === viewMonth.getFullYear() && day.getMonth() === viewMonth.getMonth();
   const firstWeekDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - selectedDate.getDay());
   const weekCells = Array.from({ length: 7 }, (_, index) => new Date(firstWeekDay.getFullYear(), firstWeekDay.getMonth(), firstWeekDay.getDate() + index));
-  const visibleDays = calendarView === 'week' ? weekCells : monthCells.filter(isInViewMonth);
-  const periodSeconds = visibleDays.reduce((sum, day) => sum + (totalsByDay[dateKey(day)] || 0), 0);
-  const periodSessions = filteredEntries.filter((entry) => visibleDays.some((day) => dateKey(day) === entryDateKey(entry.startedAt))).length;
+  const monthDays = monthCells.filter(isInViewMonth);
+  const visibleDays = calendarView === 'week' ? weekCells : monthCells;
+  const summaryDays = calendarView === 'week' ? weekCells : monthDays;
+  const periodSeconds = summaryDays.reduce((sum, day) => sum + (totalsByDay[dateKey(day)] || 0), 0);
+  const periodSessions = filteredEntries.filter((entry) => summaryDays.some((day) => dateKey(day) === entryDateKey(entry.startedAt))).length;
   const selectedKey = dateKey(selectedDate);
   const projectFilterLabel = projectFilter === 'all' ? 'All study areas' : (() => {
     const [kind, id] = projectFilter.split(':');
@@ -276,14 +278,14 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
             const key = dateKey(day);
             const seconds = totalsByDay[key] || 0;
             const inViewMonth = calendarView === 'week' || isInViewMonth(day);
-            const planned = plannedByDay[day.getDay()] || [];
+            const planned = inViewMonth ? (plannedByDay[day.getDay()] || []) : [];
             const intensity = !inViewMonth || seconds === 0 ? 0
               : seconds < 3600 ? 1
                 : seconds < 7200 ? 2
                   : seconds < 10800 ? 3 : 4;
             const todayKey = dateKey(new Date());
             const today = key === todayKey;
-            const unstudied = seconds === 0 && key <= todayKey;
+            const unstudied = inViewMonth && seconds === 0 && key <= todayKey;
             return (
               <button
                 key={key}
@@ -295,7 +297,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
                 }}
                 aria-pressed={selectedKey === key}
                 aria-label={`${formatDisplayDate(day, { month: 'long', day: 'numeric', year: 'numeric' })}${inViewMonth ? `: ${formatDuration(seconds)} studied` : ''}${planned.length ? `. Planned: ${planned.map((item) => `${item.project}, ${item.subject}, ${formatDuration(item.targetSeconds)}`).join('; ')}` : ''}`}
-                title={`${formatDisplayDate(day, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)} studied${planned.length ? ` · Planned: ${planned.map((item) => `${item.subject} ${formatDuration(item.targetSeconds)}`).join(', ')}` : ''}`}
+                title={inViewMonth ? `${formatDisplayDate(day, { month: 'long', day: 'numeric' })} · ${formatDuration(seconds)} studied${planned.length ? ` · Planned: ${planned.map((item) => `${item.subject} ${formatDuration(item.targetSeconds)}`).join(', ')}` : ''}` : `Go to ${formatDisplayDate(day, { month: 'long', year: 'numeric' })}`}
               >
                 <span className="calendar-day-number">{day.getDate()}</span>
                 {today && <span className="calendar-today-mark">Today</span>}
