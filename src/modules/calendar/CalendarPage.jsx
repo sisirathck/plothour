@@ -163,7 +163,6 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   const periodSeconds = visibleDays.reduce((sum, day) => sum + (totalsByDay[dateKey(day)] || 0), 0);
   const periodSessions = filteredEntries.filter((entry) => visibleDays.some((day) => dateKey(day) === entryDateKey(entry.startedAt))).length;
   const selectedKey = dateKey(selectedDate);
-  const selectedSchedule = plannedByDay[selectedDate.getDay()] || [];
   const projectFilterLabel = projectFilter === 'all' ? 'All study areas' : (() => {
     const [kind, id] = projectFilter.split(':');
     if (kind === 'project') return projects.find((project) => project.id === id)?.name || 'All study areas';
@@ -282,21 +281,6 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
       </section>
 
       <section className="calendar-entries-section" aria-label="Selected day sessions">
-        <div className="calendar-entries-heading">
-          <div>
-            <span className="calendar-eyebrow">DAY ENTRIES</span>
-            <h2>{formatDisplayDate(selectedDate, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
-          </div>
-          <span className="calendar-selected-total">{formatDuration(totalsByDay[selectedKey] || 0)} studied</span>
-        </div>
-        {selectedSchedule.length > 0 && <div className="calendar-day-agenda" aria-label="Planned study for selected day">
-          <div className="calendar-day-agenda-heading"><strong>Planned for this day</strong><span>{selectedSchedule.length} {selectedSchedule.length === 1 ? 'study block' : 'study blocks'}</span></div>
-          <div className="calendar-day-agenda-list">{selectedSchedule.map((item) => <div className="calendar-day-agenda-item" key={item.id} style={{ '--plan-color': item.color }}>
-            <span className="calendar-agenda-color" />
-            <span className="calendar-agenda-name"><strong>{item.subject}</strong><small>{item.project}</small></span>
-            <strong className="calendar-agenda-duration">{formatDuration(item.targetSeconds)}</strong>
-          </div>)}</div>
-        </div>}
         <TimerEntriesList entries={filteredEntries} setEntries={setEntries} projects={projects} user={user} selectedDate={selectedDate} hideRangeControls />
       </section>
     </div>
