@@ -121,7 +121,8 @@
 :root[data-theme='dark'] .calendar-day-total { border-top-color: rgba(205, 214, 232, .1); }
 
 @media (min-width: 701px) {
-  .calendar-modal-dialog { width: min(1240px, 100%); height: min(94vh, 1040px); max-height: min(94vh, 1040px); }
+  .calendar-modal-dialog { width: min(1760px, calc(100vw - 48px)); height: min(94vh, 1040px); max-height: min(94vh, 1040px); }
+  .calendar-modal-scroll .calendar-page { padding-inline: 26px; }
 }
 @media (max-width: 700px) {
   .calendar-view-select { flex: 1 1 100%; }

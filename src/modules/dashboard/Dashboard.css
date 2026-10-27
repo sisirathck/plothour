@@ -2660,6 +2660,7 @@
 }
 
 .db-snap-week-column {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2682,23 +2683,23 @@
   width: min(100%, 18px);
   min-height: 0;
   border-radius: 5px 5px 2px 2px;
-  background: currentColor;
+  background: color-mix(in srgb, var(--db-text) 18%, transparent);
   color: var(--db-text);
-  opacity: .18;
-  transition: height 350ms cubic-bezier(.16, 1, .3, 1), opacity 160ms ease;
+  opacity: 1;
+  transition: height 350ms cubic-bezier(.16, 1, .3, 1), background-color 160ms ease;
 }
 
-.db-snap-week-bar::after {
+.db-snap-week-column::after {
   position: absolute;
   z-index: 8;
   left: 50%;
-  bottom: calc(100% + 8px);
+  bottom: calc(var(--week-bar-height, 0%) + 18px);
   width: max-content;
   max-width: 150px;
   padding: 6px 8px;
   border: 1px solid var(--db-card-border, rgba(100, 105, 150, .22));
   border-radius: 7px;
-  background: var(--db-card-bg, #fff);
+  background: #fbfaff;
   color: var(--db-text, #252744);
   box-shadow: 0 6px 18px rgba(20, 24, 48, .16);
   content: attr(data-tooltip);
@@ -2712,8 +2713,8 @@
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
-.db-snap-week-bar:hover::after,
-.db-snap-week-bar:focus-visible::after {
+.db-snap-week-column:hover::after,
+.db-snap-week-column:focus-within::after {
   opacity: 1;
   transform: translate(-50%, 0);
 }
@@ -2723,13 +2724,20 @@
   opacity: 1;
 }
 
+:root[data-theme='dark'] .db-snap-week-column::after {
+  border-color: rgba(205, 214, 232, .16);
+  background: #1d222b;
+  color: #edf0f4;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .45);
+}
+
 .db-snap-week-column.is-today .db-snap-day-label {
   color: var(--db-text);
   font-weight: 800;
 }
 
 .db-snap-week-column.is-future .db-snap-week-bar {
-  opacity: .1;
+  background: color-mix(in srgb, var(--db-text) 10%, transparent);
 }
 
 .db-snap-day.is-future .db-snap-day-label {

@@ -197,11 +197,12 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
                     <div
                       key={d.key}
                       className={`db-snap-week-column${d.active ? ' is-active' : ''}${d.isToday ? ' is-today' : ''}${!d.isPastOrToday ? ' is-future' : ''}`}
+                      style={{ '--week-bar-height': `${(d.seconds / weekDayMax) * 100}%` }}
+                      data-tooltip={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
                       aria-label={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
                     >
                       <span
                         className="db-snap-week-bar"
-                        data-tooltip={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
                         aria-label={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
                         role="img"
                         style={{ height: `${(d.seconds / weekDayMax) * 100}%` }}

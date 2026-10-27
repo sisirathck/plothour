@@ -270,8 +270,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
                 {today && <span className="calendar-today-mark">Today</span>}
                 {!today && inViewMonth && intensity === 4 && <span className="calendar-day-mark" aria-hidden="true" />}
                 {planned.length > 0 && <span className="calendar-day-plan-list">
-                  {planned.slice(0, calendarView === 'week' ? 8 : 2).map((item) => <span className="calendar-day-plan" key={`${key}-${item.id}`} style={{ '--plan-color': item.color }}><span>{item.project} · {item.subject}</span><strong>{formatDuration(item.targetSeconds)}</strong></span>)}
-                  {planned.length > (calendarView === 'week' ? 8 : 2) && <span className="calendar-day-plan-more">+{planned.length - (calendarView === 'week' ? 8 : 2)} more</span>}
+                  {planned.map((item) => <span className="calendar-day-plan" key={`${key}-${item.id}`} style={{ '--plan-color': item.color }}><span>{item.project} · {item.subject}</span><strong>{formatDuration(item.targetSeconds)}</strong></span>)}
                 </span>}
                 {inViewMonth && seconds > 0 && <span className="calendar-day-total"><span>Studied</span>{formatDuration(seconds)}</span>}
               </button>
