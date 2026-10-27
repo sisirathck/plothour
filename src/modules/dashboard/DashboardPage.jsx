@@ -201,7 +201,7 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
                     >
                       <span
                         className="db-snap-week-bar"
-                        title={`${d.fullDay}: ${fmtDur(d.seconds)}`}
+                        data-tooltip={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
                         aria-label={`${d.fullDay}: ${fmtDur(d.seconds)} studied`}
                         role="img"
                         style={{ height: `${(d.seconds / weekDayMax) * 100}%` }}

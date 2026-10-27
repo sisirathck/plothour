@@ -15,7 +15,7 @@ const navItems = [
   { route: 'timer', path: '/timer', label: 'Timer' },
   { route: 'dashboard', path: '/dashboard', label: 'Dashboard' },
   { route: 'compare', path: '/compare', label: 'Compare' },
-  { route: 'manage', path: '/manage', label: 'Manage' },
+  { route: 'manage', path: '/manage', label: 'Projects' },
 ];
 
 const getRouteFromPath = () => {

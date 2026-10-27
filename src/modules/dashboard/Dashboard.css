@@ -2677,6 +2677,7 @@
 }
 
 .db-snap-week-bar {
+  position: relative;
   display: block;
   width: min(100%, 18px);
   min-height: 0;
@@ -2685,6 +2686,36 @@
   color: var(--db-text);
   opacity: .18;
   transition: height 350ms cubic-bezier(.16, 1, .3, 1), opacity 160ms ease;
+}
+
+.db-snap-week-bar::after {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  width: max-content;
+  max-width: 150px;
+  padding: 6px 8px;
+  border: 1px solid var(--db-border, rgba(100, 105, 150, .22));
+  border-radius: 7px;
+  background: var(--db-card, #fff);
+  color: var(--db-text, #252744);
+  box-shadow: 0 6px 18px rgba(20, 24, 48, .16);
+  content: attr(data-tooltip);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 3px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.db-snap-week-bar:hover::after,
+.db-snap-week-bar:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .db-snap-week-column.is-active .db-snap-week-bar {

@@ -6,6 +6,8 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   FolderKanban,
   Pencil,
@@ -233,6 +235,80 @@ const ColorPicker = ({ value, label, onChange }) => {
   );
 };
 
+const PlanDeadlinePicker = ({ value, onChange, label }) => {
+  const [open, setOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const selected = value ? new Date(`${value}T12:00:00`) : new Date();
+    return new Date(selected.getFullYear(), selected.getMonth(), 1);
+  });
+  const rootRef = useRef(null);
+  const today = new Date();
+  const selectedDate = value ? new Date(`${value}T12:00:00`) : null;
+  const firstDay = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
+  const daysInMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 0).getDate();
+  const calendarCells = [
+    ...Array.from({ length: firstDay.getDay() }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, index) => new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), index + 1)),
+  ];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const selectDate = (date) => {
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    onChange(key);
+    setOpen(false);
+  };
+
+  return (
+    <div className="manage-deadline-picker" ref={rootRef}>
+      <button type="button" className="manage-deadline-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+        <CalendarDays size={15} />
+        <span>{selectedDate && Number.isFinite(selectedDate.getTime()) ? formatDisplayDate(selectedDate, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Choose a date'}</span>
+        <ChevronDown size={14} />
+      </button>
+      {open && <div className="manage-deadline-calendar" role="dialog" aria-label={`Choose deadline for ${label}`}>
+        <div className="manage-deadline-calendar-head">
+          <button type="button" aria-label="Previous month" onClick={() => setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={16} /></button>
+          <strong>{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong>
+          <button type="button" aria-label="Next month" onClick={() => setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={16} /></button>
+        </div>
+        <div className="manage-deadline-weekdays" aria-hidden="true">{'SMTWTFS'.split('').map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+        <div className="manage-deadline-days">
+          {calendarCells.map((date, index) => date ? (
+            <button
+              type="button"
+              key={date.toISOString()}
+              className={`${date.toDateString() === today.toDateString() ? 'is-today ' : ''}${selectedDate?.toDateString() === date.toDateString() ? 'is-selected' : ''}`}
+              aria-pressed={selectedDate?.toDateString() === date.toDateString()}
+              onClick={() => selectDate(date)}
+            >{date.getDate()}</button>
+          ) : <span key={`empty-${index}`} />)}
+        </div>
+        <div className="manage-deadline-calendar-footer">
+          <button type="button" onClick={() => selectDate(today)}>Today</button>
+          {value && <button type="button" onClick={() => { onChange(''); setOpen(false); }}>Clear date</button>}
+        </div>
+      </div>}
+    </div>
+  );
+};
+
 const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
   const [milestoneTitle, setMilestoneTitle] = useState('');
   const milestones = Array.isArray(value?.milestones) ? value.milestones : [];
@@ -258,8 +334,8 @@ const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
 
   return (
     <div className="manage-plan-editor" aria-label={`${label} plan`}>
-      <label><span>Total time estimate</span><div className="manage-plan-number"><input type="number" min="0" step="0.25" value={value?.estimateHours ?? ''} placeholder="e.g. 40" onChange={(event) => onChange({ estimateHours: event.target.value === '' ? '' : Math.max(0, Number(event.target.value) || 0) })} /><span>hours</span></div></label>
-      <label><span>Target date</span><input type="date" value={value?.deadline || ''} onChange={(event) => onChange({ deadline: event.target.value })} /></label>
+      <label><span>Estimated effort</span><div className="manage-plan-number"><input type="number" min="0" step="0.25" value={value?.estimateHours ?? ''} placeholder="Optional" onChange={(event) => onChange({ estimateHours: event.target.value === '' ? '' : Math.max(0, Number(event.target.value) || 0) })} /><span>hours</span></div><small className="manage-plan-field-help">Leave blank if you have a deadline but don’t know the hours yet.</small></label>
+      <label className="manage-deadline-field"><span>Target date / deadline</span><PlanDeadlinePicker value={value?.deadline || ''} onChange={(deadline) => onChange({ deadline })} label={label} /></label>
       {showStudyGoals && <section className="manage-plan-study-goals" aria-label={`${label} recurring study goals`}>
         <div className="manage-plan-study-goals-heading"><strong>Recurring study goals</strong><span>Edit any period; the other two recalculate using planned days. A month is about 4.35 weeks.</span></div>
         <div className="manage-plan-study-goal-fields">
@@ -635,6 +711,12 @@ export const ManagePage = ({ user }) => {
                         </>
                       )}
                     </div>
+                    {!project.archived && <div className="manage-project-header-goals" aria-label={`${project.name} combined goals`}>
+                      <span>Goals</span>
+                      <strong>{formatGoalHours(totals.daily)}<small> / day</small></strong>
+                      <strong>{formatGoalHours(totals.weekly)}<small> / week</small></strong>
+                      <strong>{formatGoalHours(totals.monthly)}<small> / month</small></strong>
+                    </div>}
                     {!project.archived && <ColorPicker value={project.color} label={project.name} onChange={(color) => setColor(project.id, null, color)} />}
                     <div className="manage-card-actions">
                       <button type="button" title={project.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-label={`${project.favorite ? 'Remove' : 'Add'} ${project.name} ${project.favorite ? 'from' : 'to'} favorites`} aria-pressed={Boolean(project.favorite)} onClick={() => toggleFavorite(project.id)}><Star size={15} fill={project.favorite ? 'currentColor' : 'none'} /></button>
@@ -670,12 +752,6 @@ export const ManagePage = ({ user }) => {
                     </div>
                   ) : (
                     <>
-                      <div className="manage-project-goals" aria-label={`${project.name} combined goals`}>
-                        <span>Combined goals</span>
-                        <strong>{formatGoalHours(totals.daily)} <small>/ day</small></strong>
-                        <strong>{formatGoalHours(totals.weekly)} <small>/ week</small></strong>
-                        <strong>{formatGoalHours(totals.monthly)} <small>/ month</small></strong>
-                      </div>
                       <div className="manage-subprojects">
                         <div className="manage-subproject-table-head"><span>Subproject</span><span aria-label="Actions" /></div>
                         {subjects.map((subject) => (
