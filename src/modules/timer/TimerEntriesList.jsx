@@ -57,21 +57,57 @@ const durationLabel = (seconds) => {
 
 const EditSelect = ({ value, options, onChange, label }) => {
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
   const rootRef = useRef(null);
+  const menuRef = useRef(null);
   const selected = options.find((option) => option.value === value) || options[0];
+  const positionMenu = useCallback(() => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const gap = 6;
+    const viewportPadding = 8;
+    const below = window.innerHeight - rect.bottom - viewportPadding;
+    const above = rect.top - viewportPadding;
+    const desiredHeight = Math.min(320, options.length * 36 + 12);
+    const openUp = below < Math.min(220, desiredHeight) && above > below;
+    const maxHeight = Math.max(96, Math.min(320, (openUp ? above : below) - gap));
+    setMenuPosition({
+      position: 'fixed',
+      left: Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - rect.width - viewportPadding)),
+      width: rect.width,
+      maxHeight,
+      zIndex: 1000,
+      ...(openUp
+        ? { top: 'auto', bottom: window.innerHeight - rect.top + gap }
+        : { top: rect.bottom + gap, bottom: 'auto' }),
+    });
+  }, [options.length]);
   useEffect(() => {
     if (!open) return undefined;
-    const close = (event) => { if (!rootRef.current?.contains(event.target)) setOpen(false); };
+    positionMenu();
+    const close = (event) => {
+      if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
+    };
+    const reposition = () => positionMenu();
+    const closeWithEscape = (event) => { if (event.key === 'Escape') setOpen(false); };
     document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, [open]);
+    document.addEventListener('keydown', closeWithEscape);
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', closeWithEscape);
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, positionMenu]);
   return <div className="entry-edit-select" ref={rootRef}>
     <button type="button" className="entry-edit-select-trigger" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
       <span>{selected?.label || 'Select'}</span><ChevronDown size={14} aria-hidden="true" />
     </button>
-    {open && <div className="entry-edit-select-menu" role="listbox" aria-label={label}>
+    {open && menuPosition && createPortal(<div ref={menuRef} className="entry-edit-select-menu is-portal-menu" style={menuPosition} role="listbox" aria-label={label}>
       {options.map((option) => <button key={option.value || 'none'} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : ''} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
-    </div>}
+    </div>, document.body)}
   </div>;
 };
 
