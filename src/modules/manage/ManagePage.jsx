@@ -104,9 +104,12 @@ const getRandomProjectColor = (exclude = []) => {
 };
 
 const formatGoalHours = (hours) => {
-  const value = Number(hours) || 0;
-  if (Number.isInteger(value)) return `${value}h`;
-  return `${value.toFixed(2).replace(/0$/, '').replace(/\.$/, '')}h`;
+  const totalMinutes = Math.round(Math.max(0, Number(hours) || 0) * 60);
+  const wholeHours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (wholeHours && minutes) return `${wholeHours}h ${minutes}m`;
+  if (wholeHours) return `${wholeHours}h`;
+  return `${minutes}m`;
 };
 
 const formatDuration = (seconds) => {
@@ -316,6 +319,21 @@ const PlanDeadlinePicker = ({ value, onChange, label, dateKind = 'deadline' }) =
   );
 };
 
+const GoalDurationInput = ({ value, maxHours, label, onChange }) => {
+  const totalMinutes = Math.round(Math.max(0, Number(value) || 0) * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const update = (nextHours, nextMinutes) => {
+    const maximum = Math.round(maxHours * 60);
+    const nextTotal = Math.max(0, Math.min(maximum, (Math.max(0, Number(nextHours) || 0) * 60) + Math.max(0, Math.min(59, Number(nextMinutes) || 0))));
+    onChange(roundGoalHours(nextTotal / 60));
+  };
+  return <div className="manage-goal-duration" aria-label={label}>
+    <div className="manage-duration-part"><input type="number" min="0" max={Math.floor(maxHours)} step="1" value={hours} onChange={(event) => update(event.target.value, minutes)} aria-label={`${label} hours`} /><span>h</span></div>
+    <div className="manage-duration-part"><input type="number" min="0" max="59" step="1" value={minutes} onChange={(event) => update(hours, event.target.value)} aria-label={`${label} minutes`} /><span>m</span></div>
+  </div>;
+};
+
 const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
   const [milestoneTitle, setMilestoneTitle] = useState('');
   const milestones = Array.isArray(value?.milestones) ? value.milestones : [];
@@ -351,7 +369,7 @@ const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
           {['daily', 'weekly', 'monthly'].map((period) => (
             <label className="manage-plan-study-goal" key={period}>
               <span>{period[0].toUpperCase() + period.slice(1)}</span>
-              <div className="manage-plan-number"><input type="number" min="0" max={period === 'daily' ? 24 : period === 'weekly' ? 168 : MAX_MONTHLY_GOAL_HOURS} step="0.01" value={value?.goals?.[period] ?? 0} onChange={(event) => setGoal(period, event.target.value)} aria-label={`${period} study goal for ${label}`} /><span>hours</span></div>
+              <GoalDurationInput value={value?.goals?.[period] ?? 0} maxHours={period === 'daily' ? 24 : period === 'weekly' ? 168 : MAX_MONTHLY_GOAL_HOURS} label={`${period} study goal for ${label}`} onChange={(hours) => setGoal(period, hours)} />
             </label>
           ))}
         </div>

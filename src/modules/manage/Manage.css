@@ -589,6 +589,10 @@
 .manage-plan-study-goal { display: flex; min-width: 0; flex-direction: column; gap: 5px; color: var(--manage-muted); font-size: 9px; font-weight: 700; }
 .manage-plan-study-goal .manage-plan-number { min-width: 0; }
 .manage-plan-study-goal .manage-plan-number > span { font-size: 9px; }
+.manage-goal-duration { display: grid; grid-template-columns: minmax(64px, 1fr) minmax(58px, .72fr); gap: 6px; }
+.manage-duration-part { position: relative; min-width: 0; }
+.manage-plan-editor .manage-duration-part input:not([type='checkbox']) { padding-right: 25px; font-variant-numeric: tabular-nums; }
+.manage-duration-part > span { position: absolute; top: 50%; right: 9px; transform: translateY(-50%); color: var(--manage-muted); font-size: 9px; font-weight: 750; pointer-events: none; }
 .manage-plan-study-days { grid-column: 1 / -1; margin-top: 0; padding-top: 9px; border-top: 1px solid var(--manage-line); }
 .manage-plan-study-days .manage-study-days-editor { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .manage-plan-label { display: block; margin-bottom: 6px; color: var(--manage-muted); font-size: 10px; font-weight: 650; }
