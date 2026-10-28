@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X } from 'lucide-react';
 import { TimerEntriesList } from '../timer/TimerEntriesList';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
@@ -324,7 +324,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
     <div className="calendar-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="calendar-modal-dialog" role="dialog" aria-modal="true" aria-label="Calendar">
         <div className="calendar-modal-topbar">
-          <span><CalendarDays size={15} /> Calendar</span>
+          <span><CalendarRange className="calendar-brand-mark" size={19} strokeWidth={1.7} /> Calendar</span>
           {calendarToolbar}
           <button type="button" className="calendar-modal-close" onClick={onClose} aria-label="Close calendar"><X size={18} /></button>
         </div>

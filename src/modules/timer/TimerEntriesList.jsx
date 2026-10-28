@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Pencil, Save, Trash2, X, Calendar, CalendarDays, Undo2 } from 'lucide-react';
+import { ChevronDown, Pencil, Save, Trash2, X, Calendar, CalendarRange, Undo2 } from 'lucide-react';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
 const localDateKey = (value) => {
@@ -198,7 +198,7 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
           <div className="entries-heading-actions">
             {onOpenCalendar && (
               <button type="button" className="entries-calendar-btn" onClick={onOpenCalendar} aria-label="Open calendar view">
-                <CalendarDays size={15} /> Calendar view
+                <CalendarRange size={15} strokeWidth={1.7} /> Calendar view
               </button>
             )}
             <button
