@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Pencil, Save, Trash2, X, Calendar, CalendarRange, Undo2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Save, Trash2, X, Calendar, CalendarRange, Undo2 } from 'lucide-react';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
 const localDateKey = (value) => {
@@ -40,6 +40,10 @@ const getDateRange = (range, now = new Date()) => {
     start.setDate(1);
   } else if (range === 'quarter') {
     start.setMonth(Math.floor(start.getMonth() / 3) * 3, 1);
+  } else if (range === 'year') {
+    start.setMonth(0, 1);
+  } else if (range === 'all') {
+    return { start: '0001-01-01', end: '9999-12-31' };
   }
   return { start: localDateKey(start), end: localDateKey(end) };
 };
@@ -51,10 +55,65 @@ const durationLabel = (seconds) => {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
+const EditSelect = ({ value, options, onChange, label }) => {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = options.find((option) => option.value === value) || options[0];
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => { if (!rootRef.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+  return <div className="entry-edit-select" ref={rootRef}>
+    <button type="button" className="entry-edit-select-trigger" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+      <span>{selected?.label || 'Select'}</span><ChevronDown size={14} aria-hidden="true" />
+    </button>
+    {open && <div className="entry-edit-select-menu" role="listbox" aria-label={label}>
+      {options.map((option) => <button key={option.value || 'none'} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : ''} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
+    </div>}
+  </div>;
+};
+
+const SessionDatePicker = ({ value, onChange }) => {
+  const selected = new Date(`${value}T12:00:00`);
+  const [open, setOpen] = useState(false);
+  const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
+  const rootRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => { if (!rootRef.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const gridStart = new Date(first);
+  gridStart.setDate(1 - first.getDay());
+  const days = Array.from({ length: 42 }, (_, index) => { const day = new Date(gridStart); day.setDate(gridStart.getDate() + index); return day; });
+  return <div className="entry-date-picker" ref={rootRef}>
+    <button type="button" className="entry-date-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => { setMonth(new Date(selected.getFullYear(), selected.getMonth(), 1)); setOpen((current) => !current); }}>
+      <span>{formatDisplayDate(selected, { day: '2-digit', month: 'short', year: 'numeric' })}</span><Calendar size={14} aria-hidden="true" />
+    </button>
+    {open && <div className="entry-date-popover" role="dialog" aria-label="Choose session date">
+      <div className="entry-date-head"><button type="button" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button><strong>{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong><button type="button" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button></div>
+      <div className="entry-date-weekdays">{'SMTWTFS'.split('').map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+      <div className="entry-date-grid">{days.map((day) => { const key = localDateKey(day); return <button type="button" key={key} className={`${day.getMonth() !== month.getMonth() ? 'is-outside ' : ''}${key === value ? 'is-selected' : ''}`} onClick={() => { onChange(key); setOpen(false); }}>{day.getDate()}</button>; })}</div>
+    </div>}
+  </div>;
+};
+
 export const TimerEntriesList = ({ entries, setEntries, projects, user, selectedDate = null, hideRangeControls = false, hideProjectColors = false, onOpenCalendar }) => {
   const [expanded, setExpanded] = useState(hideRangeControls);
   const isExpanded = expanded;
   const [range, setRange] = useState('today');
+  const [customStart, setCustomStart] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 29);
+    return localDateKey(date);
+  });
+  const [customEnd, setCustomEnd] = useState(() => localDateKey(new Date()));
+  const [filterProjectId, setFilterProjectId] = useState('');
+  const [filterSubjectId, setFilterSubjectId] = useState('');
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
   const [undoAction, setUndoAction] = useState(null);
@@ -115,11 +174,34 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
 
   const dateRange = useMemo(() => selectedDate
     ? { start: localDateKey(selectedDate), end: localDateKey(selectedDate) }
-    : getDateRange(range, filterDate), [range, filterDate, selectedDate]);
+    : range === 'custom'
+      ? { start: customStart, end: customEnd }
+      : getDateRange(range, filterDate), [range, filterDate, selectedDate, customStart, customEnd]);
   const filteredEntries = useMemo(() => entries.filter((entry) => {
     const day = localDateKey(entry.startedAt);
-    return day >= dateRange.start && day <= dateRange.end;
-  }), [entries, dateRange]);
+    if (day < dateRange.start || day > dateRange.end) return false;
+    if (filterProjectId && entry.projectId !== filterProjectId) return false;
+    if (filterSubjectId && entry.subjectId !== filterSubjectId) return false;
+    return true;
+  }), [entries, dateRange, filterProjectId, filterSubjectId]);
+
+  const historyProjectOptions = useMemo(() => [
+    { value: '', label: 'All projects' },
+    ...projects.map((project) => ({ value: project.id, label: project.name })),
+  ], [projects]);
+  const historySubjectOptions = useMemo(() => {
+    const source = filterProjectId
+      ? projects.filter((project) => project.id === filterProjectId)
+      : projects;
+    return [
+      { value: '', label: filterProjectId ? 'All subprojects' : 'All subprojects' },
+      ...source.flatMap((project) => (project.subjects || []).map((subject) => ({
+        value: subject.id,
+        label: filterProjectId ? subject.name : `${project.name} · ${subject.name}`,
+        projectId: project.id,
+      }))),
+    ];
+  }, [projects, filterProjectId]);
 
   const effectivePageSize = Math.max(1, Math.min(100, hideRangeControls ? filteredEntries.length : Number(pageSize)));
   const pageCount = Math.max(1, Math.ceil(filteredEntries.length / effectivePageSize));
@@ -187,9 +269,13 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   const pendingDeleteEntry = entries.find((entry) => entry.id === pendingDeleteId);
 
   return (
-    <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}`} aria-label="Completed time entries">
+    <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}${!hideRangeControls ? ' can-toggle' : ''}`} aria-label="Completed time entries">
       {/* Panel Header */}
-      <div className="entries-panel-heading">
+      <div
+        className="entries-panel-heading"
+        onClick={() => { if (!hideRangeControls) setExpanded((current) => !current); }}
+        title={isExpanded ? 'Collapse session history' : 'Expand session history'}
+      >
         <div className="entries-heading-label">
           <span className="entries-heading-title">SESSION HISTORY</span>
           <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
@@ -197,14 +283,14 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
         {!hideRangeControls && (
           <div className="entries-heading-actions">
             {onOpenCalendar && (
-              <button type="button" className="entries-calendar-btn" onClick={onOpenCalendar} aria-label="Open calendar view">
+              <button type="button" className="entries-calendar-btn" onClick={(event) => { event.stopPropagation(); onOpenCalendar(); }} aria-label="Open calendar view">
                 <CalendarRange size={15} strokeWidth={1.7} /> Calendar view
               </button>
             )}
             <button
               type="button"
               className="entries-expand-toggle"
-              onClick={() => setExpanded((current) => !current)}
+              onClick={(event) => { event.stopPropagation(); setExpanded((current) => !current); }}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? 'Collapse session history' : 'Expand session history'}
             >
@@ -223,6 +309,9 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                 { id: 'week', label: 'Week' },
                 { id: 'month', label: 'Month' },
                 { id: 'quarter', label: 'Quarter' },
+                { id: 'year', label: 'Year' },
+                { id: 'all', label: 'All time' },
+                { id: 'custom', label: 'Custom' },
               ].map((r) => (
                 <button
                   key={r.id}
@@ -233,6 +322,11 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                   {r.label}
                 </button>
               ))}
+            </div>}
+            {!hideRangeControls && range === 'custom' && <div className="entries-custom-range" aria-label="Custom date range">
+              <div><span>From</span><SessionDatePicker value={customStart} onChange={(value) => { setCustomStart(value); if (value > customEnd) setCustomEnd(value); setPage(1); }} /></div>
+              <i aria-hidden="true">—</i>
+              <div><span>To</span><SessionDatePicker value={customEnd} onChange={(value) => { setCustomEnd(value); if (value < customStart) setCustomStart(value); setPage(1); }} /></div>
             </div>}
 
             {/* Page Size */}
@@ -249,6 +343,31 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
+            </div>}
+            {!hideRangeControls && <div className="entries-history-filters" aria-label="Filter session history">
+              <div className="entries-history-filter">
+                <span>Project</span>
+                <EditSelect
+                  value={filterProjectId}
+                  options={historyProjectOptions}
+                  label="Filter by project"
+                  onChange={(value) => { setFilterProjectId(value); setFilterSubjectId(''); setPage(1); }}
+                />
+              </div>
+              <div className="entries-history-filter">
+                <span>Subproject</span>
+                <EditSelect
+                  value={filterSubjectId}
+                  options={historySubjectOptions}
+                  label="Filter by subproject"
+                  onChange={(value) => {
+                    setFilterSubjectId(value);
+                    const option = historySubjectOptions.find((item) => item.value === value);
+                    if (option?.projectId) setFilterProjectId(option.projectId);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>}
           </div>
       {undoAction && <div className="entries-undo-toast" role="status"><span>{undoAction.message}</span><button type="button" onClick={() => { undoAction.undo(); setUndoAction(null); window.clearTimeout(undoTimerRef.current); }}><Undo2 size={14} /> Undo</button></div>}
@@ -302,57 +421,48 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                       <div className="entry-edit-grid">
                         <div className="edit-field">
                           <label>Project</label>
-                          <select
-                            className="edit-select"
+                          <EditSelect
                             value={draft.projectId}
-                            onChange={(e) => {
-                              const nextProject = projects.find((item) => item.id === e.target.value);
+                            label="Project"
+                            options={projects.map((project) => ({ value: project.id, label: project.name }))}
+                            onChange={(value) => {
+                              const nextProject = projects.find((item) => item.id === value);
                               setDraft({
                                 ...draft,
-                                projectId: e.target.value,
+                                projectId: value,
                                 projectName: nextProject?.name || '',
                                 subjectId: '',
                                 subjectName: '',
                                 color: nextProject?.color || draft.color,
                               });
                             }}
-                          >
-                            {projects.map((project) => (
-                              <option key={project.id} value={project.id}>{project.name}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
 
                         <div className="edit-field">
                           <label>Subject</label>
-                          <select
-                            className="edit-select"
+                          <EditSelect
                             value={draft.subjectId || ''}
-                            onChange={(e) => {
+                            label="Subject"
+                            options={[{ value: '', label: 'No subject' }, ...(projects.find((item) => item.id === draft.projectId)?.subjects || []).map((subject) => ({ value: subject.id, label: subject.name }))]}
+                            onChange={(value) => {
                               const project = projects.find((item) => item.id === draft.projectId);
-                              const subject = project?.subjects?.find((item) => item.id === e.target.value);
+                              const subject = project?.subjects?.find((item) => item.id === value);
                               setDraft({
                                 ...draft,
-                                subjectId: e.target.value,
+                                subjectId: value,
                                 subjectName: subject?.name || '',
                                 color: subject?.color || project?.color || draft.color,
                               });
                             }}
-                          >
-                            <option value="">No subject</option>
-                            {projects.find((item) => item.id === draft.projectId)?.subjects?.map((subject) => (
-                              <option key={subject.id} value={subject.id}>{subject.name}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
 
                         <div className="edit-field">
                           <label>Date</label>
-                          <input
-                            type="date"
-                            className="edit-input"
+                          <SessionDatePicker
                             value={draft.startDate}
-                            onChange={(e) => setDraft({ ...draft, startDate: e.target.value, endDate: e.target.value })}
+                            onChange={(value) => setDraft({ ...draft, startDate: value, endDate: value })}
                           />
                         </div>
 

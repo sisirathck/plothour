@@ -17,6 +17,12 @@ const readLocalValue = (key, fallback) => {
 
 const dateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const entryDateKey = (value) => dateKey(new Date(value));
+const valueDateKey = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? dateKey(parsed) : null;
+};
 const formatDuration = (seconds) => {
   if (!(Number(seconds) > 0)) return '0m';
   const minutes = Math.floor(Math.max(0, seconds) / 60);
@@ -116,6 +122,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
 
   const plannedByDay = useMemo(() => {
     const scheduled = {};
+    const todayKey = dateKey(new Date());
     projects.filter((project) => !project.archived).forEach((project) => {
       (project.subjects || []).forEach((subject) => {
         const goals = subject.goals || {};
@@ -137,6 +144,12 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
           if (kind === 'project' && project.id !== id) return;
           if (kind === 'subject' && subject.id !== id) return;
         }
+        const projectStartKey = valueDateKey(project.startDate || project.start_date || project.createdAt || project.created_at);
+        const subjectStartKey = valueDateKey(subject.startDate || subject.start_date || subject.createdAt || subject.created_at);
+        const startKey = [projectStartKey, subjectStartKey].filter(Boolean).sort().at(-1) || todayKey;
+        const projectEndKey = valueDateKey(project.endDate || project.end_date || project.deadline);
+        const subjectEndKey = valueDateKey(subject.endDate || subject.end_date || subject.deadline);
+        const endKey = [projectEndKey, subjectEndKey].filter(Boolean).sort()[0] || null;
         studyDays.forEach((weekday) => {
           (scheduled[weekday] ||= []).push({
             id: `${project.id}:${subject.id}`,
@@ -144,6 +157,8 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
             subject: subject.name,
             color: subject.color || project.color || '#7c83d0',
             targetSeconds: targetHours * 3600,
+            startKey,
+            endKey,
           });
         });
       });
@@ -278,7 +293,9 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
             const key = dateKey(day);
             const seconds = totalsByDay[key] || 0;
             const inViewMonth = calendarView === 'week' || isInViewMonth(day);
-            const planned = inViewMonth ? (plannedByDay[day.getDay()] || []) : [];
+            const planned = inViewMonth ? (plannedByDay[day.getDay()] || []).filter((item) => (
+              key >= item.startKey && (!item.endKey || key <= item.endKey)
+            )) : [];
             const intensity = !inViewMonth || seconds === 0 ? 0
               : seconds < 3600 ? 1
                 : seconds < 7200 ? 2

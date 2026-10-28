@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS projects (
   color text CHECK (color IS NULL OR color ~ '^#[0-9A-Fa-f]{6}$'),
   sort_order integer NOT NULL DEFAULT 0,
   archived_at timestamptz,
+  start_date date,
+  deadline date,
+  favorite boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (id, user_id)
@@ -103,6 +106,9 @@ CREATE TABLE IF NOT EXISTS subprojects (
   color text CHECK (color IS NULL OR color ~ '^#[0-9A-Fa-f]{6}$'),
   sort_order integer NOT NULL DEFAULT 0,
   archived_at timestamptz,
+  start_date date,
+  deadline date,
+  estimate_seconds bigint CHECK (estimate_seconds IS NULL OR estimate_seconds >= 0),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (id, project_id),
@@ -174,6 +180,28 @@ CREATE TABLE IF NOT EXISTS goals (
 CREATE INDEX IF NOT EXISTS goals_user_cadence_dates_idx
   ON goals (user_id, cadence, starts_on, ends_on);
 
+CREATE TABLE IF NOT EXISTS subproject_goals (
+  subproject_id uuid NOT NULL REFERENCES subprojects(id) ON DELETE CASCADE,
+  cadence text NOT NULL CHECK (cadence IN ('daily', 'weekly', 'monthly')),
+  target_hours numeric(10, 2) NOT NULL DEFAULT 0 CHECK (target_hours >= 0),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (subproject_id, cadence)
+);
+CREATE TABLE IF NOT EXISTS subproject_study_days (
+  subproject_id uuid NOT NULL REFERENCES subprojects(id) ON DELETE CASCADE,
+  weekday smallint NOT NULL CHECK (weekday BETWEEN 0 AND 6),
+  PRIMARY KEY (subproject_id, weekday)
+);
+CREATE TABLE IF NOT EXISTS milestones (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  subproject_id uuid NOT NULL REFERENCES subprojects(id) ON DELETE CASCADE,
+  title text NOT NULL CHECK (length(trim(title)) > 0),
+  completed boolean NOT NULL DEFAULT false,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- ------------------------------------------------------------------------------
 -- 4. SOCIAL, CHALLENGES & COLLABORATION
 -- ------------------------------------------------------------------------------
@@ -237,6 +265,52 @@ CREATE INDEX IF NOT EXISTS user_invite_codes_code_idx ON user_invite_codes (code
 CREATE TABLE IF NOT EXISTS user_workspace_state (
   user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   data jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(data) = 'object'),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  preferences jsonb NOT NULL DEFAULT '{}'::jsonb,
+  theme text,
+  theme_mode text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS dashboard_preferences (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  layout jsonb NOT NULL DEFAULT '{}'::jsonb,
+  date_range text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS compare_preferences (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  selected_profile_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
+  profile_colors jsonb NOT NULL DEFAULT '{}'::jsonb,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS user_reminders (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  configuration jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS reminder_deliveries (
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reminder_key text NOT NULL,
+  delivered_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, reminder_key)
+);
+CREATE TABLE IF NOT EXISTS session_activity (
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  activity_key text NOT NULL,
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  occurred_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, activity_key)
+);
+CREATE TABLE IF NOT EXISTS user_streaks (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  current_streak integer NOT NULL DEFAULT 0 CHECK (current_streak >= 0),
+  longest_streak integer NOT NULL DEFAULT 0 CHECK (longest_streak >= 0),
+  calculated_through date,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 

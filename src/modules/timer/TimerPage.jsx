@@ -720,6 +720,9 @@ export const TimerPage = ({ user }) => {
                   event.preventDefault();
                   setSearchOpen(true);
                   setActiveSearchIndex((current) => current < 0 ? searchMatches.length - 1 : (current - 1 + searchMatches.length) % searchMatches.length);
+                } else if (event.key === 'Enter' && pendingSelection && !comboSearch.trim()) {
+                  event.preventDefault();
+                  startTimer(pendingSelection.projectId, pendingSelection.subjectId || '');
                 } else if (event.key === 'Enter' && searchMatches.length) {
                   event.preventDefault();
                   chooseSearchResult(searchMatches[activeSearchIndex >= 0 ? activeSearchIndex : 0]);

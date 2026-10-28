@@ -12,14 +12,15 @@ projectsRouter.use(authenticate);
 projectsRouter.get('/', async (req, res) => {
   try {
     let result = await query(
-      `SELECT p.id, p.name, p.color, p.sort_order, p.archived_at,
+      `SELECT p.id, p.name, p.color, p.sort_order, p.archived_at, p.created_at,
               COALESCE(
                 json_agg(
                   json_build_object(
                     'id', s.id,
                     'name', s.name,
                     'color', s.color,
-                    'sort_order', s.sort_order
+                    'sort_order', s.sort_order,
+                    'created_at', s.created_at
                   ) ORDER BY s.sort_order, s.created_at
                 ) FILTER (WHERE s.id IS NOT NULL AND s.archived_at IS NULL),
                 '[]'::json
@@ -65,7 +66,7 @@ projectsRouter.post('/', async (req, res) => {
           const sRes = await query(
             `INSERT INTO subprojects (project_id, name, color, sort_order)
              VALUES ($1, $2, $3, $4)
-             RETURNING id, name, color, sort_order`,
+             RETURNING id, name, color, sort_order, created_at`,
             [newProject.id, subName.trim(), color, i]
           );
           newProject.subjects.push(sRes.rows[0]);

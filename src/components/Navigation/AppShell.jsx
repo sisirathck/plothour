@@ -305,21 +305,16 @@ export const AppShell = ({ user, onLogout }) => {
           >
             <StudyDuelLogo size="medium" />
           </button>
-          {!isSettings && (
-            <span className="demo-mode-pill">
-              {preferences.displayName || user?.display_name || 'Guest'}
-            </span>
-          )}
-          {!isSettings && (
-            <time className="nav-datetime" dateTime={localDateTime.iso}>
-              {localDateTime.label}
-            </time>
-          )}
+          <span className="demo-mode-pill">
+            {preferences.displayName || user?.display_name || 'Guest'}
+          </span>
+          <time className="nav-datetime" dateTime={localDateTime.iso}>
+            {localDateTime.label}
+          </time>
         </div>
 
         {/* 4 Primary Navigation Tabs: /timer, /dashboard, /compare, /manage */}
-        {!isSettings && (
-          <div className="dashboard-tabs" role="tablist" aria-label="Application sections">
+        <div className="dashboard-tabs" role="tablist" aria-label="Application sections">
             {visibleNavItems.map(({ route, label }) => {
               const isActive = currentRoute === route;
               return (
@@ -337,23 +332,10 @@ export const AppShell = ({ user, onLogout }) => {
                 </button>
               );
             })}
-          </div>
-        )}
+        </div>
 
         {/* Right Action Controls: Theme, Settings, Log out */}
         <div className="nav-right">
-          {currentRoute === 'dashboard' && streakKey && (
-            <div
-              className="nav-study-streak"
-              role="status"
-              title={`${studyStreak.currentStreak} day current streak · ${studyStreak.longestStreak} day longest streak`}
-              aria-label={`${studyStreak.currentStreak} day current study streak; longest streak ${studyStreak.longestStreak} days`}
-            >
-              <Flame size={16} aria-hidden="true" />
-              <strong>{studyStreak.currentStreak} <small>{studyStreak.currentStreak === 1 ? 'day' : 'days'}</small></strong>
-              <span>streak</span>
-            </div>
-          )}
           {activeTimer && currentRoute !== 'timer' && (
             <div
               className="running-session-indicator"
@@ -377,6 +359,18 @@ export const AppShell = ({ user, onLogout }) => {
               >
                 <Square size={12} fill="currentColor" strokeWidth={0} />
               </button>
+            </div>
+          )}
+          {currentRoute === 'dashboard' && streakKey && (
+            <div
+              className="nav-study-streak"
+              role="status"
+              title={`${studyStreak.currentStreak} day current streak · ${studyStreak.longestStreak} day longest streak`}
+              aria-label={`${studyStreak.currentStreak} day current study streak; longest streak ${studyStreak.longestStreak} days`}
+            >
+              <Flame size={16} aria-hidden="true" />
+              <strong>{studyStreak.currentStreak} <small>{studyStreak.currentStreak === 1 ? 'day' : 'days'}</small></strong>
+              <span>streak</span>
             </div>
           )}
 
@@ -412,7 +406,7 @@ export const AppShell = ({ user, onLogout }) => {
           {currentRoute === 'compare' && <ComparePage user={user} onNavigate={navigateTo} />}
           {currentRoute === 'manage' && <ManagePage user={user} />}
           {currentRoute === 'settings' && (
-            <SettingsPage user={user} onBack={() => navigateTo('timer')} />
+            <SettingsPage user={user} />
           )}
           {currentRoute === 'calendar' && <CalendarPage user={user} />}
           {currentRoute === 'admin' && <AdminPage user={user} />}

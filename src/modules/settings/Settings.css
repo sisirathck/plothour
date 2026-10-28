@@ -75,34 +75,9 @@
   border-radius: 999px;
 }
 
-/* Back button */
-.settings-back-btn {
-  display: flex;
-  width: max-content;
-  margin: 0 0 0 auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--sd-settings-card-border);
-  background: var(--sd-settings-card-bg);
-  color: var(--sd-settings-text-secondary);
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all var(--sd-transition-fast);
-}
-
-.settings-back-btn:hover {
-  color: var(--sd-settings-accent);
-  border-color: var(--sd-settings-accent);
-  transform: translateX(-2px);
-}
-
 /* Header & Tab Architecture */
 .demo-settings-heading {
-  margin: 20px 0 24px;
+  margin: 0 0 24px;
 }
 
 .settings-header-top-row {
@@ -175,7 +150,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 6px;
+  margin: 0;
   color: var(--sd-settings-text);
   font-size: 28px;
   font-weight: 800;
@@ -187,7 +162,7 @@
 }
 
 .demo-settings-heading p {
-  margin: 0;
+  margin: 6px 0 0;
   color: var(--sd-settings-text-muted);
   font-size: 14px;
 }
