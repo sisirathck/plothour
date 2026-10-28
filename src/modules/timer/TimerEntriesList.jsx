@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Pencil, Save, Trash2, X, Calendar, CalendarRange, Undo2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Save, Trash2, X, Calendar, CalendarRange, Undo2 } from 'lucide-react';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
 const localDateKey = (value) => {
@@ -49,6 +49,53 @@ const durationLabel = (seconds) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+};
+
+const EditSelect = ({ value, options, onChange, label }) => {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = options.find((option) => option.value === value) || options[0];
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => { if (!rootRef.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+  return <div className="entry-edit-select" ref={rootRef}>
+    <button type="button" className="entry-edit-select-trigger" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+      <span>{selected?.label || 'Select'}</span><ChevronDown size={14} aria-hidden="true" />
+    </button>
+    {open && <div className="entry-edit-select-menu" role="listbox" aria-label={label}>
+      {options.map((option) => <button key={option.value || 'none'} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : ''} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
+    </div>}
+  </div>;
+};
+
+const SessionDatePicker = ({ value, onChange }) => {
+  const selected = new Date(`${value}T12:00:00`);
+  const [open, setOpen] = useState(false);
+  const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
+  const rootRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => { if (!rootRef.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const gridStart = new Date(first);
+  gridStart.setDate(1 - first.getDay());
+  const days = Array.from({ length: 42 }, (_, index) => { const day = new Date(gridStart); day.setDate(gridStart.getDate() + index); return day; });
+  return <div className="entry-date-picker" ref={rootRef}>
+    <button type="button" className="entry-date-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => { setMonth(new Date(selected.getFullYear(), selected.getMonth(), 1)); setOpen((current) => !current); }}>
+      <span>{formatDisplayDate(selected, { day: '2-digit', month: 'short', year: 'numeric' })}</span><Calendar size={14} aria-hidden="true" />
+    </button>
+    {open && <div className="entry-date-popover" role="dialog" aria-label="Choose session date">
+      <div className="entry-date-head"><button type="button" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button><strong>{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong><button type="button" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button></div>
+      <div className="entry-date-weekdays">{'SMTWTFS'.split('').map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+      <div className="entry-date-grid">{days.map((day) => { const key = localDateKey(day); return <button type="button" key={key} className={`${day.getMonth() !== month.getMonth() ? 'is-outside ' : ''}${key === value ? 'is-selected' : ''}`} onClick={() => { onChange(key); setOpen(false); }}>{day.getDate()}</button>; })}</div>
+    </div>}
+  </div>;
 };
 
 export const TimerEntriesList = ({ entries, setEntries, projects, user, selectedDate = null, hideRangeControls = false, hideProjectColors = false, onOpenCalendar }) => {
@@ -302,57 +349,48 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                       <div className="entry-edit-grid">
                         <div className="edit-field">
                           <label>Project</label>
-                          <select
-                            className="edit-select"
+                          <EditSelect
                             value={draft.projectId}
-                            onChange={(e) => {
-                              const nextProject = projects.find((item) => item.id === e.target.value);
+                            label="Project"
+                            options={projects.map((project) => ({ value: project.id, label: project.name }))}
+                            onChange={(value) => {
+                              const nextProject = projects.find((item) => item.id === value);
                               setDraft({
                                 ...draft,
-                                projectId: e.target.value,
+                                projectId: value,
                                 projectName: nextProject?.name || '',
                                 subjectId: '',
                                 subjectName: '',
                                 color: nextProject?.color || draft.color,
                               });
                             }}
-                          >
-                            {projects.map((project) => (
-                              <option key={project.id} value={project.id}>{project.name}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
 
                         <div className="edit-field">
                           <label>Subject</label>
-                          <select
-                            className="edit-select"
+                          <EditSelect
                             value={draft.subjectId || ''}
-                            onChange={(e) => {
+                            label="Subject"
+                            options={[{ value: '', label: 'No subject' }, ...(projects.find((item) => item.id === draft.projectId)?.subjects || []).map((subject) => ({ value: subject.id, label: subject.name }))]}
+                            onChange={(value) => {
                               const project = projects.find((item) => item.id === draft.projectId);
-                              const subject = project?.subjects?.find((item) => item.id === e.target.value);
+                              const subject = project?.subjects?.find((item) => item.id === value);
                               setDraft({
                                 ...draft,
-                                subjectId: e.target.value,
+                                subjectId: value,
                                 subjectName: subject?.name || '',
                                 color: subject?.color || project?.color || draft.color,
                               });
                             }}
-                          >
-                            <option value="">No subject</option>
-                            {projects.find((item) => item.id === draft.projectId)?.subjects?.map((subject) => (
-                              <option key={subject.id} value={subject.id}>{subject.name}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
 
                         <div className="edit-field">
                           <label>Date</label>
-                          <input
-                            type="date"
-                            className="edit-input"
+                          <SessionDatePicker
                             value={draft.startDate}
-                            onChange={(e) => setDraft({ ...draft, startDate: e.target.value, endDate: e.target.value })}
+                            onChange={(value) => setDraft({ ...draft, startDate: value, endDate: value })}
                           />
                         </div>
 

@@ -14,6 +14,7 @@ import { connectionsRouter } from './routes/connections.js';
 import { adminRouter } from './routes/admin.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { pool, query } from './db.js';
+import { backfillWorkspaceProjections } from './workspaceProjection.js';
 
 dotenv.config();
 
@@ -213,6 +214,11 @@ app.listen(PORT, async () => {
     const adminRolesSchemaPath = path.resolve(__dirname, '../database/010_admin_roles.sql');
     if (fs.existsSync(adminRolesSchemaPath)) {
       await migrationClient.query(fs.readFileSync(adminRolesSchemaPath, 'utf8'));
+    }
+    const relationalUserDataSchemaPath = path.resolve(__dirname, '../database/011_relational_user_data.sql');
+    if (fs.existsSync(relationalUserDataSchemaPath)) {
+      await migrationClient.query(fs.readFileSync(relationalUserDataSchemaPath, 'utf8'));
+      await backfillWorkspaceProjections(migrationClient);
     }
     databaseReady = true;
   } catch (err) {

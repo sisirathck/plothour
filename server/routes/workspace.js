@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { pool, query } from '../db.js';
 import { authenticate } from '../middleware.js';
+import { syncWorkspaceProjection } from '../workspaceProjection.js';
 
 export const workspaceRouter = Router();
 workspaceRouter.use(authenticate);
@@ -48,23 +49,35 @@ workspaceRouter.put('/import', async (req, res) => {
     return res.json({ initialized: false, imported: false, items: {} });
   }
 
+  const client = await pool.connect();
   try {
-    const inserted = await query(
+    await client.query('BEGIN');
+    const inserted = await client.query(
       `INSERT INTO user_workspace_state (user_id, data)
        VALUES ($1, $2::jsonb)
        ON CONFLICT (user_id) DO NOTHING
        RETURNING data`,
       [req.userId, JSON.stringify(items)]
     );
-    const data = inserted.rows[0]?.data ?? (await query(
+    const data = inserted.rows[0]?.data ?? (await client.query(
       `SELECT data FROM user_workspace_state WHERE user_id = $1`,
       [req.userId]
     )).rows[0]?.data ?? {};
+    await client.query('COMMIT');
+    try {
+      await client.query('BEGIN');
+      await syncWorkspaceProjection(client, req.userId, data);
+      await client.query('COMMIT');
+    } catch (projectionError) {
+      await client.query('ROLLBACK');
+      console.error('[Workspace projection import warning]:', projectionError);
+    }
     return res.json({ initialized: true, imported: inserted.rows.length > 0, items: data });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('[Workspace Import Error]:', err);
     return res.status(500).json({ error: 'Failed to import workspace data' });
-  }
+  } finally { client.release(); }
 });
 
 workspaceRouter.put('/item', async (req, res) => {
@@ -74,8 +87,10 @@ workspaceRouter.put('/item', async (req, res) => {
     return res.status(400).json({ error: 'Invalid workspace item' });
   }
 
+  const client = await pool.connect();
   try {
-    await query(
+    await client.query('BEGIN');
+    await client.query(
       `INSERT INTO user_workspace_state (user_id, data)
        VALUES ($1, jsonb_build_object($2::text, $3::text))
        ON CONFLICT (user_id) DO UPDATE
@@ -83,11 +98,21 @@ workspaceRouter.put('/item', async (req, res) => {
            updated_at = now()`,
       [req.userId, key, value]
     );
+    await client.query('COMMIT');
+    try {
+      await client.query('BEGIN');
+      await syncWorkspaceProjection(client, req.userId, { [key]: value }, key);
+      await client.query('COMMIT');
+    } catch (projectionError) {
+      await client.query('ROLLBACK');
+      console.error('[Workspace projection item warning]:', projectionError);
+    }
     return res.json({ success: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('[Workspace Item PUT Error]:', err);
     return res.status(500).json({ error: 'Failed to save workspace data' });
-  }
+  } finally { client.release(); }
 });
 
 workspaceRouter.delete('/item', async (req, res) => {
