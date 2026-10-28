@@ -148,7 +148,10 @@ const SnapshotPanel = ({ snapshotMetrics }) => {
         {insightText && (
           <div className={`db-snapshot-insight-chip db-snapshot-insight-chip--${insightKind}`}>
             <span className={`db-snapshot-insight-dot db-snapshot-insight-dot--${insightKind}`} />
-            <span>{insightText}</span>
+            <span className="db-snapshot-insight-copy">
+              <strong>{insightKind === 'warn' ? 'Pace alert' : insightKind === 'good' ? 'On track' : 'Weekly pace'}</strong>
+              <span>{insightText}</span>
+            </span>
           </div>
         )}
       </div>

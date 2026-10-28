@@ -815,38 +815,40 @@ export const TimerPage = ({ user }) => {
           {/* Shared tab panel keeps quick launches and today's agenda aligned. */}
           <section className="timer-top-combos-section timer-insights-panel" aria-label="Study shortcuts and today's plan">
             <div className="timer-insights-tabbar" role="tablist" aria-label="Timer panel">
-              <button
-                id="timer-tab-combos"
-                type="button"
-                role="tab"
-                aria-selected={activeStudyPanelTab === 'combos'}
-                aria-controls="timer-panel-content"
-                className={`timer-insights-tab${activeStudyPanelTab === 'combos' ? ' is-active' : ''}`}
-                onClick={() => setStudyPanelTab('combos')}
-              >
-                <span>{text('timer', 'frequentTitle', 'TOP FREQUENT COMBOS')}</span>
-                <small>{topCombos.length}</small>
-              </button>
-              {hasStudyGoals && (
+              <div className={`timer-insights-tabs${activeStudyPanelTab === 'plan' ? ' is-plan' : ''}${hasStudyGoals ? '' : ' is-single'}`}>
                 <button
-                  id="timer-tab-plan"
+                  id="timer-tab-combos"
                   type="button"
                   role="tab"
-                  aria-selected={activeStudyPanelTab === 'plan'}
+                  aria-selected={activeStudyPanelTab === 'combos'}
                   aria-controls="timer-panel-content"
-                  className={`timer-insights-tab${activeStudyPanelTab === 'plan' ? ' is-active' : ''}`}
-                  onClick={() => setStudyPanelTab('plan')}
+                  className={`timer-insights-tab${activeStudyPanelTab === 'combos' ? ' is-active' : ''}`}
+                  onClick={() => setStudyPanelTab('combos')}
                 >
-                  <span>TODAY’S STUDY PLAN</span>
-                  <small>{todayStudyPlan.length}</small>
+                  <span>{text('timer', 'frequentTitle', 'TOP FREQUENT COMBOS')}</span>
+                  <small>{topCombos.length}</small>
                 </button>
-              )}
+                {hasStudyGoals && (
+                  <button
+                    id="timer-tab-plan"
+                    type="button"
+                    role="tab"
+                    aria-selected={activeStudyPanelTab === 'plan'}
+                    aria-controls="timer-panel-content"
+                    className={`timer-insights-tab${activeStudyPanelTab === 'plan' ? ' is-active' : ''}`}
+                    onClick={() => setStudyPanelTab('plan')}
+                  >
+                    <span>TODAY’S STUDY PLAN</span>
+                    <small>{todayStudyPlan.length}</small>
+                  </button>
+                )}
+              </div>
               {activeStudyPanelTab === 'combos' && <span className="timer-insights-tab-hint">1–5 select · Enter start</span>}
             </div>
 
             <div
               id="timer-panel-content"
-              className="timer-insights-pane"
+              className={`timer-insights-pane is-${activeStudyPanelTab}`}
               role="tabpanel"
               aria-labelledby={activeStudyPanelTab === 'combos' ? 'timer-tab-combos' : 'timer-tab-plan'}
               tabIndex={0}

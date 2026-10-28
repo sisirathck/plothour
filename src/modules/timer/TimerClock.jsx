@@ -88,7 +88,7 @@ export const AnalogueClockFace = ({ now }) => {
     ctx.scale(dpr, dpr);
 
     const isDark = theme === 'dark';
-    const darkAccent = getComputedStyle(document.documentElement).getPropertyValue('--sd-accent-progress').trim() || '#70c7b0';
+    const darkAccent = '#62b08f';
     const accentColor = isDark ? darkAccent : '#8086d4';
     const cx = S / 2;
     const cy = S / 2;
@@ -250,7 +250,7 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
     ctx.scale(dpr, dpr);
 
     const isDark = theme === 'dark';
-    const darkAccent = getComputedStyle(document.documentElement).getPropertyValue('--sd-accent-progress').trim() || '#70c7b0';
+    const darkAccent = '#62b08f';
     const accentColor = isDark ? darkAccent : '#8086d4';
     const cx = S / 2;
     const cy = S / 2;

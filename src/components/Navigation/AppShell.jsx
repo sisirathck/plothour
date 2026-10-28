@@ -350,8 +350,8 @@ export const AppShell = ({ user, onLogout }) => {
               aria-label={`${studyStreak.currentStreak} day current study streak; longest streak ${studyStreak.longestStreak} days`}
             >
               <Flame size={16} aria-hidden="true" />
-              <strong>{studyStreak.currentStreak}</strong>
-              <span>day streak</span>
+              <strong>{studyStreak.currentStreak} <small>{studyStreak.currentStreak === 1 ? 'day' : 'days'}</small></strong>
+              <span>streak</span>
             </div>
           )}
           {activeTimer && currentRoute !== 'timer' && (
