@@ -72,6 +72,13 @@ const studyWeekdays = [
 const WEEKS_PER_MONTH = 365.25 / 7 / 12;
 const MAX_MONTHLY_GOAL_HOURS = Math.floor(168 * WEEKS_PER_MONTH * 100) / 100;
 const roundGoalHours = (value) => Math.round((Number(value) || 0) * 100) / 100;
+const localDateKey = (value = new Date()) => {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+const DEFAULT_START_DATE = localDateKey();
 
 const deriveStudyGoals = (basis, rawValue, studyDays) => {
   const dayCount = studyDays?.length || studyWeekdays.length;
@@ -235,7 +242,7 @@ const ColorPicker = ({ value, label, onChange }) => {
   );
 };
 
-const PlanDeadlinePicker = ({ value, onChange, label }) => {
+const PlanDeadlinePicker = ({ value, onChange, label, dateKind = 'deadline' }) => {
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const selected = value ? new Date(`${value}T12:00:00`) : new Date();
@@ -282,7 +289,7 @@ const PlanDeadlinePicker = ({ value, onChange, label }) => {
         <span>{selectedDate && Number.isFinite(selectedDate.getTime()) ? formatDisplayDate(selectedDate, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Choose a date'}</span>
         <ChevronDown size={14} />
       </button>
-      {open && <div className="manage-deadline-calendar" role="dialog" aria-label={`Choose deadline for ${label}`}>
+      {open && <div className="manage-deadline-calendar" role="dialog" aria-label={`Choose ${dateKind} for ${label}`}>
         <div className="manage-deadline-calendar-head">
           <button type="button" aria-label="Previous month" onClick={() => setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={16} /></button>
           <strong>{visibleMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong>
@@ -312,6 +319,7 @@ const PlanDeadlinePicker = ({ value, onChange, label }) => {
 const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
   const [milestoneTitle, setMilestoneTitle] = useState('');
   const milestones = Array.isArray(value?.milestones) ? value.milestones : [];
+  const fallbackStartDate = localDateKey(value?.createdAt || value?.created_at) || DEFAULT_START_DATE;
   const addMilestone = (event) => {
     event.preventDefault();
     const title = milestoneTitle.trim();
@@ -335,6 +343,7 @@ const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
   return (
     <div className="manage-plan-editor" aria-label={`${label} plan`}>
       <label><span>Estimated effort</span><div className="manage-plan-number"><input type="number" min="0" step="0.25" value={value?.estimateHours ?? ''} placeholder="Optional" onChange={(event) => onChange({ estimateHours: event.target.value === '' ? '' : Math.max(0, Number(event.target.value) || 0) })} /><span>hours</span></div><small className="manage-plan-field-help">Leave blank if you have a deadline but don’t know the hours yet.</small></label>
+      <label className="manage-deadline-field"><span>Start date</span><PlanDeadlinePicker value={value?.startDate || fallbackStartDate} onChange={(startDate) => onChange({ startDate })} label={label} dateKind="start date" /><small className="manage-plan-field-help">Defaults to the date this subproject was added.</small></label>
       <label className="manage-deadline-field"><span>Target date / deadline</span><PlanDeadlinePicker value={value?.deadline || ''} onChange={(deadline) => onChange({ deadline })} label={label} /></label>
       {showStudyGoals && <section className="manage-plan-study-goals" aria-label={`${label} recurring study goals`}>
         <div className="manage-plan-study-goals-heading"><strong>Recurring study goals</strong><span>Edit any period; the other two recalculate using planned days. A month is about 4.35 weeks.</span></div>
@@ -500,7 +509,7 @@ export const ManagePage = ({ user }) => {
     const name = newProject.trim();
     if (!name) return;
     setProjects((items) => [...items, {
-      id: crypto.randomUUID(), name, color: getRandomProjectColor(items.map((project) => project.color)), subjects: [], archived: false,
+      id: crypto.randomUUID(), name, color: getRandomProjectColor(items.map((project) => project.color)), subjects: [], archived: false, createdAt: Date.now(),
     }]);
     setNewProject('');
   };
@@ -517,6 +526,7 @@ export const ManagePage = ({ user }) => {
         color: getRandomProjectColor([project.color, ...(project.subjects || []).map((subject) => subject.color)]),
         goals: { daily: 0, weekly: 0, monthly: 0 },
         studyDays: [],
+        createdAt: Date.now(),
       }],
     } : project));
     setNewSubject((items) => ({ ...items, [projectId]: '' }));
