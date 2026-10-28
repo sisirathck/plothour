@@ -89,7 +89,7 @@
    -------------------------------------------------------------------------- */
 [data-theme='dark'] {
   color-scheme: dark;
-  /* Neutral obsidian surfaces with mint-teal as the sole brand accent. */
+  /* Neutral charcoal surfaces shared across every app section. */
   --sd-coral: #70c7b0;
   --sd-coral-hover: #84d8c0;
   --sd-coral-active: #54a991;
@@ -103,38 +103,38 @@
   --sd-orange-active: var(--sd-coral-active);
   --sd-orange-glow: var(--sd-coral-glow);
   --sd-orange-subtle: rgba(112, 199, 176, 0.11);
-  --sd-bg-base: #0b0d12;
-  --sd-popover-bg: #1b202a;
-  --sd-card-bg: #181d27;
-  --sd-card-border: rgba(205, 214, 232, 0.09);
+  --sd-bg-base: #121212;
+  --sd-popover-bg: #1c1c1c;
+  --sd-card-bg: #1b1b1b;
+  --sd-card-border: rgba(255, 255, 255, 0.09);
   --sd-card-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.055);
-  --sd-bg-surface: #11151d;
-  --sd-bg-subtle: #171c25;
-  --sd-bg-elevated: #202633;
-  --sd-track-bg: #222833;
-  --sd-border-glass: rgba(205, 214, 232, 0.085);
-  --sd-border-soft: rgba(205, 214, 232, 0.07);
-  --sd-border-strong: rgba(205, 214, 232, 0.14);
+  --sd-bg-surface: #171717;
+  --sd-bg-subtle: #202020;
+  --sd-bg-elevated: #262626;
+  --sd-track-bg: #242424;
+  --sd-border-glass: rgba(255, 255, 255, 0.085);
+  --sd-border-soft: rgba(255, 255, 255, 0.07);
+  --sd-border-strong: rgba(255, 255, 255, 0.14);
   --sd-shadow-sm: 0 8px 24px -14px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.045);
   --sd-shadow-card: var(--sd-card-shadow);
   --sd-text-primary: #f2f4f7;
   --sd-text-secondary: #b8bfcc;
   --sd-text-muted: #929baa;
-  --sd-input-bg: #141923;
-  --sd-input-border: rgba(205, 214, 232, 0.1);
+  --sd-input-bg: #1a1a1a;
+  --sd-input-border: rgba(255, 255, 255, 0.1);
   --sd-input-border-focus: #70c7b0;
   --sd-input-ring: rgba(112, 199, 176, 0.22);
   --sd-banner-bg: rgba(112, 199, 176, 0.1);
   --sd-banner-border: rgba(112, 199, 176, 0.25);
   --sd-banner-text: #dff5ef;
-  --sd-glass-btn-bg: rgba(24, 29, 39, 0.88);
-  --sd-glass-btn-border: rgba(205, 214, 232, 0.085);
+  --sd-glass-btn-bg: rgba(27, 27, 27, 0.92);
+  --sd-glass-btn-border: rgba(255, 255, 255, 0.085);
   --sd-glass-btn-hover-bg: rgba(112, 199, 176, 0.13);
   --sd-glass-btn-hover-border: rgba(112, 199, 176, 0.32);
   --sd-backdrop-scrim: linear-gradient(90deg,
-      rgba(11, 13, 18, 0.84) 0%,
-      rgba(11, 13, 18, 0.38) 45%,
-      rgba(11, 13, 18, 0) 100%);
+      rgba(18, 18, 18, 0.84) 0%,
+      rgba(18, 18, 18, 0.38) 45%,
+      rgba(18, 18, 18, 0) 100%);
 }
 
 /* --------------------------------------------------------------------------
