@@ -33,7 +33,7 @@
 .calendar-day-number { font-size: 12px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .calendar-day-cell.adjacent { min-height: 64px; border-color: transparent; background: transparent; color: #c4c8e0; opacity: .8; box-shadow: none; }
 .calendar-day-cell.adjacent:hover { background: rgba(124, 131, 208, .04); opacity: 1; }
-.calendar-today-mark { position: absolute; top: 7px; right: 7px; padding: 3px 5px; border: 1px solid rgba(124, 131, 208, .3); border-radius: 5px; background: rgba(124, 131, 208, .15); color: #4b529e; font-size: 8px; font-weight: 700; letter-spacing: .035em; line-height: 1; text-transform: uppercase; }
+.calendar-today-mark { position: absolute; top: 7px; right: 7px; padding: 3px 5px; border: 1px solid #e64f48; border-radius: 5px; background: #ef5b53; color: #fff; font-size: 8px; font-weight: 750; letter-spacing: .035em; line-height: 1; text-transform: uppercase; box-shadow: 0 2px 5px rgba(217, 67, 60, .18); }
 .calendar-day-total { max-width: 100%; overflow: hidden; color: inherit; font-size: 12px; font-weight: 550; letter-spacing: -.015em; line-height: 1; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-day-mark { width: 6px; height: 6px; position: absolute; top: 9px; right: 9px; border-radius: 50%; background: #5e66be; box-shadow: 0 0 0 2px rgba(94, 102, 190, .14), 0 0 7px rgba(94, 102, 190, .32); }
 .calendar-day-cell.heat-0, .calendar-heat-legend .heat-0 { color: #8e94b2; background: #fff; border-color: #eff1f8; }
