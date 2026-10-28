@@ -311,7 +311,6 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
           })}
           </div>
         </div>
-        <div className="calendar-heat-legend"><span>Less</span><i className="heat-0" /><i className="heat-1" /><i className="heat-2" /><i className="heat-3" /><i className="heat-4" /><span>More study</span></div>
       </section>
 
       <section className="calendar-entries-section" aria-label="Selected day sessions">
