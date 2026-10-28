@@ -262,10 +262,10 @@
 :root[data-theme='dark'] .calendar-day-cell { border-color:#303030; color:#d4d4d8; }
 :root[data-theme='dark'] .calendar-day-cell.heat-0 { background:#1b1b1b; color:#a1a1aa; }
 :root[data-theme='dark'] .calendar-day-cell.unstudied:not(.adjacent) { background:#1d1d1d; border-color:#303030; }
-:root[data-theme='dark'] .calendar-day-cell.heat-1 { background:#202322; color:#d4d4d8; border-color:#343837; }
-:root[data-theme='dark'] .calendar-day-cell.heat-2 { background:#252b29; color:#e4e4e7; border-color:#3b4542; }
-:root[data-theme='dark'] .calendar-day-cell.heat-3 { background:#2a3532; color:#f4f4f5; border-color:#46534f; }
-:root[data-theme='dark'] .calendar-day-cell.heat-4 { background:#30423d; color:#fafafa; border-color:#56645f; }
+:root[data-theme='dark'] .calendar-day-cell.heat-1 { background:#1f2925; color:#d4d4d8; border-color:#314139; }
+:root[data-theme='dark'] .calendar-day-cell.heat-2 { background:#26372f; color:#e4e4e7; border-color:#3b5147; }
+:root[data-theme='dark'] .calendar-day-cell.heat-3 { background:#2e493d; color:#f4f4f5; border-color:#486558; }
+:root[data-theme='dark'] .calendar-day-cell.heat-4 { background:#396050; color:#fafafa; border-color:#5a7a6c; }
 :root[data-theme='dark'] .calendar-day-cell.heat-1 .calendar-day-number,
 :root[data-theme='dark'] .calendar-day-cell.heat-2 .calendar-day-number,
 :root[data-theme='dark'] .calendar-day-cell.heat-3 .calendar-day-number,
@@ -277,7 +277,7 @@
 :root[data-theme='dark'] .calendar-day-cell.selected { border-color:#a1a1aa; box-shadow:0 0 0 1px rgba(244,244,245,.2),0 4px 12px rgba(0,0,0,.28); }
 :root[data-theme='dark'] .calendar-today-mark { border-color:#ef6a62; background:#ef5b53; color:#fff; }
 :root[data-theme='dark'] .calendar-day-mark { background:#a1a1aa; box-shadow:none; }
-:root[data-theme='dark'] .calendar-grid-tray .calendar-day-cell.heat-4.selected { background:#394a45; }
+:root[data-theme='dark'] .calendar-grid-tray .calendar-day-cell.heat-4.selected { background:#426b5a; }
 :root[data-theme='dark'] .calendar-entries-section { border-top-color:#292929; background:#151515; }
 :root[data-theme='dark'] .calendar-selected-total { border-color:rgba(112,199,176,.24); background:rgba(112,199,176,.12); color:#d7f5ed; }
 :root[data-theme='dark'] .calendar-entries-section .demo-entry-item { border-color:rgba(205,214,232,.09); background:#191f29; }
