@@ -360,18 +360,20 @@ const PlanEditor = ({ value, label, onChange, showStudyGoals = false }) => {
 
   return (
     <div className="manage-plan-editor" aria-label={`${label} plan`}>
-      <label><span>Estimated effort</span><div className="manage-plan-number"><input type="number" min="0" step="0.25" value={value?.estimateHours ?? ''} placeholder="Optional" onChange={(event) => onChange({ estimateHours: event.target.value === '' ? '' : Math.max(0, Number(event.target.value) || 0) })} /><span>hours</span></div><small className="manage-plan-field-help">Leave blank if you have a deadline but don’t know the hours yet.</small></label>
-      <label className="manage-deadline-field"><span>Start date</span><PlanDeadlinePicker value={value?.startDate || fallbackStartDate} onChange={(startDate) => onChange({ startDate })} label={label} dateKind="start date" /><small className="manage-plan-field-help">Defaults to the date this subproject was added.</small></label>
+      <label><span>Estimated effort</span><div className="manage-plan-number"><input type="number" min="0" step="0.25" value={value?.estimateHours ?? ''} placeholder="Optional" onChange={(event) => onChange({ estimateHours: event.target.value === '' ? '' : Math.max(0, Number(event.target.value) || 0) })} /><span>hours</span></div></label>
+      <label className="manage-deadline-field"><span>Start date</span><PlanDeadlinePicker value={value?.startDate || fallbackStartDate} onChange={(startDate) => onChange({ startDate })} label={label} dateKind="start date" /></label>
       <label className="manage-deadline-field"><span>Target date / deadline</span><PlanDeadlinePicker value={value?.deadline || ''} onChange={(deadline) => onChange({ deadline })} label={label} /></label>
       {showStudyGoals && <section className="manage-plan-study-goals" aria-label={`${label} recurring study goals`}>
-        <div className="manage-plan-study-goals-heading"><strong>Recurring study goals</strong><span>Edit any period; the other two recalculate using planned days. A month is about 4.35 weeks.</span></div>
-        <div className="manage-plan-study-goal-fields">
-          {['daily', 'weekly', 'monthly'].map((period) => (
-            <label className="manage-plan-study-goal" key={period}>
-              <span>{period[0].toUpperCase() + period.slice(1)}</span>
-              <GoalDurationInput value={value?.goals?.[period] ?? 0} maxHours={period === 'daily' ? 24 : period === 'weekly' ? 168 : MAX_MONTHLY_GOAL_HOURS} label={`${period} study goal for ${label}`} onChange={(hours) => setGoal(period, hours)} />
-            </label>
-          ))}
+        <div className="manage-plan-study-goals-main">
+          <div className="manage-plan-study-goals-heading"><strong>Recurring goals</strong></div>
+          <div className="manage-plan-study-goal-fields">
+            {['daily', 'weekly', 'monthly'].map((period) => (
+              <label className="manage-plan-study-goal" key={period}>
+                <span>{period.toUpperCase()} GOAL</span>
+                <GoalDurationInput value={value?.goals?.[period] ?? 0} maxHours={period === 'daily' ? 24 : period === 'weekly' ? 168 : MAX_MONTHLY_GOAL_HOURS} label={`${period} study goal for ${label}`} onChange={(hours) => setGoal(period, hours)} />
+              </label>
+            ))}
+          </div>
         </div>
         <div className="manage-plan-study-days">
           <StudyDaysEditor label={label} value={value?.studyDays} onChange={setStudyDays} />
