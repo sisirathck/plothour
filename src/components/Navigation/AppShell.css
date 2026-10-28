@@ -267,6 +267,9 @@
 
 .app-route-transition {
   min-width: 0;
+}
+
+.app-route-transition.is-active {
   animation: app-route-arrive 340ms cubic-bezier(.2, .75, .25, 1) both;
 }
 
@@ -276,7 +279,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-route-transition { animation: none; }
+  .app-route-transition.is-active { animation: none; }
 }
 
 /* ── Responsive ──────────────────────────────── */

@@ -78,6 +78,7 @@ const calculateStudyStreak = (entries) => {
 
 export const AppShell = ({ user, onLogout }) => {
   const [currentRoute, setCurrentRoute] = useState(getRouteFromPath);
+  const [visitedRoutes, setVisitedRoutes] = useState(() => new Set([getRouteFromPath()]));
   const visibleNavItems = user?.is_admin
     ? [...navItems, { route: 'admin', path: '/admin', label: 'Admin' }]
     : navItems;
@@ -227,7 +228,9 @@ export const AppShell = ({ user, onLogout }) => {
     }
 
     const handlePopState = () => {
-      setCurrentRoute(getRouteFromPath());
+      const nextRoute = getRouteFromPath();
+      setVisitedRoutes((current) => current.has(nextRoute) ? current : new Set([...current, nextRoute]));
+      setCurrentRoute(nextRoute);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -277,6 +280,7 @@ export const AppShell = ({ user, onLogout }) => {
 
   const navigateTo = (route) => {
     window.history.pushState({}, '', `/${route}`);
+    setVisitedRoutes((current) => current.has(route) ? current : new Set([...current, route]));
     setCurrentRoute(route);
   };
 
@@ -400,17 +404,13 @@ export const AppShell = ({ user, onLogout }) => {
 
       {/* Modular Section Content */}
       <main className="app-shell-content" id={`panel-${currentRoute}`} role="region">
-        <div key={currentRoute} className="app-route-transition">
-          {currentRoute === 'timer' && <TimerPage user={user} onNavigate={navigateTo} />}
-          {currentRoute === 'dashboard' && <DashboardPage user={user} onNavigate={navigateTo} />}
-          {currentRoute === 'compare' && <ComparePage user={user} onNavigate={navigateTo} />}
-          {currentRoute === 'manage' && <ManagePage user={user} />}
-          {currentRoute === 'settings' && (
-            <SettingsPage user={user} />
-          )}
-          {currentRoute === 'calendar' && <CalendarPage user={user} />}
-          {currentRoute === 'admin' && <AdminPage user={user} />}
-        </div>
+        {visitedRoutes.has('timer') && <div className={`app-route-transition${currentRoute === 'timer' ? ' is-active' : ''}`} hidden={currentRoute !== 'timer'}><TimerPage user={user} onNavigate={navigateTo} /></div>}
+        {visitedRoutes.has('dashboard') && <div className={`app-route-transition${currentRoute === 'dashboard' ? ' is-active' : ''}`} hidden={currentRoute !== 'dashboard'}><DashboardPage user={user} onNavigate={navigateTo} /></div>}
+        {visitedRoutes.has('compare') && <div className={`app-route-transition${currentRoute === 'compare' ? ' is-active' : ''}`} hidden={currentRoute !== 'compare'}><ComparePage user={user} onNavigate={navigateTo} /></div>}
+        {visitedRoutes.has('manage') && <div className={`app-route-transition${currentRoute === 'manage' ? ' is-active' : ''}`} hidden={currentRoute !== 'manage'}><ManagePage user={user} /></div>}
+        {visitedRoutes.has('settings') && <div className={`app-route-transition${currentRoute === 'settings' ? ' is-active' : ''}`} hidden={currentRoute !== 'settings'}><SettingsPage user={user} /></div>}
+        {visitedRoutes.has('calendar') && <div className={`app-route-transition${currentRoute === 'calendar' ? ' is-active' : ''}`} hidden={currentRoute !== 'calendar'}><CalendarPage user={user} /></div>}
+        {visitedRoutes.has('admin') && <div className={`app-route-transition${currentRoute === 'admin' ? ' is-active' : ''}`} hidden={currentRoute !== 'admin'}><AdminPage user={user} /></div>}
       </main>
     </div>
   );
