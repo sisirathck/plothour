@@ -1707,7 +1707,21 @@
 }
 
 .entries-history-filter .entry-edit-select-trigger { height: 32px; font-size: 11.5px; }
-.entries-history-filter .entry-edit-select-menu { max-height: 230px; overflow-y: auto; }
+.entries-history-filter .entry-edit-select-menu {
+  max-height: 230px;
+  overflow-y: auto;
+  background: #fff;
+  border-color: rgba(78, 84, 145, .2);
+  box-shadow: 0 14px 34px rgba(38, 42, 92, .18), 0 2px 8px rgba(38, 42, 92, .1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-theme='dark'] .timer-root .entries-history-filter .entry-edit-select-menu {
+  background: #202020;
+  border-color: #3a3a3a;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .56), 0 3px 10px rgba(0, 0, 0, .34);
+}
 
 .entry-edit-select-trigger,
 .entry-date-trigger {
