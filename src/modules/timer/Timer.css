@@ -1252,6 +1252,10 @@
   flex-wrap: wrap;
 }
 
+.demo-entry-card.can-toggle .entries-panel-heading { cursor: pointer; }
+.demo-entry-card.can-toggle .entries-panel-heading:hover { background: color-mix(in srgb, var(--sd-bg-subtle) 58%, transparent); }
+.entries-panel-heading:has(.entries-calendar-btn:hover) { background: transparent; }
+
 .entries-heading-label {
   display: inline-flex;
   align-items: center;
@@ -1662,6 +1666,30 @@
 .entry-edit-select,
 .entry-date-picker { position: relative; }
 
+.entries-history-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.entries-history-filter {
+  width: clamp(145px, 15vw, 210px);
+}
+
+.entries-history-filter > span {
+  display: block;
+  margin: 0 0 4px 2px;
+  color: var(--sd-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.entries-history-filter .entry-edit-select-trigger { height: 32px; font-size: 11.5px; }
+.entries-history-filter .entry-edit-select-menu { max-height: 230px; overflow-y: auto; }
+
 .entry-edit-select-trigger,
 .entry-date-trigger {
   width: 100%; height: 36px; padding: 0 10px 0 12px; display: flex; align-items: center; justify-content: space-between;
@@ -2038,6 +2066,8 @@
   .entries-panel-heading { gap: 8px; padding: 13px 14px; }
   .entries-heading-actions { gap: 4px; }
   .entries-controls { gap: 9px; padding: 10px 12px; }
+  .entries-history-filters { width: 100%; margin-left: 0; }
+  .entries-history-filter { width: auto; flex: 1 1 0; min-width: 0; }
   .entries-range-pills { max-width: 100%; overflow-x: auto; }
   .range-pill-btn { min-height: 34px; padding-inline: 9px; white-space: nowrap; }
   .entries-calendar-btn { min-height: 36px; }
@@ -2059,6 +2089,8 @@
 @media (max-width: 420px) {
   .timer-cmd-column { padding-inline: 11px; }
   .timer-selects-row { grid-template-columns: minmax(0, 1fr); }
+  .entries-history-filters { flex-direction: column; align-items: stretch; }
+  .entries-history-filter { width: 100%; }
   .timer-primary-selectors { padding: 12px; }
   .timer-insights-tab { padding-inline: 5px; font-size: 7.5px; }
   .entries-heading-actions { margin-left: auto; justify-content: flex-end; }

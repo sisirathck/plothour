@@ -102,6 +102,8 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   const [expanded, setExpanded] = useState(hideRangeControls);
   const isExpanded = expanded;
   const [range, setRange] = useState('today');
+  const [filterProjectId, setFilterProjectId] = useState('');
+  const [filterSubjectId, setFilterSubjectId] = useState('');
   const [pageSize, setPageSize] = useState('20');
   const [page, setPage] = useState(1);
   const [undoAction, setUndoAction] = useState(null);
@@ -165,8 +167,29 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
     : getDateRange(range, filterDate), [range, filterDate, selectedDate]);
   const filteredEntries = useMemo(() => entries.filter((entry) => {
     const day = localDateKey(entry.startedAt);
-    return day >= dateRange.start && day <= dateRange.end;
-  }), [entries, dateRange]);
+    if (day < dateRange.start || day > dateRange.end) return false;
+    if (filterProjectId && entry.projectId !== filterProjectId) return false;
+    if (filterSubjectId && entry.subjectId !== filterSubjectId) return false;
+    return true;
+  }), [entries, dateRange, filterProjectId, filterSubjectId]);
+
+  const historyProjectOptions = useMemo(() => [
+    { value: '', label: 'All projects' },
+    ...projects.map((project) => ({ value: project.id, label: project.name })),
+  ], [projects]);
+  const historySubjectOptions = useMemo(() => {
+    const source = filterProjectId
+      ? projects.filter((project) => project.id === filterProjectId)
+      : projects;
+    return [
+      { value: '', label: filterProjectId ? 'All subprojects' : 'All subprojects' },
+      ...source.flatMap((project) => (project.subjects || []).map((subject) => ({
+        value: subject.id,
+        label: filterProjectId ? subject.name : `${project.name} · ${subject.name}`,
+        projectId: project.id,
+      }))),
+    ];
+  }, [projects, filterProjectId]);
 
   const effectivePageSize = Math.max(1, Math.min(100, hideRangeControls ? filteredEntries.length : Number(pageSize)));
   const pageCount = Math.max(1, Math.ceil(filteredEntries.length / effectivePageSize));
@@ -234,9 +257,13 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   const pendingDeleteEntry = entries.find((entry) => entry.id === pendingDeleteId);
 
   return (
-    <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}`} aria-label="Completed time entries">
+    <section className={`demo-entry-card${isExpanded ? ' is-expanded' : ''}${!hideRangeControls ? ' can-toggle' : ''}`} aria-label="Completed time entries">
       {/* Panel Header */}
-      <div className="entries-panel-heading">
+      <div
+        className="entries-panel-heading"
+        onClick={() => { if (!hideRangeControls) setExpanded((current) => !current); }}
+        title={isExpanded ? 'Collapse session history' : 'Expand session history'}
+      >
         <div className="entries-heading-label">
           <span className="entries-heading-title">SESSION HISTORY</span>
           <span className="date-badge">{filteredEntries.length} {filteredEntries.length === 1 ? 'session' : 'sessions'}</span>
@@ -244,14 +271,14 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
         {!hideRangeControls && (
           <div className="entries-heading-actions">
             {onOpenCalendar && (
-              <button type="button" className="entries-calendar-btn" onClick={onOpenCalendar} aria-label="Open calendar view">
+              <button type="button" className="entries-calendar-btn" onClick={(event) => { event.stopPropagation(); onOpenCalendar(); }} aria-label="Open calendar view">
                 <CalendarRange size={15} strokeWidth={1.7} /> Calendar view
               </button>
             )}
             <button
               type="button"
               className="entries-expand-toggle"
-              onClick={() => setExpanded((current) => !current)}
+              onClick={(event) => { event.stopPropagation(); setExpanded((current) => !current); }}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? 'Collapse session history' : 'Expand session history'}
             >
@@ -296,6 +323,31 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
+            </div>}
+            {!hideRangeControls && <div className="entries-history-filters" aria-label="Filter session history">
+              <div className="entries-history-filter">
+                <span>Project</span>
+                <EditSelect
+                  value={filterProjectId}
+                  options={historyProjectOptions}
+                  label="Filter by project"
+                  onChange={(value) => { setFilterProjectId(value); setFilterSubjectId(''); setPage(1); }}
+                />
+              </div>
+              <div className="entries-history-filter">
+                <span>Subproject</span>
+                <EditSelect
+                  value={filterSubjectId}
+                  options={historySubjectOptions}
+                  label="Filter by subproject"
+                  onChange={(value) => {
+                    setFilterSubjectId(value);
+                    const option = historySubjectOptions.find((item) => item.value === value);
+                    if (option?.projectId) setFilterProjectId(option.projectId);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>}
           </div>
       {undoAction && <div className="entries-undo-toast" role="status"><span>{undoAction.message}</span><button type="button" onClick={() => { undoAction.undo(); setUndoAction(null); window.clearTimeout(undoTimerRef.current); }}><Undo2 size={14} /> Undo</button></div>}
