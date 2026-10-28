@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft,
   Check,
   Copy,
   ChevronDown,
@@ -401,7 +400,7 @@ export const playZenBell = () => {
   }
 };
 
-export const SettingsPage = ({ onBack, user }) => {
+export const SettingsPage = ({ user }) => {
   const { config } = useSiteCustomization();
   const preferencesKey = getUserKey(user, 'preferences');
   const entriesKey = getUserKey(user, 'time_entries');
@@ -896,12 +895,6 @@ export const SettingsPage = ({ onBack, user }) => {
 
   return (
     <div className="demo-settings-page" aria-label="PlotHour Settings" style={getSiteFontStyle(config, 'settings')}>
-      {/* Back navigation */}
-      <button type="button" className="settings-back-btn" onClick={onBack}>
-        <ArrowLeft size={15} />
-        <span>Back</span>
-      </button>
-
       {/* Settings Header & 2-Tab Navigation */}
       <header className="demo-settings-heading">
         <div className="settings-header-top-row">
