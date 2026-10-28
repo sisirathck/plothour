@@ -287,15 +287,17 @@
 }
 
 .timer-insights-panel { min-width: 0; }
-.timer-insights-tabbar { min-height: 42px; display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-bottom: 1px solid var(--sd-border-glass); }
-.timer-insights-tab { min-height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--sd-text-muted); font: inherit; font-size: 9px; font-weight: 750; letter-spacing: .075em; white-space: nowrap; cursor: pointer; transition: color 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
-.timer-insights-tab:hover { color: var(--sd-text-primary); background: var(--sd-bg-subtle); }
-.timer-insights-tab small { min-width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; border-radius: 999px; background: var(--sd-bg-subtle); color: var(--sd-text-muted); font-size: 9px; font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.timer-insights-tab.is-active { border-color: rgba(121, 129, 204, .42); background: linear-gradient(180deg, rgba(121, 129, 204, .16), rgba(121, 129, 204, .09)); color: #343b78; box-shadow: inset 0 0 0 1px rgba(121, 129, 204, .08), 0 2px 7px rgba(65, 72, 140, .12); }
-.timer-insights-tab.is-active small { background: rgba(121, 129, 204, .18); color: #555fae; }
-.timer-insights-tab:focus-visible { outline: 2px solid #7981cc; outline-offset: 1px; }
-[data-theme='dark'] .timer-insights-tab.is-active { color: #e7f5ef; background: linear-gradient(180deg, rgba(98, 176, 143, .2), rgba(98, 176, 143, .1)); border-color: rgba(98, 176, 143, .36); }
-[data-theme='dark'] .timer-insights-tab.is-active small { color: #e7f5ef; background: rgba(98, 176, 143, .18); }
+.timer-insights-tabbar { min-height: 42px; display: flex; align-items: stretch; gap: 18px; padding: 0 4px; border-bottom: 1px solid var(--sd-border-glass); }
+.timer-insights-tab { min-height: 42px; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 1px 1px 0; border: 0; border-radius: 0; background: transparent; color: var(--sd-text-muted); font: inherit; font-size: 9px; font-weight: 700; letter-spacing: .075em; white-space: nowrap; cursor: pointer; transition: color 160ms ease; }
+.timer-insights-tab::after { content: ''; height: 2px; position: absolute; right: 0; bottom: -1px; left: 0; border-radius: 2px 2px 0 0; background: transparent; transform: scaleX(.45); transition: background 160ms ease, transform 180ms ease; }
+.timer-insights-tab:hover { color: var(--sd-text-primary); background: transparent; }
+.timer-insights-tab small { min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; border: 1px solid var(--sd-border-glass); border-radius: 6px; background: var(--sd-bg-subtle); color: var(--sd-text-muted); font-size: 9px; font-weight: 750; letter-spacing: 0; font-variant-numeric: tabular-nums; transition: color 160ms ease, border-color 160ms ease, background 160ms ease; }
+.timer-insights-tab.is-active { background: transparent; color: var(--sd-text-primary); box-shadow: none; }
+.timer-insights-tab.is-active::after { background: var(--sd-coral); transform: scaleX(1); }
+.timer-insights-tab.is-active small { border-color: color-mix(in srgb, var(--sd-coral) 34%, var(--sd-border-glass)); background: var(--sd-bg-subtle); color: var(--sd-text-primary); }
+.timer-insights-tab:focus-visible { outline: 2px solid var(--sd-coral); outline-offset: -4px; }
+[data-theme='dark'] .timer-insights-tab.is-active { color: #f4f4f5; }
+[data-theme='dark'] .timer-insights-tab.is-active small { border-color: #3a3a3a; background: #242424; color: #d4d4d8; }
 .timer-insights-tab-hint { margin-left: auto; padding-right: 7px; color: var(--sd-text-muted); font-size: 10px; white-space: nowrap; }
 .timer-insights-pane { height: 390px; min-height: 0; overflow: auto; padding: 9px 3px 4px; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--sd-coral) 34%, transparent) transparent; }
 .timer-insights-pane { overscroll-behavior: contain; }
