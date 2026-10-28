@@ -1388,6 +1388,25 @@
   gap: 6px;
 }
 
+.entries-custom-range {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.entries-custom-range > div { width: 142px; }
+.entries-custom-range > div > span {
+  display: block;
+  margin: 0 0 4px 2px;
+  color: var(--sd-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.entries-custom-range .entry-date-trigger { height: 32px; font-size: 11px; }
+.entries-custom-range > i { padding-bottom: 8px; color: var(--sd-text-muted); font-style: normal; }
+
 .size-picker-lbl {
   font-size: 11px;
   color: var(--sd-text-muted);
@@ -2069,6 +2088,7 @@
   .entries-history-filters { width: 100%; margin-left: 0; }
   .entries-history-filter { width: auto; flex: 1 1 0; min-width: 0; }
   .entries-range-pills { max-width: 100%; overflow-x: auto; }
+  .entries-custom-range { width: 100%; }
   .range-pill-btn { min-height: 34px; padding-inline: 9px; white-space: nowrap; }
   .entries-calendar-btn { min-height: 36px; }
   .demo-entry-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 6px 8px; padding: 12px 13px; }
@@ -2091,6 +2111,9 @@
   .timer-selects-row { grid-template-columns: minmax(0, 1fr); }
   .entries-history-filters { flex-direction: column; align-items: stretch; }
   .entries-history-filter { width: 100%; }
+  .entries-custom-range { display: grid; grid-template-columns: 1fr 1fr; }
+  .entries-custom-range > div { width: auto; }
+  .entries-custom-range > i { display: none; }
   .timer-primary-selectors { padding: 12px; }
   .timer-insights-tab { padding-inline: 5px; font-size: 7.5px; }
   .entries-heading-actions { margin-left: auto; justify-content: flex-end; }

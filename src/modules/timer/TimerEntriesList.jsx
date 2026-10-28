@@ -40,6 +40,10 @@ const getDateRange = (range, now = new Date()) => {
     start.setDate(1);
   } else if (range === 'quarter') {
     start.setMonth(Math.floor(start.getMonth() / 3) * 3, 1);
+  } else if (range === 'year') {
+    start.setMonth(0, 1);
+  } else if (range === 'all') {
+    return { start: '0001-01-01', end: '9999-12-31' };
   }
   return { start: localDateKey(start), end: localDateKey(end) };
 };
@@ -102,6 +106,12 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
   const [expanded, setExpanded] = useState(hideRangeControls);
   const isExpanded = expanded;
   const [range, setRange] = useState('today');
+  const [customStart, setCustomStart] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 29);
+    return localDateKey(date);
+  });
+  const [customEnd, setCustomEnd] = useState(() => localDateKey(new Date()));
   const [filterProjectId, setFilterProjectId] = useState('');
   const [filterSubjectId, setFilterSubjectId] = useState('');
   const [pageSize, setPageSize] = useState('20');
@@ -164,7 +174,9 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
 
   const dateRange = useMemo(() => selectedDate
     ? { start: localDateKey(selectedDate), end: localDateKey(selectedDate) }
-    : getDateRange(range, filterDate), [range, filterDate, selectedDate]);
+    : range === 'custom'
+      ? { start: customStart, end: customEnd }
+      : getDateRange(range, filterDate), [range, filterDate, selectedDate, customStart, customEnd]);
   const filteredEntries = useMemo(() => entries.filter((entry) => {
     const day = localDateKey(entry.startedAt);
     if (day < dateRange.start || day > dateRange.end) return false;
@@ -297,6 +309,9 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                 { id: 'week', label: 'Week' },
                 { id: 'month', label: 'Month' },
                 { id: 'quarter', label: 'Quarter' },
+                { id: 'year', label: 'Year' },
+                { id: 'all', label: 'All time' },
+                { id: 'custom', label: 'Custom' },
               ].map((r) => (
                 <button
                   key={r.id}
@@ -307,6 +322,11 @@ export const TimerEntriesList = ({ entries, setEntries, projects, user, selected
                   {r.label}
                 </button>
               ))}
+            </div>}
+            {!hideRangeControls && range === 'custom' && <div className="entries-custom-range" aria-label="Custom date range">
+              <div><span>From</span><SessionDatePicker value={customStart} onChange={(value) => { setCustomStart(value); if (value > customEnd) setCustomEnd(value); setPage(1); }} /></div>
+              <i aria-hidden="true">—</i>
+              <div><span>To</span><SessionDatePicker value={customEnd} onChange={(value) => { setCustomEnd(value); if (value < customStart) setCustomStart(value); setPage(1); }} /></div>
             </div>}
 
             {/* Page Size */}
