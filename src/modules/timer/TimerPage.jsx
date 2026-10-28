@@ -261,18 +261,6 @@ export const TimerPage = ({ user }) => {
   const sessionProject = projects.find((project) => project.id === sessionProjectId);
   const sessionSubjectId = activeTimer ? activeTimer.subjectId || '' : selSub;
   const sessionSubject = sessionProject?.subjects?.find((subject) => subject.id === sessionSubjectId);
-  const comboEntries = useMemo(() => entries.filter((entry) => {
-    const projectMatches = entry.projectId
-      ? entry.projectId === sessionProjectId
-      : entry.projectName === sessionProject?.name;
-    const subjectMatches = entry.subjectId
-      ? entry.subjectId === sessionSubjectId
-      : (entry.subjectName || '') === (sessionSubject?.name || '');
-    return projectMatches && subjectMatches;
-  }), [entries, sessionProjectId, sessionProject?.name, sessionSubjectId, sessionSubject?.name]);
-  const averageComboSeconds = comboEntries.length
-    ? Math.round(comboEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0) / comboEntries.length)
-    : 0;
 
   // Elapsed computation
   const elapsed = useMemo(() => {
@@ -281,32 +269,6 @@ export const TimerPage = ({ user }) => {
     return Math.max(0, Math.floor((now.getTime() - activeTimer.startedAt) / 1000));
   }, [activeTimer, now, isPaused, pausedElapsed]);
 
-  // Today summary
-  const todaySecs = useMemo(() => {
-    const today = new Date().toDateString();
-    return entries
-      .filter((e) => new Date(e.startedAt).toDateString() === today)
-      .reduce((s, e) => s + (e.durationSeconds || 0), 0);
-  }, [entries]);
-
-  const todaySessionsCount = useMemo(() => {
-    const today = new Date().toDateString();
-    return entries.filter((e) => new Date(e.startedAt).toDateString() === today).length;
-  }, [entries]);
-
-  const dailyGoalSecs = useMemo(() => {
-    const weekday = now.getDay();
-    const plannedHours = projects.reduce((total, project) => {
-      if (project.archived) return total;
-      return total + (project.subjects || []).reduce((subjectTotal, subject) => {
-        const schedule = getSubjectStudySchedule(subject);
-        return schedule.studyDays.includes(weekday) ? subjectTotal + schedule.targetHours : subjectTotal;
-      }, 0);
-    }, 0);
-    return Math.max(1, plannedHours || 4) * 3600;
-  }, [projects, now]);
-  const todayProgressSecs = todaySecs + (activeTimer ? elapsed : 0);
-  const goalPct = Math.min(100, Math.round((todayProgressSecs / dailyGoalSecs) * 100));
   const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch';
   const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[2];
   const sessionProgress = sessionGoal.seconds ? Math.min(100, Math.round((elapsed / sessionGoal.seconds) * 100)) : 0;
@@ -1130,28 +1092,6 @@ export const TimerPage = ({ user }) => {
               </section>
             )}
 
-            {/* Daily Summary Metrics Strip */}
-            <div className="horology-metrics-strip">
-              <div className="h-metric">
-                <span className="h-metric-val">{fmtDur(todayProgressSecs)}</span>
-                <span className="h-metric-lbl">TODAY</span>
-              </div>
-              <div className="h-metric-divider" />
-              <div className="h-metric">
-                <span className="h-metric-val">{todaySessionsCount + (activeTimer ? 1 : 0)}</span>
-                <span className="h-metric-lbl">SESSIONS</span>
-              </div>
-              <div className="h-metric-divider" />
-              <div className="h-metric">
-                <span className="h-metric-val">{goalPct}%</span>
-                <span className="h-metric-lbl">DAILY GOAL</span>
-              </div>
-              <div className="h-metric-divider" />
-              <div className="h-metric" title={`Average for ${sessionProject?.name || 'this project'}${sessionSubject?.name ? ` · ${sessionSubject.name}` : ''}`}>
-                <span className="h-metric-val">{averageComboSeconds ? fmtDur(averageComboSeconds) : '—'}</span>
-                <span className="h-metric-lbl">AVG SESSION</span>
-              </div>
-            </div>
           </div>
         </div>
       </section>
