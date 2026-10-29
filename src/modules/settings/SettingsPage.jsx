@@ -16,7 +16,6 @@ import {
   Settings2,
   Save,
   Search,
-  Sliders,
   Sparkles,
   Sun,
   User,
@@ -40,7 +39,7 @@ import {
 } from './SettingsSupport';
 import './Settings.css';
 
-export const SettingsPage = ({ user }) => {
+export const SettingsPage = ({ user, connectionsOnly = false }) => {
   const { config } = useSiteCustomization();
   const preferencesKey = getUserKey(user, 'preferences');
   const entriesKey = getUserKey(user, 'time_entries');
@@ -57,22 +56,8 @@ export const SettingsPage = ({ user }) => {
     return [...new Set([systemTimezone, ...supported])].sort((a, b) => a.localeCompare(b));
   }, [systemTimezone]);
 
-  // 2-Tab Architecture state ('preferences' | 'connections')
-  const [activeSettingsTab, setActiveSettingsTab] = useState(() => {
-    try {
-      const savedTab = localStorage.getItem('studyduel_settings_tab');
-      return savedTab === 'connections' ? 'connections' : 'preferences';
-    } catch {
-      return 'preferences';
-    }
-  });
+  const activeSettingsTab = connectionsOnly ? 'connections' : 'preferences';
   const [settingsSearch, setSettingsSearch] = useState('');
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('studyduel_settings_tab', activeSettingsTab);
-    } catch {}
-  }, [activeSettingsTab]);
 
   useEffect(() => {
     const panel = document.getElementById(`panel-${activeSettingsTab}`);
@@ -325,6 +310,7 @@ export const SettingsPage = ({ user }) => {
 
   // Tab 2: Connections State
   const [userInviteCode, setUserInviteCode] = useState(() => {
+    if (!connectionsOnly) return '';
     if (user?.id) return '';
     const stored = localStorage.getItem(inviteCodeKey);
     if (stored) return stored;
@@ -345,7 +331,7 @@ export const SettingsPage = ({ user }) => {
   const friendRemoveCancelRef = useRef(null);
 
   useEffect(() => {
-    if (!friendPendingRemoval) return undefined;
+    if (!connectionsOnly || !friendPendingRemoval) return undefined;
     const previousFocus = document.activeElement;
     friendRemoveCancelRef.current?.focus();
     const handleDialogKeyDown = (event) => {
@@ -370,9 +356,10 @@ export const SettingsPage = ({ user }) => {
       document.removeEventListener('keydown', handleDialogKeyDown);
       if (previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [friendPendingRemoval]);
+  }, [connectionsOnly, friendPendingRemoval]);
 
   const [friends, setFriends] = useState(() => {
+    if (!connectionsOnly) return [];
     const saved = readJson(friendsKey, []);
     const mockFriendIds = new Set(['friend-1', 'friend-2', 'friend-3']);
     const mockFriendCodes = new Set(['DUEL-4821', 'DUEL-9104', 'DUEL-3390']);
@@ -386,7 +373,7 @@ export const SettingsPage = ({ user }) => {
   });
 
   useEffect(() => {
-    if (!user?.id) return undefined;
+    if (!connectionsOnly || !user?.id) return undefined;
     let active = true;
     fetch('/api/connections', { credentials: 'same-origin' })
       .then(async (response) => {
@@ -409,7 +396,7 @@ export const SettingsPage = ({ user }) => {
         if (active) setFriendNotice({ type: 'error', message: error.message });
       });
     return () => { active = false; };
-  }, [user?.id]);
+  }, [connectionsOnly, user?.id]);
 
   const copyInviteCode = async () => {
     try {
@@ -534,55 +521,28 @@ export const SettingsPage = ({ user }) => {
   };
 
   return (
-    <div className="demo-settings-page" aria-label="PlotHour Settings" style={getSiteFontStyle(config, 'settings')}>
+    <div className={`demo-settings-page${connectionsOnly ? ' connection-settings-dialog-content' : ''}`} aria-label="PlotHour Settings" style={getSiteFontStyle(config, 'settings')}>
       {/* Settings Header & 2-Tab Navigation */}
-      <header className="demo-settings-heading">
+      {!connectionsOnly && <header className="demo-settings-heading">
         <div className="settings-header-top-row">
           <div>
             <h1>
               <Settings2 size={26} className="settings-header-icon" />
               <span>Settings</span>
             </h1>
-            <p>Customize your study workspace, session defaults, and duel connections.</p>
+            <p>Customize your study workspace, timer, and account preferences.</p>
           </div>
 
           <div className="settings-heading-actions">
-          {/* Clean 2-Tab Architecture at top */}
-          <div className="settings-tab-nav" role="tablist" aria-label="Settings sections">
-            <button
-              type="button"
-              role="tab"
-              id="tab-preferences"
-              aria-selected={activeSettingsTab === 'preferences'}
-              aria-controls="panel-preferences"
-              className={`settings-tab-btn ${activeSettingsTab === 'preferences' ? 'active' : ''}`}
-              onClick={() => setActiveSettingsTab('preferences')}
-            >
-              <Sliders size={15} />
-              <span>Preferences</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="tab-connections"
-              aria-selected={activeSettingsTab === 'connections'}
-              aria-controls="panel-connections"
-              className={`settings-tab-btn ${activeSettingsTab === 'connections' ? 'active' : ''}`}
-              onClick={() => setActiveSettingsTab('connections')}
-            >
-              <Users size={15} />
-              <span>Connections</span>
-            </button>
-          </div>
           <label className="settings-quick-search"><Search size={15} /><input type="search" value={settingsSearch} onChange={(event) => setSettingsSearch(event.target.value)} placeholder="Search settings" aria-label="Search settings" /></label>
           </div>
         </div>
-      </header>
+      </header>}
 
       {/* =========================================================================
           TAB 1: PREFERENCES
           ========================================================================= */}
-      {activeSettingsTab === 'preferences' && (
+      {!connectionsOnly && activeSettingsTab === 'preferences' && (
         <div id="panel-preferences" role="tabpanel" aria-labelledby="tab-preferences">
           <WorkspaceBackup user={user} />
           {/* CARD 1: Workspace, Profile & Theme Appearance Card */}
@@ -936,7 +896,7 @@ export const SettingsPage = ({ user }) => {
             </div>
             {importError && <p className="settings-import-feedback" role="status">{importError}</p>}
           </section>
-          {hasUnsavedChanges && <div className="settings-save-dock">
+          {!connectionsOnly && hasUnsavedChanges && <div className="settings-save-dock">
             <div className="settings-save-wrap">
               {saveStatus && saveStatus !== 'saving' && <span className="settings-save-error" role="alert">{saveStatus}</span>}
               <button type="button" className="settings-save-btn" onClick={saveSettings} disabled={saveStatus === 'saving'}>
@@ -951,8 +911,8 @@ export const SettingsPage = ({ user }) => {
       {/* =========================================================================
           TAB 2: CONNECTIONS
           ========================================================================= */}
-      {activeSettingsTab === 'connections' && (
-        <div id="panel-connections" role="tabpanel" aria-labelledby="tab-connections">
+      {connectionsOnly && (
+        <div id={connectionsOnly ? undefined : 'panel-connections'} role="tabpanel" aria-labelledby={connectionsOnly ? undefined : 'tab-connections'}>
           <ComparisonSharing user={user} />
           {/* CARD 1: Your PlotHour Invite Code Card */}
           <section className="settings-bento-card" aria-labelledby="card-invite-title">

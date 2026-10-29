@@ -412,7 +412,7 @@ export const AppShell = ({ user, onLogout }) => {
       <main className="app-shell-content" id={`panel-${currentRoute}`} role="region">
         {visitedRoutes.has('timer') && <div className={`app-route-transition${currentRoute === 'timer' ? ' is-active' : ''}`} hidden={currentRoute !== 'timer'}><TimerPage user={user} onNavigate={navigateTo} requestedTask={requestedTask} /></div>}
         {visitedRoutes.has('dashboard') && <div className={`app-route-transition${currentRoute === 'dashboard' ? ' is-active' : ''}`} hidden={currentRoute !== 'dashboard'}><DashboardPage user={user} onNavigate={navigateTo} /></div>}
-        {visitedRoutes.has('compare') && <div className={`app-route-transition${currentRoute === 'compare' ? ' is-active' : ''}`} hidden={currentRoute !== 'compare'}><ComparePage user={user} onNavigate={navigateTo} /></div>}
+        {visitedRoutes.has('compare') && <div className={`app-route-transition${currentRoute === 'compare' ? ' is-active' : ''}`} hidden={currentRoute !== 'compare'}><ComparePage user={user} /></div>}
         {visitedRoutes.has('manage') && <div className={`app-route-transition${currentRoute === 'manage' ? ' is-active' : ''}`} hidden={currentRoute !== 'manage'}><ManagePage user={user} /></div>}
         {visitedRoutes.has('settings') && <div className={`app-route-transition${currentRoute === 'settings' ? ' is-active' : ''}`} hidden={currentRoute !== 'settings'}><SettingsPage user={user} /></div>}
         {visitedRoutes.has('calendar') && <div className={`app-route-transition${currentRoute === 'calendar' ? ' is-active' : ''}`} hidden={currentRoute !== 'calendar'}><CalendarPage user={user} /></div>}

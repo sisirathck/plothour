@@ -167,44 +167,6 @@
   font-size: 14px;
 }
 
-/* 2-Tab Architecture at Top */
-.settings-tab-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 9999px;
-  background: var(--sd-settings-card-bg);
-  border: 1px solid var(--sd-settings-card-border);
-  box-shadow: var(--sd-settings-shadow);
-}
-
-.settings-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 20px;
-  border-radius: 9999px;
-  border: 0;
-  background: transparent;
-  color: var(--sd-settings-text-muted);
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.settings-tab-btn:hover {
-  color: var(--sd-settings-text);
-}
-
-.settings-tab-btn.active {
-  background: var(--sd-settings-accent);
-  color: #ffffff;
-  font-weight: 700;
-  box-shadow: 0 3px 12px var(--sd-settings-accent-subtle);
-}
-
 /* Bento Floating Cards (rounded-3xl) */
 .settings-bento-card {
   border-radius: 24px; /* rounded-3xl */

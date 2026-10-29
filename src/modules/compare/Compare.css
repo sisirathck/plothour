@@ -249,6 +249,15 @@
 .compare-change-up,.compare-change-down,.compare-delta { color:var(--compare-muted); }
 .compare-modal-backdrop { position:fixed; inset:0; z-index:1400; display:grid; place-items:center; overflow-y:auto; box-sizing:border-box; padding:20px; background:rgba(91,83,172,.22); backdrop-filter:blur(11px) saturate(1.2); }
 .compare-manage-panel { width:min(620px,100%); max-height:min(780px,calc(100dvh - 40px)); display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(255,255,255,.9); border-radius:26px; background:linear-gradient(145deg,#fff 0%,#fbfaff 48%,#f1f0ff 100%); color:var(--compare-text); box-shadow:0 32px 100px rgba(29,26,76,.26),0 0 0 1px rgba(255,255,255,.25); }
+.compare-connection-settings-backdrop { place-items:stretch; overflow:hidden; padding:0; }
+.compare-connection-settings-panel { width:100%; max-width:none; height:100dvh; max-height:100dvh; border:0; border-radius:0; }
+.compare-connection-settings-content { box-sizing:border-box; min-height:0; flex:1; overflow:auto; margin:0; padding:12px clamp(20px,3vw,48px) 16px; border:0; border-radius:0; }
+.compare-connection-settings-content .demo-settings-page { width:100%; max-width:none; box-sizing:border-box; max-height:none; min-height:0; overflow:visible; padding:0; }
+.compare-connection-settings-content #panel-connections { padding:0; }
+.compare-connection-settings-content .comparison-sharing-card { margin-top:0; }
+.compare-connection-settings-content .settings-bento-card { margin-bottom:14px; }
+.compare-connection-settings-content .settings-confirm-backdrop { z-index:1500; }
+:root[data-theme='dark'] .compare-connection-settings-panel { border-color:var(--sd-border-glass); background:linear-gradient(145deg,#1b1b1b 0%,#121212 100%); }
 :root[data-theme='dark'] .compare-modal-backdrop { background:rgba(4,8,18,.62); }
 :root[data-theme='dark'] .compare-manage-panel { border-color:var(--sd-border-glass); background:linear-gradient(145deg,#1b1b1b 0%,#121212 100%); }
 .compare-manage-panel-heading { display:flex; justify-content:space-between; gap:18px; padding:26px 28px 22px; border-bottom:1px solid var(--compare-line); }
