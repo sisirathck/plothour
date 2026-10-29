@@ -138,7 +138,7 @@ connectionsRouter.get('/comparison', async (req, res) => {
       const selected = new Set(sharing?.project_ids || []);
       const visibleEntries = (Array.isArray(storedEntries) ? storedEntries : []).filter(entry => own || selected.has(entry.projectId)).map(entry => own || sharing?.share_project_names ? entry : {...entry,projectName:'Shared project',subjectName:''});
       const visibleProjects = (Array.isArray(projects) ? projects : []).filter(project => own || selected.has(project.id));
-      return { ...summarizeProfile({id:profile.id,name:profile.display_name,entries:visibleEntries,projects:visibleProjects,timeZone:profile.timezone || 'UTC',start:from,end:to,previousStart:previousFrom,previousEnd:previousTo,range:rangeType,calendarDays,recentStart:recentFrom,recentEnd:recentTo}), weekStartsOn:profile.week_starts_on, sharingLimited:!own };
+      return { ...summarizeProfile({id:profile.id,name:profile.display_name,entries:visibleEntries,projects:visibleProjects,timeZone:profile.timezone || 'UTC',start:from,end:to,previousStart:previousFrom,previousEnd:previousTo,range:rangeType,calendarDays,recentStart:recentFrom,recentEnd:recentTo}), weekStartsOn:profile.week_starts_on, sharingLimited:!own, sharedProjectCount: own ? null : selected.size };
 
     });
     return res.json({ profiles: serializedProfiles });
