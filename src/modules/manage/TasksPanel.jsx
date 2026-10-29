@@ -131,9 +131,10 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart }) => {
   const duration = (seconds) => { const minutes = Math.ceil(Math.max(0, seconds) / 60); return minutes >= 60 ? `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}` : `${minutes}m`; };
   const dueLabel = (date) => deadlineLabel(date, today);
   const remaining = studyPlan.reduce((total, item) => total + item.remainingSeconds, 0);
+  const showTaskColumn = items.length > 0 || undoTasks.length > 0;
   return <section className="task-agenda"><header><div className="agenda-heading"><div><strong>Today & upcoming</strong><small>{today.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</small></div></div><a href="/manage" aria-label="Manage tasks">Manage tasks</a></header>
     {error && <small role="alert">{error}</small>}
-    <div className="task-agenda-list">
+    <div className={`task-agenda-list${showTaskColumn ? '' : ' is-study-only'}`}>
       <section className="agenda-study-section">
       <div className="agenda-section-label">TODAY’S STUDY PLAN<span>{remaining > 0 ? `${duration(remaining)} left` : 'Complete'}</span></div>
       <div className="agenda-column-items" tabIndex={0} role="region" aria-label="Today's study goals">
@@ -143,7 +144,7 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart }) => {
         <div className="agenda-study-copy"><strong>{item.subjectName}</strong><small>{item.projectName} · {duration(item.completedSeconds)} / {duration(item.targetSeconds)}</small><div className="agenda-progress"><i style={{ width: `${Math.min(100, item.progress)}%` }} /></div></div>
         <button type="button" onClick={() => onStart?.(item.projectId, item.subjectId)} aria-label={`Start ${item.subjectName}`}>{item.progress >= 100 ? 'Study' : 'Start'} <ArrowUpRight size={11} /></button>
       </div>)}
-      </div></section><section className="agenda-tasks-section"><div className="agenda-section-label">TASKS & DEADLINES<span>{items.filter(item => !item.completed).length} open</span></div>
+      </div></section>{showTaskColumn && <section className="agenda-tasks-section"><div className="agenda-section-label">TASKS & DEADLINES<span>{items.filter(item => !item.completed).length} open</span></div>
       <div className="agenda-column-items" tabIndex={0} role="region" aria-label="Tasks and deadlines">
       {!items.length && <p className="agenda-empty">No upcoming deadlines. You’re all caught up.</p>}{items.map(item => <div className={`task-line${item.completed ? ' is-completed' : item.date && item.date < key ? ' is-overdue' : ''}`} key={item.id}>
       {!item.deadline && <input type="checkbox" checked={false} aria-label={`Complete ${item.title}`} onChange={() => completeTask(item)} />}
@@ -154,6 +155,6 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart }) => {
       </div>}
     </div>)}</div>
       {undoTasks.length > 0 && <div className="agenda-undo-notices" aria-live="polite">{undoTasks.map(task => <div className="agenda-undo-notice" key={task.id}><span title={task.title}>Completed · {task.title}</span><button type="button" onClick={() => undoComplete(task)}>Undo</button><i className="agenda-undo-progress" aria-hidden="true" /></div>)}</div>}
-      </section></div>
+      </section>}</div>
   </section>;
 };
