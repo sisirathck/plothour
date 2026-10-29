@@ -56,3 +56,17 @@
 .agenda-deadline-bar i{height:100%;display:block;background:var(--sd-coral);opacity:.55;border-radius:inherit;transition:width 900ms linear}
 .is-overdue .agenda-deadline-bar{background:color-mix(in srgb,#c16d72 40%,transparent)}
 @media(max-width:600px){.task-agenda-list{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}.agenda-tasks-section{border-top:1px solid var(--sd-border-glass)}}
+
+/* Small agenda text needs a stronger contrast hierarchy on charcoal. */
+[data-theme='dark'] .task-agenda .agenda-tasks-section .agenda-section-label{color:#bdc6d2;font-size:9px}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .task-line strong{color:#eef1f5;font-size:12px;font-weight:600}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .task-line small{color:#b0bac8;font-size:10px}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .agenda-due{color:#d4dce7;background:#282d34;font-size:9px;font-weight:600}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .agenda-due.is-today{color:#a7ddc4;background:#233b32}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .is-overdue .agenda-due{color:#f0b2b7;background:#422a30}
+[data-theme='dark'] .task-agenda .agenda-tasks-section input[type='checkbox']{color-scheme:dark;accent-color:#85c8a7;outline:1px solid #7a8796;outline-offset:-1px;border-radius:3px}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .agenda-deadline-bar{background:#353e47}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .agenda-deadline-bar i{background:#85c8a7;opacity:1}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .is-overdue .agenda-deadline-bar{background:#b5757e}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .is-completed strong{color:#a1adbb;font-weight:500}
+[data-theme='dark'] .task-agenda .agenda-tasks-section .is-completed .agenda-due{color:#b0bac8;background:#252a30}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarDays, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X, FileText } from 'lucide-react';
+import { useTasks } from '../manage/TasksPanel';
 import { TimerEntriesList } from '../timer/TimerEntriesList';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
@@ -38,6 +39,9 @@ const WEEKS_PER_MONTH = 365.25 / 7 / 12;
 
 export const CalendarPage = ({ user, entries: providedEntries, setEntries: setProvidedEntries, projects: providedProjects, onClose }) => {
   const { config } = useSiteCustomization();
+  const { tasks, error: taskError } = useTasks(user);
+  const [taskDay, setTaskDay] = useState(null);
+  const taskDialog = useRef(null);
   const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : 'studyduel_demo_projects';
   const [localEntries, setLocalEntries] = useState(() => readLocalValue(entriesKey, []));
@@ -303,9 +307,11 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
             const todayKey = dateKey(new Date());
             const today = key === todayKey;
             const unstudied = inViewMonth && seconds === 0 && key <= todayKey;
+            const filteredTaskProject = projects.find(project => projectFilter === `project:${project.id}` || (project.subjects || []).some(subject => projectFilter === `subject:${subject.id}`));
+            const dayTasks = tasks.filter(task => (projectFilter === 'all' || task.project_name === filteredTaskProject?.name) && (valueDateKey(task.due_date) === key || valueDateKey(task.reminder_date) === key));
             return (
+              <div className="calendar-day-wrap" key={key}>
               <button
-                key={key}
                 type="button"
                 className={`calendar-day-cell heat-${intensity}${!inViewMonth ? ' adjacent' : ''}${planned.length ? ' has-plan' : ''}${calendarView === 'week' ? ' week-cell' : ''}${selectedKey === key ? ' selected' : ''}${today ? ' today' : ''}${unstudied ? ' unstudied' : ''}`}
                 onClick={() => {
@@ -324,12 +330,28 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
                 </span>}
                 {inViewMonth && seconds > 0 && <span className="calendar-day-total"><span>Studied</span>{formatDuration(seconds)}</span>}
               </button>
+              {(dayTasks.length > 0 || planned.length > 0) && <button
+                type="button"
+                className="calendar-day-task-trigger"
+                aria-label={`View tasks and study plan for ${formatDisplayDate(day, { month: 'long', day: 'numeric' })}`}
+                title={`${dayTasks.length} tasks · ${planned.length} study goals`}
+                onClick={() => { setTaskDay({ day, key, tasks: dayTasks, planned }); taskDialog.current.showModal(); }}
+              ><FileText size={13} strokeWidth={1.7} /></button>}
+              </div>
             );
           })}
           </div>
         </div>
       </section>
 
+      <dialog ref={taskDialog} className="calendar-task-dialog" onKeyDown={event => event.stopPropagation()} onClick={event => { if (event.target === event.currentTarget) taskDialog.current.close(); }}>
+        {taskDay && <><header><div><small>TASKS & STUDY PLAN</small><h2>{formatDisplayDate(taskDay.day, { weekday: 'long', month: 'short', day: 'numeric' })}</h2></div><button type="button" aria-label="Close task details" onClick={() => taskDialog.current.close()}><X size={18} /></button></header>
+          {taskError && <p role="alert">{taskError}</p>}
+          {taskDay.tasks.map(task => <article key={task.id} className={task.completed ? 'is-completed' : ''}><strong>{task.title}</strong><p>{task.project_name || 'Personal'} · {task.completed ? 'Completed' : 'Open'}</p><small>{valueDateKey(task.due_date) === taskDay.key ? 'Due on this day' : 'Reminder on this day'}{task.due_date ? ` · Deadline ${valueDateKey(task.due_date)}` : ''}</small></article>)}
+          {taskDay.planned.length > 0 && <h3>Planned study</h3>}
+          {taskDay.planned.map(item => <article key={item.id}><strong>{item.subject}</strong><p>{item.project} · {formatDuration(item.targetSeconds)} goal</p></article>)}
+        </>}
+      </dialog>
       <section className="calendar-entries-section" aria-label="Selected day sessions">
         <TimerEntriesList entries={filteredEntries} setEntries={setEntries} projects={projects} user={user} selectedDate={selectedDate} hideRangeControls />
       </section>
