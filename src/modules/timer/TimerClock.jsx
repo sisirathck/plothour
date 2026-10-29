@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 
 /* ── Minimalist Horology Dial Artwork (Halo & Precision Guides) ── */
@@ -479,13 +479,21 @@ export const CompactStopwatchFace = ({ elapsed, targetSeconds = 0 }) => {
 
 /* ── Nested study-target progress rings ── */
 export const SessionTargetRings = ({ rings = [] }) => {
+  const gradientId = useId();
   const visibleRings = rings.slice(0, 3);
   const radii = visibleRings.length === 1 ? [48] : visibleRings.length === 2 ? [50, 37] : [51, 39, 27];
 
   return (
     <div className={`session-target-rings ring-count-${visibleRings.length}`}>
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <circle className="session-target-rings-plate" cx="60" cy="60" r="56" />
+      <svg viewBox="0 0 120 120" shapeRendering="geometricPrecision" aria-hidden="true">
+        <defs>
+          {visibleRings.map((ring) => (
+            <linearGradient key={ring.id} id={`${gradientId}-${ring.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={`var(--ring-${ring.id})`} />
+              <stop offset="100%" stopColor={`var(--ring-${ring.id}-end)`} />
+            </linearGradient>
+          ))}
+        </defs>
         {visibleRings.map((ring, index) => {
           const radius = radii[index];
           const circumference = 2 * Math.PI * radius;
@@ -500,16 +508,12 @@ export const SessionTargetRings = ({ rings = [] }) => {
                 r={radius}
                 strokeDasharray={circumference}
                 strokeDashoffset={circumference * (1 - progress / 100)}
+                style={{ stroke: `url(#${gradientId}-${ring.id})`, opacity: progress > 0 ? 1 : 0 }}
               />
             </g>
           );
         })}
       </svg>
-      <div className="session-target-ring-key" aria-hidden="true">
-        {visibleRings.map((ring) => (
-          <span key={ring.id}><i className={`is-${ring.id}`} />{ring.shortLabel}<b>{Math.round(ring.progress)}%</b></span>
-        ))}
-      </div>
     </div>
   );
 };

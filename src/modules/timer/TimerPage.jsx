@@ -878,6 +878,17 @@ export const TimerPage = ({ user }) => {
                   <span aria-hidden="true" />
                   {isPaused ? 'PAUSED' : 'RUNNING'}
                 </div>
+                {sessionTargetRings.length > 0 && (
+                  <div className="session-target-ring-key" aria-label="Target completion">
+                    {sessionTargetRings.map((ring) => (
+                      <span key={ring.id} title={`${ring.id} target completion`}>
+                        <i className={`is-${ring.id}`} />
+                        {ring.id === 'total' ? 'Total' : ring.id === 'daily' ? 'Daily' : ring.id === 'weekly' ? 'Weekly' : 'Monthly'}
+                        <b>{Math.round(ring.progress)}%</b>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="timer-running-hero">
                   <div className="timer-running-identity">

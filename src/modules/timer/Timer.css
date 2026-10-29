@@ -665,6 +665,15 @@
 }
 
 .timer-running-session-card {
+  position: relative;
+  --ring-daily: #888ce0;
+  --ring-daily-end: #6266b7;
+  --ring-weekly: #a4a9cf;
+  --ring-weekly-end: #7b82b2;
+  --ring-monthly: #bbc4d8;
+  --ring-monthly-end: #929ebc;
+  --ring-total: var(--ring-daily);
+  --ring-total-end: var(--ring-daily-end);
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -688,6 +697,15 @@
   font-weight: 750;
   line-height: 1;
   letter-spacing: .12em;
+}
+
+[data-theme='dark'] .timer-running-session-card {
+  --ring-daily: #80bfa2;
+  --ring-daily-end: #4f9578;
+  --ring-weekly: #91ada5;
+  --ring-weekly-end: #668d82;
+  --ring-monthly: #a5b5b3;
+  --ring-monthly-end: #778f8b;
 }
 
 .timer-running-status > span {
@@ -842,18 +860,18 @@
   filter: drop-shadow(0 4px 7px color-mix(in srgb, var(--sd-shadow-color) 16%, transparent));
 }
 
-.session-target-ring circle {
+.timer-running-progress .session-target-ring circle {
   fill: none;
-  stroke-width: 5.5;
+  stroke-width: 6;
 }
 
 .session-target-ring-track {
-  stroke: color-mix(in srgb, var(--sd-track-bg) 88%, var(--sd-bg-surface));
+  stroke: color-mix(in srgb, var(--sd-text-muted) 12%, var(--sd-bg-surface));
 }
 
 .session-target-ring-value {
   stroke-linecap: round;
-  transition: stroke-dashoffset 420ms ease;
+  transition: stroke-dashoffset 900ms linear;
 }
 
 .session-target-ring-daily .session-target-ring-value { stroke: var(--sd-coral); }
@@ -863,14 +881,15 @@
 
 .session-target-ring-key {
   position: absolute;
-  inset: 0;
+  top: 18px;
+  right: 18px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 12px;
   color: var(--sd-text-muted);
-  font-size: 5.5px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -878,21 +897,25 @@
 
 .session-target-ring-key span {
   display: grid;
-  grid-template-columns: 4px 7px 18px;
+  grid-template-columns: 5px auto auto;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .session-target-ring-key i {
-  width: 3px;
-  height: 3px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--sd-coral);
+  background: var(--ring-daily);
 }
 
-.session-target-ring-key i.is-weekly { background: color-mix(in srgb, var(--sd-coral) 62%, var(--sd-text-primary)); }
-.session-target-ring-key i.is-monthly { background: color-mix(in srgb, var(--sd-coral) 42%, var(--sd-text-muted)); }
+.session-target-ring-key i.is-weekly { background: var(--ring-weekly); }
+.session-target-ring-key i.is-monthly { background: var(--ring-monthly); }
 .session-target-ring-key b { color: var(--sd-text-primary); font-weight: 750; text-align: right; }
+
+@media (max-width: 600px) {
+  .session-target-ring-key { gap: 7px; font-size: 8px; right: 12px; }
+}
 
 .session-target-rings-empty {
   width: 100%;
