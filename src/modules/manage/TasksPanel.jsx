@@ -101,8 +101,12 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart, onManageTa
   const undoTimers = useRef(new Map());
   useEffect(() => () => { undoTimers.current.forEach(timer => clearTimeout(timer)); }, []);
   useEffect(() => {
-    setCompletingIds(ids => ids.filter(id => !tasks.some(task => task.id === id && task.completed)));
-  }, [tasks]);
+    setCompletingIds(ids => ids.filter(id => {
+      const task = tasks.find(item => item.id === id);
+      if (!task || !task.completed) return false;
+      return !undoTasks.some(item => item.id === id);
+    }));
+  }, [tasks, undoTasks]);
   const completeTask = async (task) => {
     setCompletingIds(ids => [...ids, task.id]);
     const saved = await mutate(`/${task.id}`, 'PATCH', { completed: true });
@@ -135,7 +139,7 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart, onManageTa
   const duration = (seconds) => { const minutes = Math.ceil(Math.max(0, seconds) / 60); return minutes >= 60 ? `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}` : `${minutes}m`; };
   const dueLabel = (date) => deadlineLabel(date, today);
   const remaining = studyPlan.reduce((total, item) => total + item.remainingSeconds, 0);
-  const showTaskColumn = items.length > 0 || undoTasks.length > 0;
+  const showTaskColumn = items.length > 0 || undoTasks.length > 0 || completingIds.length > 0;
   return <section className="task-agenda"><header><div className="agenda-heading"><div><strong>Today & upcoming</strong><small>{today.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</small></div></div><a href="/manage?tab=tasks" aria-label="Manage tasks" onClick={(event) => { if (!onManageTasks) return; event.preventDefault(); onManageTasks(); }}>Manage tasks</a></header>
     {error && <small role="alert">{error}</small>}
     <div className={`task-agenda-list${showTaskColumn ? '' : ' is-study-only'}`}>
