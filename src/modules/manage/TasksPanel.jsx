@@ -150,7 +150,7 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart, onManageTa
   const dueLabel = (date) => deadlineLabel(date, today);
   const remaining = studyPlan.reduce((total, item) => total + item.remainingSeconds, 0);
   const showTaskColumn = items.length > 0 || undoTasks.length > 0 || completingIds.length > 0 || restoringIds.length > 0;
-  return <section className="task-agenda"><header><div className="agenda-heading"><div><strong>Today & upcoming</strong><small>{today.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</small></div></div><a href="/manage?tab=tasks" aria-label="Manage tasks" onClick={(event) => { if (!onManageTasks) return; event.preventDefault(); onManageTasks(); }}>Manage tasks</a></header>
+  return <section className="task-agenda"><header><div className="agenda-heading"><div><strong>Today & upcoming</strong><small>{formatDisplayDate(today, { weekday: 'long', month: 'short', day: 'numeric' })}</small></div></div><a href="/manage?tab=tasks" aria-label="Manage tasks" onClick={(event) => { if (!onManageTasks) return; event.preventDefault(); onManageTasks(); }}>Manage tasks</a></header>
     {error && <small role="alert">{error}</small>}
     <div className={`task-agenda-list${showTaskColumn ? '' : ' is-study-only'}`}>
       <section className="agenda-study-section">

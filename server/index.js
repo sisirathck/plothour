@@ -14,6 +14,7 @@ import { workspaceRouter } from './routes/workspace.js';
 import { connectionsRouter } from './routes/connections.js';
 import { adminRouter } from './routes/admin.js';
 import { analyticsRouter } from './routes/analytics.js';
+import { emailReportsRouter, processScheduledEmailReports } from './routes/emailReports.js';
 import { pool, query } from './db.js';
 import { backfillWorkspaceProjections } from './workspaceProjection.js';
 
@@ -38,6 +39,7 @@ app.use(cors({
 
 // Body & Cookie parsers
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '4kb' }));
 app.use(cookieParser());
 
 // Healthcheck
@@ -99,6 +101,7 @@ app.use('/api/workspace', workspaceRouter);
 app.use('/api/connections', connectionsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/email-reports', emailReportsRouter);
 
 // Serve frontend static build if dist/ exists (Production mode)
 if (fs.existsSync(distPath)) {
@@ -223,8 +226,13 @@ app.listen(PORT, async () => {
       await backfillWorkspaceProjections(migrationClient);
     }
     await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/012_tasks.sql'), 'utf8'));
+    await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/013_email_reports.sql'), 'utf8'));
     await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/013_task_subprojects.sql'), 'utf8'));
     databaseReady = true;
+    const emailScheduleTimer = setInterval(() => {
+      if (databaseReady) processScheduledEmailReports().catch((error) => console.error('[Scheduled email reports]', error.message));
+    }, 60_000);
+    emailScheduleTimer.unref();
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);
   } finally {

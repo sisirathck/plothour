@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import './Manage.css';
 import { TasksPanel } from './TasksPanel';
+import { EmailReportsPanel } from './EmailReportsPanel';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 
@@ -628,7 +629,7 @@ export const ManagePage = ({ user }) => {
   const [workspaceTab, setWorkspaceTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'tasks' ? 'tasks' : 'projects');
   useEffect(() => {
     const selectWorkspaceTab = (event) => {
-      if (event.detail === 'tasks' || event.detail === 'projects') setWorkspaceTab(event.detail);
+      if (['tasks', 'projects', 'email'].includes(event.detail)) setWorkspaceTab(event.detail);
     };
     window.addEventListener('manage-workspace-tab', selectWorkspaceTab);
     return () => window.removeEventListener('manage-workspace-tab', selectWorkspaceTab);
@@ -638,8 +639,9 @@ export const ManagePage = ({ user }) => {
       <div className="manage-view-tabs" role="tablist" aria-label="Workspace sections" style={{ marginBottom: 20 }}>
         <button role="tab" aria-selected={workspaceTab === 'projects'} className={workspaceTab === 'projects' ? 'selected' : ''} onClick={() => setWorkspaceTab('projects')}>Projects</button>
         <button role="tab" aria-selected={workspaceTab === 'tasks'} className={workspaceTab === 'tasks' ? 'selected' : ''} onClick={() => setWorkspaceTab('tasks')}>Tasks & reminders</button>
+        <button role="tab" aria-selected={workspaceTab === 'email'} className={workspaceTab === 'email' ? 'selected' : ''} onClick={() => setWorkspaceTab('email')}>Email reports</button>
       </div>
-      {workspaceTab === 'tasks' ? <TasksPanel user={user} projects={activeProjects} /> : <>
+      {workspaceTab === 'email' ? <EmailReportsPanel user={user} /> : workspaceTab === 'tasks' ? <TasksPanel user={user} projects={activeProjects} /> : <>
       {projectPendingDelete && (
         <div
           className="manage-delete-backdrop"

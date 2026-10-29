@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { getSiteFontStyle, SITE_COPY_FIELDS, SITE_FONT_OPTIONS, siteAssetUrl } from '../../context/SiteCustomizationContext';
 import './AdminPage.css';
+import { EmailPreviewsGallery } from '../manage/EmailReportsPanel';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 const PAGE_SIZE = 50;
 const EMPTY_CONFIG = { copy: {}, fonts: {}, visuals: { login: { light: [], dark: [], shuffle: true }, dashboard: { light: [], dark: [], shuffle: true }, logo: { light: null, dark: null } } };
@@ -21,10 +23,10 @@ async function api(path, options = {}) {
 }
 
 const dateLabel = (value) => value
-  ? new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(value))
+  ? formatDisplayDate(value, { year: 'numeric', month: 'short', day: 'numeric' })
   : 'No sessions yet';
 const dateTimeLabel = (value) => value
-  ? new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value))
+  ? `${formatDisplayDate(value, { year: 'numeric', month: 'short', day: 'numeric' })} · ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(value))}`
   : 'Never';
 
 const durationLabel = (seconds) => {
@@ -363,6 +365,11 @@ export const AdminPage = ({ user }) => {
           </div>
           <p className="admin-customization-hint">Google Noto is Noto Sans, a Google Fonts family designed for broad multilingual support. Choose “Save site changes” to publish your selection.</p>
         </div>
+      </section>
+
+      <section className="admin-customization-card admin-email-preview-library">
+        <div className="admin-users-heading"><div><h2><Mail size={17} /> Email preview library</h2><p>Review the report designs and task reminder emails available to PlotHour users.</p></div></div>
+        <EmailPreviewsGallery />
       </section>
 
       <section className="admin-users-card">
