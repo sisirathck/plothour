@@ -669,18 +669,6 @@ export const ManagePage = ({ user }) => {
           </section>
         </div>
       )}
-      <header className="manage-page-header">
-        <div>
-          <div className="manage-eyebrow"><FolderKanban size={14} /> WORKSPACE</div>
-          <h1>{text('manage', 'title', 'Project library')}</h1>
-          <p>{text('manage', 'subtitle', 'Shape your study plan, set targets, and keep completed projects within reach.')}</p>
-        </div>
-        <div className="manage-header-stats">
-          <span><strong>{activeProjects.length}</strong> active</span>
-          <span><strong>{archivedProjects.length}</strong> archived</span>
-        </div>
-      </header>
-
       <section className="manage-library-card" aria-label="Project management">
         <div className="manage-library-toolbar">
           <div className="manage-view-tabs" role="tablist" aria-label="Project status">
@@ -691,6 +679,7 @@ export const ManagePage = ({ user }) => {
               <Archive size={14} /> {text('manage', 'archivedTab', 'Archived')} <span>{archivedProjects.length}</span>
             </button>
           </div>
+          <p className="manage-toolbar-description">{text('manage', 'subtitle', 'Shape your study plan, set targets, and keep completed projects within reach.')}</p>
           <label className="manage-search">
             <Search size={16} />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={text('manage', 'searchPlaceholder', 'Find a project')} aria-label="Find a project" />

@@ -93,6 +93,8 @@ export const EditSelect = ({ value, options, onChange, label }) => {
       position: 'fixed',
       left: Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - rect.width - viewportPadding)),
       width: rect.width,
+      minWidth: 0,
+      boxSizing: 'border-box',
       maxHeight,
       zIndex: 1000,
       ...(openUp
@@ -131,7 +133,7 @@ export const EditSelect = ({ value, options, onChange, label }) => {
   </div>;
 };
 
-export const SessionDatePicker = ({ value, onChange, minDate = '' }) => {
+export const SessionDatePicker = ({ value, onChange, minDate = '', maxDate = '' }) => {
   const selected = value ? new Date(`${value}T12:00:00`) : new Date();
   const [open, setOpen] = useState(false);
   const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
@@ -151,9 +153,9 @@ export const SessionDatePicker = ({ value, onChange, minDate = '' }) => {
       <span>{value ? formatDisplayDate(selected, { day: '2-digit', month: 'short', year: 'numeric' }) : 'Choose a date'}</span><Calendar size={14} aria-hidden="true" />
     </button>
     {open && <div className="entry-date-popover" role="dialog" aria-label="Choose session date">
-      <div className="entry-date-head"><button type="button" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button><strong>{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong><button type="button" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button></div>
+      <div className="entry-date-head"><button type="button" aria-label="Previous month" disabled={Boolean(minDate && localDateKey(new Date(month.getFullYear(), month.getMonth(), 0)) < minDate)} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button><strong>{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong><button type="button" aria-label="Next month" disabled={Boolean(maxDate && localDateKey(new Date(month.getFullYear(), month.getMonth() + 1, 1)) > maxDate)} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button></div>
       <div className="entry-date-weekdays">{'SMTWTFS'.split('').map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
-      <div className="entry-date-grid">{days.map((day) => { const key = localDateKey(day); const disabled = Boolean(minDate && key < minDate); return <button type="button" key={key} disabled={disabled} aria-disabled={disabled} className={`${day.getMonth() !== month.getMonth() ? 'is-outside ' : ''}${key === value ? 'is-selected' : ''}`} onClick={() => { if (disabled) return; onChange(key); setOpen(false); }}>{day.getDate()}</button>; })}</div>
+      <div className="entry-date-grid">{days.map((day) => { const key = localDateKey(day); const disabled = Boolean((minDate && key < minDate) || (maxDate && key > maxDate)); return <button type="button" key={key} disabled={disabled} aria-disabled={disabled} className={`${day.getMonth() !== month.getMonth() ? 'is-outside ' : ''}${key === value ? 'is-selected' : ''}`} onClick={() => { if (disabled) return; onChange(key); setOpen(false); }}>{day.getDate()}</button>; })}</div>
     </div>}
   </div>;
 };

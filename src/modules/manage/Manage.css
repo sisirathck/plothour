@@ -90,6 +90,16 @@
   border-bottom: 1px solid var(--manage-line);
 }
 
+.manage-toolbar-description {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--manage-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .manage-view-tabs {
   display: inline-flex;
   align-items: center;
@@ -144,6 +154,12 @@
   border-radius: 10px;
   color: var(--manage-muted);
   background: var(--sd-bg-base, rgba(255,255,255,.48));
+}
+
+@media (max-width: 760px) {
+  .manage-library-toolbar { flex-wrap: wrap; }
+  .manage-toolbar-description { order: 3; flex-basis: 100%; text-align: left; }
+  .manage-search { width: min(280px, 45%); }
 }
 
 .manage-search input,

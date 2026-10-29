@@ -74,8 +74,8 @@ export const TasksPanel = ({ user, projects }) => {
     <form className="tasks-create" onSubmit={add}>
       <label>Task<input required maxLength={240} name="title" placeholder="What needs to get done?" /></label>
       <label>Project<EditSelect label="Task project" value={project} options={[{value:'',label:'Personal / unassigned'},...projects.map(p => ({value:p.name,label:p.name}))]} onChange={setProject} /></label>
-      <label>Due date<SessionDatePicker value={due} onChange={setDue} minDate={todayKey} />{due && <button type="button" className="task-clear-date" onClick={() => setDue('')}>Clear date</button>}{!due && <small>Optional</small>}</label>
-      <label><span className="tasks-field-label">Remind me on <em>Optional</em></span><SessionDatePicker value={reminder} onChange={setReminder} />{reminder && <button type="button" className="task-clear-date" onClick={() => setReminder('')}>Clear reminder</button>}</label>
+      <label>Due date<SessionDatePicker value={due} onChange={value => { setDue(value); if (reminder && (reminder < todayKey || reminder > value)) setReminder(''); }} minDate={todayKey} />{due && <button type="button" className="task-clear-date" onClick={() => { setDue(''); if (reminder && reminder < todayKey) setReminder(''); }}>Clear date</button>}{!due && <small>Optional</small>}</label>
+      <label><span className="tasks-field-label">Remind me on <em>Optional</em></span><SessionDatePicker value={reminder} onChange={setReminder} minDate={todayKey} maxDate={due} />{reminder && <button type="button" className="task-clear-date" onClick={() => setReminder('')}>Clear reminder</button>}</label>
       <button disabled={busy}>{busy ? 'Saving…' : 'Add task'}</button>
     </form>
     {error && <p role="alert">{error}</p>}
