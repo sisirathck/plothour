@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createHmac, randomInt, timingSafeEqual } from 'crypto';
 import nodemailer from 'nodemailer';
 import { query } from '../db.js';
+import { getBrandedEmailFrom } from '../emailDelivery.js';
 import {
   hashPassword,
   verifyPassword,
@@ -55,7 +56,7 @@ function isEmailConfigured() {
 }
 
 async function sendVerificationEmail(email, displayName, code) {
-  const from = process.env.EMAIL_FROM || `PlotHour <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
+  const from = getBrandedEmailFrom();
   const safeName = escapeHtml(displayName || 'there');
   const subject = 'Your PlotHour verification code';
   const text = `Hi ${displayName || 'there'},\n\nYour PlotHour verification code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes. If you did not request an account, you can ignore this email.`;
@@ -104,7 +105,7 @@ async function sendVerificationEmail(email, displayName, code) {
 }
 
 export async function sendPasswordResetEmail(email, displayName, code) {
-  const from = process.env.EMAIL_FROM || `PlotHour <${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space>`;
+  const from = getBrandedEmailFrom();
   const safeName = escapeHtml(displayName || 'there');
   const subject = 'Your PlotHour password reset code';
   const text = `Hi ${displayName || 'there'},\n\nYour password reset code is ${code}. It expires in ${verificationCodeLifetimeMinutes} minutes.\n\nIf you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.`;

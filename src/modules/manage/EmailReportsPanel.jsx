@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { BellRing, CalendarClock, Check, ChevronDown, Clock3, FileText, Mail, Plus, Send, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
+import { BellRing, CalendarClock, Check, ChevronDown, Clock3, FileText, LoaderCircle, Mail, Plus, Send, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import './EmailReportsPanel.css';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
 const reportTypes = [
-  { id: 'agenda', name: 'Today & upcoming', detail: 'Today’s plan, tasks, and deadlines', icon: CalendarClock, cadence: 'Daily' },
+  { id: 'agenda', name: "Today's agenda", detail: 'Today’s study target, project plan, and upcoming tasks', icon: CalendarClock, cadence: 'Daily' },
   { id: 'weekly-plan', name: 'Weekly study plan', detail: 'A look at the week ahead', icon: Clock3, cadence: 'Weekly' },
   { id: 'weekly-recap', name: 'Weekly progress recap', detail: 'How last week went', icon: Sparkles, cadence: 'Weekly' },
   { id: 'monthly-recap', name: 'Monthly progress report', detail: 'Study time, active days, and goals', icon: FileText, cadence: 'Monthly' },
-  { id: 'comparison', name: 'Period comparison', detail: 'Compare this month with another period', icon: BellRing, cadence: 'Monthly' },
+  { id: 'comparison', name: 'Date range comparison', detail: 'Compare progress across selected dates', icon: BellRing, cadence: 'Monthly' },
   { id: 'task-reminder', name: 'Task reminders', detail: 'A nudge before selected deadlines', icon: BellRing, cadence: 'Before each due date' },
 ];
 
@@ -25,11 +25,11 @@ const comparisonMetrics = [
 const defaultComparisonMetrics = comparisonMetrics.map(metric => metric.id);
 
 const previewCopy = {
-  agenda: { eyebrow: 'THURSDAY · OCTOBER 29', title: 'Your day, with a little more focus.', intro: 'Here’s what’s on your study plan today.', metric: '3h 15m', metricLabel: 'planned study time', rows: [['Algorithms', '1 hour'], ['Database Systems', '45 minutes'], ['Submit graph algorithms assignment', 'Due today']] },
+  agenda: { eyebrow: 'THURSDAY · OCTOBER 29', title: 'Your agenda for today.', intro: 'A clear target and the projects and subprojects to focus on.', metric: '1h 45m', metricLabel: "today's study target", rows: [['Studied so far', '25 minutes'], ['Time remaining', '1h 20m'], ['Upcoming tasks', '2 open tasks']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '1h', detail: '25m studied · 35m remaining' }, { project: 'Mathematics', subject: 'Statistics', time: '45m', detail: 'Not started · 45m remaining' }] },
   'weekly-plan': { eyebrow: 'NEXT WEEK · NOV 2–8', title: 'A clear plan for the week ahead.', intro: 'Your study goals, gathered in one place.', metric: '12h', metricLabel: 'weekly study goal', callout: { label: 'Daily pace to reach your goal', value: '1h 43m each day', detail: 'Spread across 7 days, that adds up to 12 focused hours.' }, rows: [['Projects in your plan', '3'], ['Subjects and subprojects', '6'], ['Planned study days', 'Mon · Tue · Thu · Sat']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '2h 40m', detail: '3h goal · 20m remaining' }, { project: 'Computer Science', subject: 'Database Systems', time: '1h 15m', detail: '2h goal · 45m remaining' }, { project: 'Mathematics', subject: 'Statistics', time: '45m', detail: '2h goal · 1h 15m remaining' }] },
-  'weekly-recap': { eyebrow: 'WEEKLY RECAP · OCT 19–25', title: 'Look how far you moved things forward.', intro: 'A quick reflection on your study week.', metric: '8h 42m', metricLabel: 'focused this week', rows: [['Study sessions', '14 sessions'], ['Active days', '5 days'], ['Weekly goal', '82% complete']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '3h 10m', detail: '5 sessions' }, { project: 'Japanese', subject: 'Listening Practice', time: '2h 05m', detail: '4 sessions' }, { project: 'Mathematics', subject: 'Statistics', time: '1h 40m', detail: '3 sessions' }] },
+  'weekly-recap': { eyebrow: 'LAST WEEK · SUNDAY–SATURDAY', title: 'Your week, measured against your goals.', intro: 'A clear view of what you planned and what you studied.', metric: '8h 42m', metricLabel: 'studied this week', rows: [['Weekly goal', '10h 30m'], ['Goal completed', '83%'], ['Time remaining', '1h 48m']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '3h 10m', detail: '4h goal · 50m remaining' }, { project: 'Japanese', subject: 'Listening Practice', time: '2h 05m', detail: '2h goal · goal reached' }, { project: 'Mathematics', subject: 'Statistics', time: '1h 40m', detail: '2h 30m goal · 50m remaining' }] },
   'monthly-recap': { eyebrow: 'MONTHLY REPORT · OCTOBER', title: 'Your October, in perspective.', intro: 'Small sessions added up to meaningful progress.', metric: '36h 20m', metricLabel: 'focused this month', rows: [['Active days', '18 days'], ['Study sessions', '61 sessions'], ['Best streak', '6 days']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '12h 20m', detail: '18 sessions' }, { project: 'Japanese', subject: 'Listening Practice', time: '8h 05m', detail: '14 sessions' }, { project: 'Mathematics', subject: 'Statistics', time: '6h 40m', detail: '11 sessions' }] },
-  comparison: { eyebrow: 'PERIOD COMPARISON', title: 'You studied 5h 35m more this month.', intro: 'October 1–29 compared with September 1–30. Here’s how your study habits changed.', metric: '+18%', metricLabel: 'total study time', comparisonRows: comparisonMetrics, areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '12h 20m', detail: '10h 05m before · +2h 15m' }, { project: 'Japanese', subject: 'Listening Practice', time: '8h 05m', detail: '6h 40m before · +1h 25m' }, { project: 'Mathematics', subject: 'Statistics', time: '6h 40m', detail: '7h 15m before · −35m' }] },
+  comparison: { eyebrow: 'DATE RANGE COMPARISON', title: 'See how your study time changed.', intro: 'Choose any date range, then compare it with a previous period or a custom range.', metric: '+18%', metricLabel: 'total study time', comparisonRows: comparisonMetrics, areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '12h 20m', detail: '10h 05m before · +22%' }, { project: 'Japanese', subject: 'Listening Practice', time: '8h 05m', detail: '6h 40m before · +21%' }, { project: 'Mathematics', subject: 'Statistics', time: '6h 40m', detail: '7h 15m before · −8%' }] },
   'task-reminder': { eyebrow: 'UPCOMING DEADLINE', title: 'A gentle nudge for what matters next.', intro: 'You asked to be reminded before this deadline.', metric: '2 days', metricLabel: 'until it’s due', rows: [['Task', 'Finish statistics problem set'], ['Project / subject', 'Mathematics / Statistics'], ['Due date', 'Saturday, Oct 31'], ['Your reminder', 'Thursday, Oct 29 · 8:00 AM']] },
 };
 
@@ -40,6 +40,7 @@ const timeLabel = (time) => {
 
 const periodOptions = ['This week', 'Last week', 'This month', 'Last month', 'This quarter', 'Last quarter', 'This year', 'Last year', 'Custom date range'];
 const reportRangeOptions = (type) => type === 'weekly-plan' ? ['This week', 'Next week', 'Custom date range'] : periodOptions;
+const validDateRange = (from, to) => /^\d{4}-\d{2}-\d{2}$/.test(from || '') && /^\d{4}-\d{2}-\d{2}$/.test(to || '') && from <= to;
 const cadenceSummary = (schedule) => {
   if (schedule.frequency === 'Daily') return 'Every day';
   if (schedule.frequency === 'Weekly') return `Every ${schedule.day}`;
@@ -72,6 +73,7 @@ export const EmailReportsPanel = ({ user }) => {
   const [schedules, setSchedules] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [allTasksEnabled, setAllTasksEnabled] = useState(false);
+  const [taskRemindersEnabled, setTaskRemindersEnabled] = useState(false);
   const [taskRules, setTaskRules] = useState([]);
   const [taskOptions, setTaskOptions] = useState([]);
   const [friendOptions, setFriendOptions] = useState([]);
@@ -86,7 +88,7 @@ export const EmailReportsPanel = ({ user }) => {
   const [accountVerified, setAccountVerified] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   const [actionError, setActionError] = useState('');
-  const [sendingTaskInfo, setSendingTaskInfo] = useState(false);
+  const [sendButtonStates, setSendButtonStates] = useState({});
   const [emailInput, setEmailInput] = useState('');
   const [addError, setAddError] = useState('');
   const accountEmail = user?.email || 'alex.morgan@example.com';
@@ -112,6 +114,7 @@ export const EmailReportsPanel = ({ user }) => {
       setSchedules(settings.schedules || []);
       setRecipients(payload.recipients || []);
       setAllTasksEnabled(settings.allTasksEnabled || false);
+      setTaskRemindersEnabled(settings.taskRemindersEnabled === true);
       setTaskRules(settings.taskRules || []);
       setReportsEnabled(settings.enabled || false);
       setDeliveryConfigured(Boolean(payload.deliveryConfigured));
@@ -128,17 +131,17 @@ export const EmailReportsPanel = ({ user }) => {
     if (loading || !settingsLoaded) return undefined;
     setSaveState('saving');
     const timer = window.setTimeout(() => {
-      emailApi('/', { method: 'PUT', body: JSON.stringify({ settings: { enabled: reportsEnabled, format: 'html', schedules, allTasksEnabled, taskRules, dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) })
+      emailApi('/', { method: 'PUT', body: JSON.stringify({ settings: { enabled: reportsEnabled, format: 'html', schedules, allTasksEnabled, taskRemindersEnabled, taskRules, dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) })
         .then(() => setSaveState('saved')).catch(error => { setSaveState('error'); setActionError(error.message); });
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [loading, settingsLoaded, reportsEnabled, schedules, allTasksEnabled, taskRules, dateFormat, locale]);
+  }, [loading, settingsLoaded, reportsEnabled, schedules, allTasksEnabled, taskRemindersEnabled, taskRules, dateFormat, locale]);
 
   const updateSchedule = (id, patch) => setSchedules(items => items.map(item => item.id === id ? { ...item, ...patch } : item));
   const addSchedule = () => {
     const availableType = scheduledReportTypes.find(type => !schedules.some(item => item.type === type.id));
     if (!availableType) return;
-    setSchedules(items => [...items, { id: crypto.randomUUID(), type: availableType.id, frequency: availableType.cadence === 'Daily' ? 'Daily' : availableType.cadence === 'Monthly' ? 'Monthly' : 'Weekly', day: availableType.cadence === 'Monthly' ? '1st of the month' : 'Monday', time: '08:00', compare: 'Previous period', range: availableType.id === 'weekly-recap' ? 'Last week' : availableType.id === 'monthly-recap' ? 'This month' : availableType.id === 'weekly-plan' ? 'Next week' : 'This week', metrics: defaultComparisonMetrics, people: ['You'], enabled: true }]);
+    setSchedules(items => [...items, { id: crypto.randomUUID(), type: availableType.id, frequency: availableType.cadence === 'Daily' ? 'Daily' : availableType.cadence === 'Monthly' ? 'Monthly' : 'Weekly', day: availableType.cadence === 'Monthly' ? '1st of the month' : 'Monday', time: '08:00', compare: 'Previous period', range: availableType.id === 'agenda' ? 'Today' : availableType.id === 'weekly-recap' ? 'Last week' : availableType.id === 'monthly-recap' ? 'This month' : availableType.id === 'weekly-plan' ? 'Next week' : 'This week', includeUpcomingTasks: false, metrics: defaultComparisonMetrics, people: ['You'], enabled: true }]);
   };
   const addRecipient = (event) => {
     event.preventDefault();
@@ -150,18 +153,29 @@ export const EmailReportsPanel = ({ user }) => {
     }).catch(error => setAddError(error.message));
   };
   const removeRecipient = (recipient) => emailApi(`/recipients/${recipient.id}`, { method: 'DELETE' }).then(() => setRecipients(items => items.filter(item => item.id !== recipient.id))).catch(error => setActionError(error.message));
+  const setTemporarySendState = (id, state) => {
+    setSendButtonStates(current => ({ ...current, [id]: state }));
+    if (state.status === 'sent' || state.status === 'error') {
+      window.setTimeout(() => setSendButtonStates(current => current[id] === state ? { ...current, [id]: null } : current), state.status === 'sent' ? 2600 : 4500);
+    }
+  };
   const sendNow = (schedule) => {
-    setActionError(''); setActionMessage('Sending your report…');
-    emailApi('/send', { method: 'POST', body: JSON.stringify({ schedule: { ...schedule, format: 'html', dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) }).then(result => setActionMessage(`Report sent to ${result.count} verified recipient${result.count === 1 ? '' : 's'}.`)).catch(error => { setActionMessage(''); setActionError(error.message); });
+    setTemporarySendState(schedule.id, { status: 'sending' });
+    emailApi('/send', { method: 'POST', body: JSON.stringify({ schedule: { ...schedule, format: 'html', dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) })
+      .then(() => setTemporarySendState(schedule.id, { status: 'sent' }))
+      .catch(error => setTemporarySendState(schedule.id, { status: 'error', message: error.message }));
   };
   const sendTaskInfoNow = () => {
-    setSendingTaskInfo(true);
-    setActionError('');
-    setActionMessage('Sending your task update…');
+    setTemporarySendState('task-info', { status: 'sending' });
     emailApi('/send-task-info', { method: 'POST' })
-      .then(result => setActionMessage(`Task update sent to ${result.count} verified recipient${result.count === 1 ? '' : 's'} with ${result.taskCount} task${result.taskCount === 1 ? '' : 's'}.`))
-      .catch(error => { setActionMessage(''); setActionError(error.message); })
-      .finally(() => setSendingTaskInfo(false));
+      .then(() => setTemporarySendState('task-info', { status: 'sent' }))
+      .catch(error => setTemporarySendState('task-info', { status: 'error', message: error.message }));
+  };
+  const renderSendButton = (id, onClick, disabled, idleLabel = 'Send now', idleTitle = 'Send this report now') => {
+    const state = sendButtonStates[id];
+    return <button type="button" className={`email-send-now${state ? ` is-${state.status}` : ''}`} onClick={onClick} disabled={disabled || state?.status === 'sending'} title={state?.message || idleTitle} aria-live="polite">
+      {state?.status === 'sending' ? <><LoaderCircle size={12} /> Sending…</> : state?.status === 'sent' ? <><Check size={12} /> Sent</> : state?.status === 'error' ? <><ShieldCheck size={12} /> Try again</> : <><Send size={12} /> {idleLabel}</>}
+    </button>;
   };
   const addTaskRule = (task) => setTaskRules(items => items.some(item => item.id === task.id) ? items : [...items, { id: task.id, title: task.title, project: task.project_name, subproject: task.subproject_name, due: task.due_date, enabled: true, reminders: [{ id: crypto.randomUUID(), offset: '1 day before', time: '08:00' }] }]);
   return <section className="email-studio">
@@ -181,10 +195,12 @@ export const EmailReportsPanel = ({ user }) => {
           {schedules.map(schedule => {
             const selectedType = reportTypes.find(item => item.id === schedule.type) || reportTypes[0];
             const Icon = selectedType.icon;
+            const missingCurrentRange = ['weekly-plan','monthly-recap','comparison'].includes(schedule.type) && schedule.range === 'Custom date range' && !validDateRange(schedule.from, schedule.to);
+            const missingCompareRange = schedule.type === 'comparison' && schedule.compare === 'Custom dates' && !validDateRange(schedule.compareFrom, schedule.compareTo);
             return <article className="email-schedule-row" key={schedule.id}>
               <span className="email-schedule-icon"><Icon size={17} /></span>
               <div className="email-schedule-main">
-                <div className="email-schedule-title-line"><EmailReportTypeSelect label="Report type" value={schedule.type} options={scheduledReportTypes} onChange={type => updateSchedule(schedule.id, { type })} /><div className="email-row-actions"><label title={schedule.enabled ? 'Pause this report' : 'Enable this report'}><input type="checkbox" checked={schedule.enabled !== false} onChange={event => updateSchedule(schedule.id, { enabled: event.target.checked })} /><span>{schedule.enabled === false ? 'Paused' : 'On'}</span></label><button type="button" className="email-send-now" onClick={() => sendNow(schedule)} disabled={!deliveryConfigured || !accountVerified} title="Send this report now"><Send size={12} /> Send now</button><button type="button" className="email-remove-schedule" aria-label={`Remove ${selectedType.name} schedule`} onClick={() => setSchedules(items => items.filter(item => item.id !== schedule.id))}><Trash2 size={14} /></button></div></div>
+                <div className="email-schedule-title-line"><EmailReportTypeSelect label="Report type" value={schedule.type} options={scheduledReportTypes} onChange={type => updateSchedule(schedule.id, { type })} /><div className="email-row-actions"><label title={schedule.enabled ? 'Pause this report' : 'Enable this report'}><input type="checkbox" checked={schedule.enabled !== false} onChange={event => updateSchedule(schedule.id, { enabled: event.target.checked })} /><span>{schedule.enabled === false ? 'Paused' : 'On'}</span></label>{renderSendButton(schedule.id, () => sendNow(schedule), !deliveryConfigured || !accountVerified || missingCurrentRange || missingCompareRange)}<button type="button" className="email-remove-schedule" aria-label={`Remove ${selectedType.name} schedule`} onClick={() => setSchedules(items => items.filter(item => item.id !== schedule.id))}><Trash2 size={14} /></button></div></div>
                 <p>{selectedType.detail}</p>
                 <div className="email-schedule-controls">
                   <label className="email-control-field"><span>Repeats</span><span className="email-control-select"><select value={schedule.frequency} onChange={event => updateSchedule(schedule.id, { frequency: event.target.value, day: event.target.value === 'Daily' ? 'Every day' : event.target.value === 'Weekly' ? 'Monday' : event.target.value === 'Monthly' ? '1st of the month' : event.target.value === 'Quarterly' ? 'First day of quarter' : 'January 1' })}><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option><option>Yearly</option></select><ChevronDown size={13} /></span></label>
@@ -192,23 +208,22 @@ export const EmailReportsPanel = ({ user }) => {
                   {schedule.frequency === 'Monthly' && <label className="email-control-field"><span>On</span><span className="email-control-select"><select value={schedule.day} onChange={event => updateSchedule(schedule.id, { day: event.target.value })}><option>1st of the month</option><option>15th of the month</option><option>Last day of month</option></select><ChevronDown size={13} /></span></label>}
                   {schedule.frequency === 'Quarterly' && <label className="email-control-field"><span>On</span><span className="email-control-select"><select value={schedule.day} onChange={event => updateSchedule(schedule.id, { day: event.target.value })}><option>First day of quarter</option><option>Last day of quarter</option></select><ChevronDown size={13} /></span></label>}
                   {schedule.frequency === 'Yearly' && <label className="email-control-field"><span>On</span><span className="email-control-select"><select value={schedule.day} onChange={event => updateSchedule(schedule.id, { day: event.target.value })}><option>January 1</option><option>January 31</option><option>December 31</option></select><ChevronDown size={13} /></span></label>}
-                  {['weekly-plan','weekly-recap','monthly-recap','comparison'].includes(schedule.type) && <label className="email-control-field email-period-field"><span>Study period</span><span className="email-control-select"><select value={schedule.range || (schedule.type === 'weekly-plan' ? 'This week' : schedule.type === 'weekly-recap' ? 'Last week' : schedule.type === 'comparison' ? 'This month' : 'This month')} onChange={event => updateSchedule(schedule.id, { range: event.target.value })}>{reportRangeOptions(schedule.type).map(period => <option key={period}>{period}</option>)}</select><ChevronDown size={13} /></span></label>}
+                  {['weekly-plan','monthly-recap','comparison'].includes(schedule.type) && <label className="email-control-field email-period-field"><span>{schedule.type === 'comparison' ? 'Date range' : 'Study period'}</span><span className="email-control-select"><select value={schedule.range || (schedule.type === 'weekly-plan' ? 'This week' : schedule.type === 'comparison' ? 'This month' : 'This month')} onChange={event => updateSchedule(schedule.id, { range: event.target.value })}>{reportRangeOptions(schedule.type).map(period => <option key={period}>{period}</option>)}</select><ChevronDown size={13} /></span></label>}
                   {schedule.type === 'comparison' && <label className="email-control-field"><span>Compare against</span><span className="email-control-select"><select value={schedule.compare || 'Previous period'} onChange={event => updateSchedule(schedule.id, { compare: event.target.value })}><option>Previous period</option><option>3 months earlier</option><option>Same period last year</option><option>Custom dates</option></select><ChevronDown size={13} /></span></label>}
                   <label className="email-control-field email-time-field"><span>Send at</span><input type="time" value={schedule.time} onChange={event => updateSchedule(schedule.id, { time: event.target.value })} /></label>
                 </div>
+                <label className="email-include-upcoming-tasks"><input type="checkbox" checked={schedule.includeUpcomingTasks === true} onChange={event => updateSchedule(schedule.id, { includeUpcomingTasks: event.target.checked })} /><span><strong>Include upcoming tasks</strong><small>Off by default. Task details are added only when you turn this on.</small></span></label>
                 {schedule.type === 'comparison' && <div className="email-comparison-controls"><span className="email-comparison-label">Compare people</span><div className="email-people-pills">{[{ id: 'You', name: 'You' }, ...friendOptions].map(person => { const selected = (schedule.people || ['You']).includes(person.id); return <button key={person.id} type="button" className={selected ? 'is-selected' : ''} aria-pressed={selected} disabled={person.id === 'You'} onClick={() => updateSchedule(schedule.id, { people: selected ? (schedule.people || ['You']).filter(id => id !== person.id) : [...(schedule.people || ['You']), person.id] })}>{selected && <Check size={11} />}{person.name}</button>; })}</div><small>Only connected study partners appear here. Their totals are compared for the same date range.</small><div className="email-metric-config"><div><strong>Include in report</strong><small>Choose the stats to compare in the email.</small></div><div className="email-metric-options">{comparisonMetrics.map(metric => { const selected = (schedule.metrics || defaultComparisonMetrics).includes(metric.id); const selectedCount = (schedule.metrics || defaultComparisonMetrics).length; return <label key={metric.id}><input type="checkbox" checked={selected} disabled={selected && selectedCount === 1} onChange={() => updateSchedule(schedule.id, { metrics: selected ? (schedule.metrics || defaultComparisonMetrics).filter(id => id !== metric.id) : [...(schedule.metrics || defaultComparisonMetrics), metric.id] })} /><span>{metric.label}</span></label>; })}</div></div></div>}
-                {['weekly-plan','weekly-recap','monthly-recap','comparison'].includes(schedule.type) && schedule.range === 'Custom date range' && <div className="email-custom-range"><label>From<input type="date" value={schedule.from || ''} onChange={event => updateSchedule(schedule.id, { from: event.target.value })} /></label><span>to</span><label>Through<input type="date" value={schedule.to || ''} onChange={event => updateSchedule(schedule.id, { to: event.target.value })} /></label></div>}
-                {schedule.type === 'comparison' && schedule.compare === 'Custom dates' && <div className="email-custom-range"><label>Compare from<input type="date" value={schedule.compareFrom || ''} onChange={event => updateSchedule(schedule.id, { compareFrom: event.target.value })} /></label><span>to</span><label>Through<input type="date" value={schedule.compareTo || ''} onChange={event => updateSchedule(schedule.id, { compareTo: event.target.value })} /></label></div>}
+                {['weekly-plan','monthly-recap','comparison'].includes(schedule.type) && schedule.range === 'Custom date range' && <div className="email-custom-range"><label>From<input type="date" required value={schedule.from || ''} onChange={event => updateSchedule(schedule.id, { from: event.target.value })} /></label><span>to</span><label>Through<input type="date" required min={schedule.from || undefined} value={schedule.to || ''} onChange={event => updateSchedule(schedule.id, { to: event.target.value })} /></label></div>}
+                {schedule.type === 'comparison' && schedule.compare === 'Custom dates' && <div className="email-custom-range"><label>Compare from<input type="date" required value={schedule.compareFrom || ''} onChange={event => updateSchedule(schedule.id, { compareFrom: event.target.value })} /></label><span>to</span><label>Through<input type="date" required min={schedule.compareFrom || undefined} value={schedule.compareTo || ''} onChange={event => updateSchedule(schedule.id, { compareTo: event.target.value })} /></label></div>}
                 <div className="email-next-send"><Clock3 size={12} /> {cadenceSummary(schedule)} at {timeLabel(schedule.time)} <span>· your local time</span></div>
               </div>
             </article>;
           })}
         </div>
         <button type="button" className="email-add-schedule" onClick={addSchedule} disabled={schedules.length >= scheduledReportTypes.length}><Plus size={15} /> Add another report</button>
-      </section>
-
-      <section className="email-card email-task-reminders-card">
-        <div className="email-card-heading"><div><span className="email-section-kicker">RIGHT ON TIME</span><h2>Task reminders</h2><p>Pick the tasks, lead times, and send times for each reminder.</p></div><div className="email-task-heading-actions"><button type="button" className="email-send-now" onClick={sendTaskInfoNow} disabled={sendingTaskInfo || !deliveryConfigured || !accountVerified || loading || (!allTasksEnabled && !taskRules.some(task => task.enabled))} title={!deliveryConfigured ? 'Email delivery is not configured on this server' : !accountVerified ? 'Verify your account email before sending' : 'Send the current task selection now'}><Send size={12} />{sendingTaskInfo ? 'Sending…' : 'Send task info now'}</button><span className="email-reminder-enabled"><span /> Custom rules</span></div></div>
+      <div className="email-task-reminder-schedule">
+        <div className="email-task-schedule-heading"><div><span className="email-section-kicker">TASK ALERTS</span><h3>Task reminders</h3><p>Choose which deadlines to include and when reminders arrive.</p></div><div className="email-task-heading-actions"><label className="email-schedule-reminder-toggle"><input type="checkbox" checked={taskRemindersEnabled} onChange={event => setTaskRemindersEnabled(event.target.checked)} /><span>Automatic reminders {taskRemindersEnabled ? 'On' : 'Off'}</span></label>{renderSendButton('task-info', sendTaskInfoNow, !deliveryConfigured || !accountVerified || loading || (!allTasksEnabled && !taskRules.some(task => task.enabled)), 'Send task info now', !deliveryConfigured ? 'Email delivery is not configured on this server' : !accountVerified ? 'Verify your account email before sending' : 'Send the current task selection now')}</div></div>
         <div className="email-reminder-scope"><div><strong>Apply reminders to</strong><small>Choose all open tasks or customize each task below.</small></div><label className="email-scope-toggle"><input type="checkbox" checked={allTasksEnabled} onChange={event => setAllTasksEnabled(event.target.checked)} /><span>{allTasksEnabled ? 'All open tasks' : 'Selected tasks'}</span></label></div>
         {!allTasksEnabled && <><div className="email-task-rule-list">{taskRules.map(task => <article className={`email-task-rule${task.enabled ? ' is-enabled' : ''}`} key={task.id}>
           <div className="email-task-rule-head"><label className="email-task-choice"><input type="checkbox" checked={task.enabled} onChange={event => setTaskRules(items => items.map(item => item.id === task.id ? { ...item, enabled: event.target.checked } : item))} /><span className="email-checkmark"><Check size={12} /></span><span><strong>{task.title}</strong><small>{[task.project, task.subproject].filter(Boolean).join(' / ')}{task.due ? ` · Due ${formatDisplayDate(task.due, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small></span></label><span className="email-rule-count">{task.enabled ? `${task.reminders.length} reminders` : 'Off'}</span></div>
@@ -218,6 +233,7 @@ export const EmailReportsPanel = ({ user }) => {
         </article>)}</div><label className="email-task-add-select"><span>Add a task to customize</span><span className="email-control-select"><select value="" onChange={event => { const task = taskOptions.find(item => item.id === event.target.value); if (task) addTaskRule(task); }}><option value="">Choose an open task…</option>{taskOptions.filter(task => !taskRules.some(rule => rule.id === task.id)).map(task => <option key={task.id} value={task.id}>{task.title}</option>)}</select><ChevronDown size={13} /></span></label></>}
         {allTasksEnabled && <div className="email-all-tasks-state"><Check size={15} /><span><strong>All open tasks included</strong><small>Each task can have reminders 3 days before, 2 days before, 1 day before, or on its due date. You can still fine-tune individual tasks.</small></span><button type="button" onClick={() => setAllTasksEnabled(false)}>Customize tasks</button></div>}
         <div className="email-reminder-note"><BellRing size={15} /><span>Existing “Remind me on” dates can be carried over as a reminder rule.</span></div>
+      </div>
       </section>
 
       <aside className="email-side-column">

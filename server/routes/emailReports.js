@@ -11,10 +11,30 @@ const hashToken = token => createHash('sha256').update(token).digest('hex');
 const makeUnsubscribeToken = (userId, email) => createHmac('sha256', process.env.AUTH_SECRET || 'studyduel-development-fallback-secret-key-32b').update(`${userId}:${email}:email-report-unsubscribe`).digest('hex');
 const validId = value => typeof value === 'string' && /^[\w-]{1,80}$/.test(value);
 const validTime = value => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+const validDateRange = (from, to) => {
+  const validDate = value => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  };
+  return validDate(from) && validDate(to) && from <= to;
+};
 const validTaskId = value => typeof value === 'string' && /^[\da-f]{8}-[\da-f]{4}-[1-8][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(value);
 const addDays = (value, amount) => { const date = new Date(`${value}T00:00:00Z`); date.setUTCDate(date.getUTCDate() + amount); return date.toISOString().slice(0, 10); };
 const daySpan = (from, to) => Math.max(1, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1);
 const fmtDuration = seconds => { const mins = Math.round((Number(seconds) || 0) / 60); return `${Math.floor(mins / 60)}h ${mins % 60}m`; };
+const formatPercentChange = (current, previous) => {
+  const now = Number(current) || 0;
+  const before = Number(previous) || 0;
+  if (before === 0) return now === 0 ? '0%' : 'New';
+  const change = Math.round(((now - before) / Math.abs(before)) * 100);
+  return `${change > 0 ? '+' : ''}${change}%`;
+};
+const emailChangeColor = change => String(change || '').startsWith('-') || String(change || '').startsWith('−')
+  ? '#b42318'
+  : String(change || '').startsWith('+') || change === 'New'
+    ? '#16803c'
+    : '#72778a';
 const areaKey = (project, subject) => `${project || 'Personal'}\u0000${subject || 'No subproject'}`;
 const dateKeyAt = (date, timeZone) => { const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date); const values = Object.fromEntries(parts.map(part => [part.type, part.value])); return `${values.year}-${values.month}-${values.day}`; };
 const localClock = (date, timeZone) => Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', hour: '2-digit', minute: '2-digit', weekday: 'long', day: 'numeric', month: 'numeric', hourCycle: 'h23' }).formatToParts(date).map(part => [part.type, part.value]));
@@ -47,10 +67,11 @@ const emailBrandHeader = () => {
   return `<header style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid #e8eaf3"><span style="display:grid;gap:3px"><img src="${base}/plothour-logo-light.png" alt="PlotHour" width="84" style="display:block;width:84px;height:auto;max-height:25px;object-fit:contain;object-position:left center"><small style="font:10px Arial,sans-serif;color:#858aa0">Turn time into progress</small></span><span style="font:700 10px Arial,sans-serif;color:#777d97;text-align:right;letter-spacing:.08em">STUDY REPORT</span></header>`;
 };
 
-function resolveRange(range, timezone, from, to) {
+function resolveRange(range, timezone, from, to, weekStartsOn = 1) {
   const today = localToday(timezone);
   const date = new Date(`${today}T00:00:00Z`);
-  const weekDay = (date.getUTCDay() + 6) % 7;
+  const firstDay = Number.isInteger(Number(weekStartsOn)) && Number(weekStartsOn) >= 0 && Number(weekStartsOn) <= 6 ? Number(weekStartsOn) : 1;
+  const weekDay = (date.getUTCDay() - firstDay + 7) % 7;
   const weekStart = addDays(today, -weekDay);
   const monthStart = `${today.slice(0, 7)}-01`;
   if (range === 'Custom date range' && /^\d{4}-\d{2}-\d{2}$/.test(from || '') && /^\d{4}-\d{2}-\d{2}$/.test(to || '') && from <= to) return { from, to, label: `${from} – ${to}` };
@@ -139,22 +160,90 @@ function comparisonBreakdownHtml(current, previous) {
     item.current += area.current; item.previous += area.previous; all.set(key, item);
   });
   const rows = [...all.values()].sort((a,b) => b.current-a.current || b.previous-a.previous);
-  const text = rows.length ? `\n\nStudy time by project and subproject:\n${rows.map(row => `• ${row.project} / ${row.subject}: ${fmtDuration(row.current)} this period · ${fmtDuration(row.previous)} previous`).join('\n')}` : '\n\nNo study sessions were logged in either period.';
-  const html = `<section style="margin-top:22px"><h2 style="font-size:17px">Study time by project and subproject</h2>${rows.length ? `<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subject / subproject</th><th align="right">This period</th><th align="right">Previous</th><th align="right">Change</th></tr></thead><tbody>${rows.map(row => `<tr><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.project)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.subject)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.current)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.previous)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${row.current - row.previous >= 0 ? '+' : '−'}${fmtDuration(Math.abs(row.current-row.previous))}</td></tr>`).join('')}</tbody></table>` : '<p>No study sessions were logged in either period.</p>'}</section>`;
+  const text = rows.length ? `\n\nStudy time by project and subproject:\n${rows.map(row => `• ${row.project} / ${row.subject}: ${fmtDuration(row.current)} this period · ${fmtDuration(row.previous)} previous · ${formatPercentChange(row.current, row.previous)} change`).join('\n')}` : '\n\nNo study sessions were logged in either period.';
+  const html = `<section style="margin-top:22px"><h2 style="font-size:17px">Study time by project and subproject</h2>${rows.length ? `<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subject / subproject</th><th align="right">This period</th><th align="right">Previous</th><th align="right">Change</th></tr></thead><tbody>${rows.map(row => { const change = formatPercentChange(row.current, row.previous); return `<tr><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.project)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.subject)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.current)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.previous)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee;color:${emailChangeColor(change)};font-weight:700">${change}</td></tr>`; }).join('')}</tbody></table>` : '<p>No study sessions were logged in either period.</p>'}</section>`;
   return { text, html };
+}
+
+async function renderWeeklyRecap(userId, user, schedule, timezone, range, dateFormat, locale) {
+  const [stats, goalResult] = await Promise.all([
+    reportStats(userId, timezone, range),
+    query(`WITH RECURSIVE subproject_tree AS (
+      SELECT id,project_id,parent_subproject_id,name,name::text AS full_name,ARRAY[id] AS visited
+      FROM subprojects WHERE parent_subproject_id IS NULL
+      UNION ALL
+      SELECT child.id,child.project_id,child.parent_subproject_id,child.name,(parent.full_name || ' / ' || child.name)::text,parent.visited || child.id
+      FROM subprojects child JOIN subproject_tree parent ON parent.id=child.parent_subproject_id WHERE NOT child.id=ANY(parent.visited)
+    ) SELECT p.name AS project_name,s.full_name AS subject_name,
+      COALESCE(
+        NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='weekly'),0),
+        NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='daily'),0) * GREATEST(cardinality(COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[])),1),
+        NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='monthly'),0) / 4.35,
+        0
+      ) AS weekly_hours
+      FROM projects p JOIN subproject_tree s ON s.project_id=p.id
+      LEFT JOIN subproject_goals g ON g.subproject_id=s.id
+      LEFT JOIN subproject_study_days d ON d.subproject_id=s.id
+      WHERE p.user_id=$1 GROUP BY p.id,p.name,p.sort_order,s.id,s.full_name ORDER BY p.sort_order,s.full_name`, [userId]),
+  ]);
+
+  const recapRows = new Map();
+  for (const goal of goalResult.rows) {
+    const key = areaKey(goal.project_name, goal.subject_name);
+    const actual = stats.areas.find(area => areaKey(area.project, area.subject) === key);
+    recapRows.set(key, { project: goal.project_name, subject: goal.subject_name, goalSeconds: Math.max(0, Number(goal.weekly_hours) || 0) * 3600, studiedSeconds: actual?.seconds || 0 });
+  }
+  for (const area of stats.areas) {
+    const key = areaKey(area.project, area.subject);
+    if (!recapRows.has(key)) recapRows.set(key, { project: area.project, subject: area.subject, goalSeconds: 0, studiedSeconds: area.seconds });
+  }
+  const rows = [...recapRows.values()].sort((a, b) => b.studiedSeconds - a.studiedSeconds || b.goalSeconds - a.goalSeconds);
+  const goalSeconds = rows.reduce((sum, row) => sum + row.goalSeconds, 0);
+  const completion = goalSeconds > 0 ? Math.round(stats.seconds / goalSeconds * 100) : null;
+  const goalDifference = stats.seconds - goalSeconds;
+  const subject = `PlotHour weekly progress recap · ${range.label}`;
+  const overview = goalSeconds > 0
+    ? `${fmtDuration(stats.seconds)} studied against a ${fmtDuration(goalSeconds)} goal · ${goalDifference > 0 ? `over goal by ${fmtDuration(goalDifference)}` : goalDifference < 0 ? `fell short by ${fmtDuration(Math.abs(goalDifference))}` : 'goal met'} · ${completion}% complete`
+    : `${fmtDuration(stats.seconds)} studied · no weekly goals are configured yet`;
+  const textRows = rows.length
+    ? rows.map(row => { const difference = row.studiedSeconds - row.goalSeconds; const result = difference > 0 ? `over by ${fmtDuration(difference)}` : difference < 0 ? `fell short by ${fmtDuration(Math.abs(difference))}` : 'goal met'; return `• ${row.project} / ${row.subject}: ${fmtDuration(row.studiedSeconds)} studied${row.goalSeconds > 0 ? ` · ${fmtDuration(row.goalSeconds)} goal · ${result}` : ''}`; }).join('\n')
+    : 'No study sessions or project goals were recorded for this week.';
+  const upcomingTasks = schedule.includeUpcomingTasks === true
+    ? await query(`SELECT title,project_name,subproject_name,due_date FROM user_tasks WHERE user_id=$1 AND completed=false AND due_date >= $2::date ORDER BY due_date,created_at DESC LIMIT 30`, [userId, localToday(timezone)])
+    : { rows: [] };
+  const taskText = schedule.includeUpcomingTasks === true ? `\n\nUpcoming tasks:\n${upcomingTasks.rows.map(task => `${task.title}${task.project_name ? ` · ${task.project_name}` : ''}${task.subproject_name ? ` / ${task.subproject_name}` : ''}${task.due_date ? ` · due ${formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale)}` : ''}`).join('\n') || 'No upcoming tasks.'}` : '';
+  const tasksHtml = schedule.includeUpcomingTasks === true ? `<section style="margin-top:22px"><h2 style="font-size:17px">Upcoming tasks</h2>${upcomingTasks.rows.length ? `<ul>${upcomingTasks.rows.map(task => `<li>${escapeEmailHtml(task.title)}${task.project_name ? ` · ${escapeEmailHtml(task.project_name)}` : ''}${task.subproject_name ? ` / ${escapeEmailHtml(task.subproject_name)}` : ''}${task.due_date ? ` · due ${escapeEmailHtml(formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale))}` : ''}</li>`).join('')}</ul>` : '<p>No upcoming tasks.</p>'}</section>` : '';
+  const text = `${subject}\n\n${range.label}\n${overview}\n\nStudy by project and subproject:\n${textRows}${taskText}\n\nManage email reports in PlotHour.`;
+  const htmlRows = rows.length ? rows.map(row => { const difference = row.studiedSeconds - row.goalSeconds; const result = difference > 0 ? `Over by ${fmtDuration(difference)}` : difference < 0 ? `Fell short by ${fmtDuration(Math.abs(difference))}` : 'Goal met'; return `<tr><td style="padding:9px 4px;border-bottom:1px solid #e9eaf1">${escapeEmailHtml(row.project)}</td><td style="padding:9px 4px;border-bottom:1px solid #e9eaf1">${escapeEmailHtml(row.subject)}</td><td align="right" style="padding:9px 4px;border-bottom:1px solid #e9eaf1">${fmtDuration(row.studiedSeconds)}</td><td align="right" style="padding:9px 4px;border-bottom:1px solid #e9eaf1">${row.goalSeconds > 0 ? fmtDuration(row.goalSeconds) : '—'}</td><td align="right" style="padding:9px 4px;border-bottom:1px solid #e9eaf1">${row.goalSeconds > 0 ? result : '—'}</td></tr>`; }).join('') : '<tr><td colspan="5" style="padding:12px 4px">No study sessions or project goals were recorded for this week.</td></tr>';
+  const html = `<main style="font:15px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:23px;color:#525db5">Your PlotHour weekly progress recap</h1><p>${escapeEmailHtml(range.label)}</p><section style="margin:18px 0;padding:16px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:9px"><strong style="font-size:22px;color:#525db5">${fmtDuration(stats.seconds)} studied</strong><div style="margin-top:6px">${goalSeconds > 0 ? `${fmtDuration(goalSeconds)} weekly goal · ${goalDifference > 0 ? `Over goal by ${fmtDuration(goalDifference)}` : goalDifference < 0 ? `Fell short by ${fmtDuration(Math.abs(goalDifference))}` : 'Goal met'} · ${completion}% complete` : 'No weekly goals are configured yet.'}</div></section><h2 style="font-size:17px">Study by project and subproject</h2><table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subproject</th><th align="right">Studied</th><th align="right">Goal</th><th align="right">Result</th></tr></thead><tbody>${htmlRows}</tbody></table>${tasksHtml}<p style="color:#82869a;font-size:12px;margin-top:22px">Manage email reports in PlotHour.</p></main>`;
+  return { subject, text, html, range };
 }
 
 async function renderReport(userId, user, schedule) {
   const timezone = schedule.timezone || user.timezone || 'UTC';
   const dateFormat = supportedDateFormats.has(schedule.dateFormat) ? schedule.dateFormat : 'system';
   const locale = safeLocale(schedule.locale);
-  const range = resolveRange(schedule.range || (schedule.type === 'agenda' ? 'Today' : 'This week'), timezone, schedule.from, schedule.to);
+  if (['weekly-plan','monthly-recap','comparison'].includes(schedule.type) && schedule.range === 'Custom date range' && !validDateRange(schedule.from, schedule.to)) {
+    throw Object.assign(new Error('Choose a valid start and end date for this report.'), { status: 400 });
+  }
+  if (schedule.type === 'comparison' && schedule.compare === 'Custom dates' && !validDateRange(schedule.compareFrom, schedule.compareTo)) {
+    throw Object.assign(new Error('Choose a valid start and end date for the comparison range.'), { status: 400 });
+  }
+  const weekStartsOn = Number.isInteger(Number(user.week_starts_on)) && Number(user.week_starts_on) >= 0 && Number(user.week_starts_on) <= 6 ? Number(user.week_starts_on) : 1;
+  const range = resolveRange(schedule.type === 'agenda' ? 'Today' : schedule.type === 'weekly-recap' ? 'Last week' : (schedule.range || 'This week'), timezone, schedule.from, schedule.to, weekStartsOn);
   range.label = formatDateRange(range.from, range.to, dateFormat, locale);
+  if (schedule.type === 'weekly-recap') return renderWeeklyRecap(userId, user, schedule, timezone, range, dateFormat, locale);
   if (schedule.type === 'agenda' || schedule.type === 'weekly-plan') {
+    const today = localToday(timezone);
+    const includeUpcomingTasks = schedule.includeUpcomingTasks === true;
     const [tasks, stats, goalResult] = await Promise.all([
-      query(`SELECT title, project_name, subproject_name, due_date, reminder_date, completed FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NULL OR due_date >= $2::date) AND (due_date IS NULL OR due_date <= $3::date) ORDER BY due_date NULLS LAST LIMIT 30`, [userId, range.from, range.to]),
+      !includeUpcomingTasks
+        ? Promise.resolve({ rows: [] })
+        : schedule.type === 'agenda'
+        ? query(`SELECT title, project_name, subproject_name, due_date, reminder_date, completed FROM user_tasks WHERE user_id=$1 AND completed=false AND ((due_date IS NOT NULL AND due_date >= $2::date) OR (reminder_date IS NOT NULL AND reminder_date >= $2::date) OR (due_date IS NULL AND reminder_date IS NULL)) ORDER BY COALESCE(due_date,reminder_date) NULLS LAST,created_at DESC LIMIT 30`, [userId, today])
+        : query(`SELECT title, project_name, subproject_name, due_date, reminder_date, completed FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NULL OR due_date >= $2::date) AND (due_date IS NULL OR due_date <= $3::date) ORDER BY due_date NULLS LAST LIMIT 30`, [userId, range.from, range.to]),
       reportStats(userId, timezone, range),
-      schedule.type === 'weekly-plan' ? query(`WITH RECURSIVE subproject_tree AS (
+      ['agenda', 'weekly-plan'].includes(schedule.type) ? query(`WITH RECURSIVE subproject_tree AS (
         SELECT id,project_id,parent_subproject_id,name,name::text AS full_name,ARRAY[id] AS visited FROM subprojects WHERE parent_subproject_id IS NULL
         UNION ALL
         SELECT child.id,child.project_id,child.parent_subproject_id,child.name,(parent.full_name || ' / ' || child.name)::text,parent.visited || child.id
@@ -166,25 +255,33 @@ async function renderReport(userId, user, schedule) {
           NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='monthly'),0) / 4.35,
           0
         ) AS weekly_hours,
+        COALESCE(MAX(g.target_hours) FILTER (WHERE g.cadence='daily'),0) AS daily_hours,
         COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[]) AS study_days
         FROM projects p JOIN subproject_tree s ON s.project_id=p.id
         LEFT JOIN subproject_goals g ON g.subproject_id=s.id
         LEFT JOIN subproject_study_days d ON d.subproject_id=s.id
         WHERE p.user_id=$1 GROUP BY p.id,p.name,p.sort_order,s.id,s.full_name ORDER BY p.sort_order,s.full_name`, [userId]) : Promise.resolve({ rows: [] }),
     ]);
-    const taskRows = tasks.rows.map(task => `${task.title}${task.project_name ? ` · ${task.project_name}` : ''}${task.subproject_name ? ` / ${task.subproject_name}` : ''}${task.due_date ? ` · due ${formatDateKey(String(task.due_date).slice(0, 10), dateFormat, locale)}` : ''}`);
-    const subject = schedule.type === 'agenda' ? 'Your PlotHour day ahead' : `Your PlotHour study plan · ${range.label}`;
+    const taskRows = tasks.rows.map(task => `${task.title}${task.project_name ? ` · ${task.project_name}` : ''}${task.subproject_name ? ` / ${task.subproject_name}` : ''}${task.due_date ? ` · due ${formatDateKey(String(task.due_date).slice(0, 10), dateFormat, locale)}` : ''}${task.reminder_date ? ` · reminder ${formatDateKey(String(task.reminder_date).slice(0, 10), dateFormat, locale)}` : ''}`);
+    const subject = schedule.type === 'agenda' ? `Your PlotHour agenda · ${range.label}` : `Your PlotHour study plan · ${range.label}`;
     const actualByArea = new Map(stats.areas.map(area => [areaKey(area.project, area.subject), area]));
     const periodScale = daySpan(range.from, range.to) / 7;
+    const todayWeekday = new Date(`${today}T00:00:00Z`).getUTCDay();
     const planRows = goalResult.rows.map(goal => {
       const key = areaKey(goal.project_name, goal.subject_name);
       const actual = actualByArea.get(key);
-      return { project: goal.project_name, subject: goal.subject_name, targetHours: Number(goal.weekly_hours || 0) * periodScale, seconds: actual?.seconds || 0, sessions: actual?.sessions || 0, studyDays: goal.study_days.map(Number) };
+      const studyDays = goal.study_days.map(Number);
+      const scheduledDays = studyDays.length ? studyDays : [0,1,2,3,4,5,6];
+      const weeklyHours = Number(goal.weekly_hours || 0);
+      const dailyHours = Number(goal.daily_hours || 0) || weeklyHours / scheduledDays.length;
+      const targetHours = schedule.type === 'agenda'
+        ? (scheduledDays.includes(todayWeekday) ? dailyHours : 0)
+        : weeklyHours * periodScale;
+      return { project: goal.project_name, subject: goal.subject_name, targetHours, seconds: actual?.seconds || 0, sessions: actual?.sessions || 0, studyDays };
     });
     const goalKeys = new Set(planRows.map(row => areaKey(row.project, row.subject)));
-    stats.areas.filter(area => !goalKeys.has(areaKey(area.project, area.subject))).forEach(area => planRows.push({ ...area, targetHours: 0, studyDays: [] }));
+    if (schedule.type === 'weekly-plan') stats.areas.filter(area => !goalKeys.has(areaKey(area.project, area.subject))).forEach(area => planRows.push({ ...area, targetHours: 0, studyDays: [] }));
     planRows.sort((a,b) => b.targetHours-a.targetHours || b.seconds-a.seconds);
-    const today = localToday(timezone);
     const plannedWeekdays = new Set(planRows.flatMap(row => row.studyDays));
     if (!plannedWeekdays.size) [0,1,2,3,4,5,6].forEach(day => plannedWeekdays.add(day));
     const remainingDates = [];
@@ -200,13 +297,27 @@ async function renderReport(userId, user, schedule) {
     const studyDayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const planText = planRows.length ? `\n\nProject and subproject goals:\n${planRows.map(row => `• ${row.project} / ${row.subject}: ${row.targetHours > 0 ? `${fmtDuration(row.targetHours * 3600)} goal · ` : ''}${fmtDuration(row.seconds)} studied · ${row.targetHours > 0 ? `${fmtDuration(Math.max(0, row.targetHours * 3600 - row.seconds))} remaining` : `${row.sessions} sessions`}${row.studyDays.length ? ` · study days ${row.studyDays.map(day => studyDayNames[day]).join(', ')}` : ''}`).join('\n')}` : '\n\nNo project or subproject goals have been set.';
     const planHtml = `<section style="margin-top:22px"><h2 style="font-size:17px">Project and subproject goals</h2>${planRows.length ? `<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subject / subproject</th><th align="left">Study days</th><th align="right">Goal</th><th align="right">Studied</th><th align="right">Remaining</th></tr></thead><tbody>${planRows.map(row => `<tr><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.project)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.subject)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${row.studyDays.length ? row.studyDays.map(day => studyDayNames[day]).join(', ') : 'Not set'}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${row.targetHours > 0 ? fmtDuration(row.targetHours*3600) : '—'}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.seconds)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${row.targetHours > 0 ? fmtDuration(Math.max(0,row.targetHours*3600-row.seconds)) : '—'}</td></tr>`).join('')}</tbody></table>` : '<p>No project or subproject goals have been set.</p>'}</section>`;
-    const text = `${subject}\n\n${planPace ? `${planPace}\n` : ''}Study time already logged in this period: ${fmtDuration(stats.seconds)}\n${schedule.type === 'weekly-plan' ? planText : areaBreakdownText(stats)}\n\nOpen tasks: ${tasks.rows.length}\n${taskRows.join('\n') || 'No upcoming tasks.'}\n\nManage email reports in PlotHour.`;
-    const html = `<main style="font:15px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:22px;color:#525db5">${escapeEmailHtml(subject)}</h1><p>${escapeEmailHtml(range.label)} · ${fmtDuration(stats.seconds)} studied in this period</p>${planPace ? `<div style="padding:14px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:8px"><strong>${plannedGoalHours > 0 ? 'Daily pace to reach your project goals' : 'Set a goal for a daily pace'}</strong>${plannedGoalHours > 0 ? `<div style="font-size:20px;color:#525db5;font-weight:700;margin-top:5px">${fmtDuration(dailyPace * 3600)} per study day</div><small>${escapeEmailHtml(planPace)}</small>` : `<p>${escapeEmailHtml(planPace)}</p>`}</div>` : ''}${schedule.type === 'weekly-plan' ? planHtml : areaBreakdownHtml(stats)}<h2 style="font-size:16px;margin-top:22px">Upcoming tasks</h2>${tasks.rows.length ? `<ul>${tasks.rows.map(task => `<li>${escapeEmailHtml(task.title)}${task.project_name ? ` · ${escapeEmailHtml(task.project_name)}` : ''}${task.subproject_name ? ` / ${escapeEmailHtml(task.subproject_name)}` : ''}${task.due_date ? ` · due ${escapeEmailHtml(formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale))}` : ''}</li>`).join('')}</ul>` : '<p>No upcoming tasks.</p>'}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
+    const agendaRows = planRows.filter(row => row.targetHours > 0);
+    const agendaTargetSeconds = agendaRows.reduce((sum, row) => sum + row.targetHours * 3600, 0);
+    const agendaStudiedSeconds = agendaRows.reduce((sum, row) => sum + row.seconds, 0);
+    const agendaRemainingSeconds = Math.max(0, agendaTargetSeconds - agendaStudiedSeconds);
+    const agendaPlanText = agendaRows.length
+      ? `Today's target: ${fmtDuration(agendaTargetSeconds)} across ${agendaRows.length} project/subproject${agendaRows.length === 1 ? '' : 's'}. ${fmtDuration(agendaStudiedSeconds)} studied; ${fmtDuration(agendaRemainingSeconds)} remaining today.\n\n${agendaRows.map(row => `• ${row.project} / ${row.subject}: ${fmtDuration(row.targetHours * 3600)} target · ${fmtDuration(row.seconds)} studied · ${fmtDuration(Math.max(0, row.targetHours * 3600 - row.seconds))} remaining`).join('\n')}`
+      : 'No study goals are scheduled for today. Add recurring goals and study days to your projects or subprojects to build a daily agenda.';
+    const agendaPlanHtml = `<section style="margin-top:18px"><div style="padding:15px 16px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:9px"><strong style="font-size:13px">Today's study target</strong>${agendaRows.length ? `<div style="font-size:22px;color:#525db5;font-weight:700;margin:6px 0">${fmtDuration(agendaTargetSeconds)}</div><div style="font-size:12px;color:#656b80">${fmtDuration(agendaStudiedSeconds)} studied · ${fmtDuration(agendaRemainingSeconds)} remaining today</div>` : '<p style="margin:6px 0 0;color:#656b80">No study goals are scheduled for today. Add recurring goals and study days to your projects or subprojects to build a daily agenda.</p>'}</div>${agendaRows.length ? `<h2 style="font-size:17px;margin-top:20px">Today's project and subproject plan</h2><table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subproject</th><th align="right">Today's target</th><th align="right">Studied</th><th align="right">Remaining</th></tr></thead><tbody>${agendaRows.map(row => `<tr><td style="padding:9px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.project)}</td><td style="padding:9px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.subject)}</td><td align="right" style="padding:9px 3px;border-bottom:1px solid #eee">${fmtDuration(row.targetHours*3600)}</td><td align="right" style="padding:9px 3px;border-bottom:1px solid #eee">${fmtDuration(row.seconds)}</td><td align="right" style="padding:9px 3px;border-bottom:1px solid #eee">${fmtDuration(Math.max(0,row.targetHours*3600-row.seconds))}</td></tr>`).join('')}</tbody></table>` : ''}</section>`;
+    const agendaProgressHtml = `<p>${escapeEmailHtml(range.label)} · ${fmtDuration(stats.seconds)} studied today</p>`;
+    const summaryText = schedule.type === 'weekly-plan'
+      ? `${planPace ? `${planPace}\n` : ''}Study time already logged in this period: ${fmtDuration(stats.seconds)}${planText}`
+      : agendaPlanText;
+    const taskSectionText = includeUpcomingTasks ? `\n\nUpcoming tasks (${tasks.rows.length}):\n${taskRows.join('\n') || 'No upcoming tasks.'}` : '';
+    const taskSectionHtml = includeUpcomingTasks ? `<h2 style="font-size:16px;margin-top:22px">Upcoming tasks</h2>${tasks.rows.length ? `<ul>${tasks.rows.map(task => `<li>${escapeEmailHtml(task.title)}${task.project_name ? ` · ${escapeEmailHtml(task.project_name)}` : ''}${task.subproject_name ? ` / ${escapeEmailHtml(task.subproject_name)}` : ''}${task.due_date ? ` · due ${escapeEmailHtml(formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale))}` : task.reminder_date ? ` · reminder ${escapeEmailHtml(formatDateKey(String(task.reminder_date).slice(0,10), dateFormat, locale))}` : ''}</li>`).join('')}</ul>` : '<p>No upcoming tasks.</p>'}` : '';
+    const text = `${subject}\n\n${summaryText}${taskSectionText}\n\nManage email reports in PlotHour.`;
+    const html = `<main style="font:15px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:22px;color:#525db5">${escapeEmailHtml(subject)}</h1>${schedule.type === 'agenda' ? agendaProgressHtml : `<p>${escapeEmailHtml(range.label)} · ${fmtDuration(stats.seconds)} studied in this period</p>`}${schedule.type === 'agenda' ? agendaPlanHtml : planPace ? `<div style="padding:14px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:8px"><strong>Daily pace to reach your project goals</strong><div style="font-size:20px;color:#525db5;font-weight:700;margin-top:5px">${fmtDuration(dailyPace * 3600)} per study day</div><small>${escapeEmailHtml(planPace)}</small></div>` : ''}${schedule.type === 'weekly-plan' ? planHtml : ''}${taskSectionHtml}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
     return { subject, text, html, range };
   }
   const current = await reportStats(userId, timezone, range);
-  const compare = schedule.type === 'comparison' && schedule.compare === 'Custom dates' && /^\d{4}-\d{2}-\d{2}$/.test(schedule.compareFrom || '') && /^\d{4}-\d{2}-\d{2}$/.test(schedule.compareTo || '') && schedule.compareFrom <= schedule.compareTo
-    ? { from: schedule.compareFrom, to: schedule.compareTo, label: 'Selected comparison range' }
+  const compare = schedule.type === 'comparison' && schedule.compare === 'Custom dates' && validDateRange(schedule.compareFrom, schedule.compareTo)
+    ? { from: schedule.compareFrom, to: schedule.compareTo, label: formatDateRange(schedule.compareFrom, schedule.compareTo, dateFormat, locale) }
     : previousRange(range, schedule.compare);
   compare.label = formatDateRange(compare.from, compare.to, dateFormat, locale);
   const previous = await reportStats(userId, timezone, compare);
@@ -214,18 +325,18 @@ async function renderReport(userId, user, schedule) {
   const weeklyGoalSeconds = (Number(goals.rows[0]?.weekly_hours) || 0) * 3600;
   const currentGoal = weeklyGoalSeconds * daySpan(range.from, range.to) / 7;
   const previousGoal = weeklyGoalSeconds * daySpan(compare.from, compare.to) / 7;
-  const pct = previous.seconds ? Math.round((current.seconds - previous.seconds) / previous.seconds * 100) : null;
+  const pct = formatPercentChange(current.seconds, previous.seconds);
   const goalPct = goal => goal > 0 ? `${Math.round(current.seconds / goal * 100)}%` : 'No goal set';
   const previousGoalPct = previousGoal > 0 ? `${Math.round(previous.seconds / previousGoal * 100)}%` : 'No goal set';
   const subject = schedule.type === 'comparison' ? `Study comparison · ${range.label}` : `PlotHour study report · ${range.label}`;
   const metrics = [
-    ['Study time', fmtDuration(current.seconds), fmtDuration(previous.seconds), pct == null ? '—' : `${pct > 0 ? '+' : ''}${pct}%`],
-    ['Average session', fmtDuration(current.average), fmtDuration(previous.average), ''],
-    ['Sessions', String(current.entries), String(previous.entries), ''],
-    ['Active days', String(current.activeDays), String(previous.activeDays), ''],
-    ['Longest session', fmtDuration(current.longest), fmtDuration(previous.longest), ''],
-    ['Goal completion', goalPct(currentGoal), previousGoalPct, currentGoal > 0 && previousGoal > 0 ? `${Math.round(current.seconds / currentGoal * 100) - Math.round(previous.seconds / previousGoal * 100)} pts` : ''],
-    ['Best study streak', `${current.bestStreak} days`, `${previous.bestStreak} days`, ''],
+    ['Study time', fmtDuration(current.seconds), fmtDuration(previous.seconds), pct],
+    ['Average session', fmtDuration(current.average), fmtDuration(previous.average), formatPercentChange(current.average, previous.average)],
+    ['Sessions', String(current.entries), String(previous.entries), formatPercentChange(current.entries, previous.entries)],
+    ['Active days', String(current.activeDays), String(previous.activeDays), formatPercentChange(current.activeDays, previous.activeDays)],
+    ['Longest session', fmtDuration(current.longest), fmtDuration(previous.longest), formatPercentChange(current.longest, previous.longest)],
+    ['Goal completion', goalPct(currentGoal), previousGoalPct, currentGoal > 0 && previousGoal > 0 ? `${formatPercentChange(current.seconds / currentGoal, previous.seconds / previousGoal)} (${Math.round(current.seconds / currentGoal * 100) - Math.round(previous.seconds / previousGoal * 100)} pts)` : '—'],
+    ['Best study streak', `${current.bestStreak} days`, `${previous.bestStreak} days`, formatPercentChange(current.bestStreak, previous.bestStreak)],
   ];
   const wanted = new Set(schedule.metrics || ['studyTime','averageSession','sessions','activeDays','longestSession','goalProgress','bestStreak']);
   const metricIds = ['studyTime','averageSession','sessions','activeDays','longestSession','goalProgress','bestStreak'];
@@ -247,19 +358,40 @@ async function renderReport(userId, user, schedule) {
   ].filter(metric => wanted.has(metric[0]));
   const peopleText = peopleRows.length && friendMetrics.length ? `\n\nSame-period study partners:\n${peopleRows.map(person => `${person.name}: ${friendMetrics.map(metric => `${metric[1]} ${metric[2](person)}`).join(' · ')}`).join('\n')}` : '';
   const peopleHtml = peopleRows.length && friendMetrics.length ? `<h2 style="font-size:17px;margin-top:24px">Study partners · same period</h2><table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Person</th>${friendMetrics.map(metric => `<th align="right">${escapeEmailHtml(metric[1])}</th>`).join('')}</tr></thead><tbody>${peopleRows.map(person => `<tr><td style="padding:9px 2px;border-bottom:1px solid #eee">${escapeEmailHtml(person.name)}</td>${friendMetrics.map(metric => `<td align="right">${escapeEmailHtml(metric[2](person))}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '';
+  const upcomingTasks = schedule.includeUpcomingTasks === true
+    ? await query(`SELECT title,project_name,subproject_name,due_date,reminder_date FROM user_tasks WHERE user_id=$1 AND completed=false AND ((due_date IS NOT NULL AND due_date >= $2::date) OR (reminder_date IS NOT NULL AND reminder_date >= $2::date) OR (due_date IS NULL AND reminder_date IS NULL)) ORDER BY COALESCE(due_date,reminder_date) NULLS LAST,created_at DESC LIMIT 30`, [userId, localToday(timezone)])
+    : { rows: [] };
+  const upcomingTaskText = schedule.includeUpcomingTasks === true
+    ? `\n\nUpcoming tasks (${upcomingTasks.rows.length}):\n${upcomingTasks.rows.map(task => `${task.title}${task.project_name ? ` · ${task.project_name}` : ''}${task.subproject_name ? ` / ${task.subproject_name}` : ''}${task.due_date ? ` · due ${formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale)}` : task.reminder_date ? ` · reminder ${formatDateKey(String(task.reminder_date).slice(0,10), dateFormat, locale)}` : ''}`).join('\n') || 'No upcoming tasks.'}`
+    : '';
+  const upcomingTaskHtml = schedule.includeUpcomingTasks === true
+    ? `<h2 style="font-size:17px;margin-top:22px">Upcoming tasks</h2>${upcomingTasks.rows.length ? `<ul>${upcomingTasks.rows.map(task => `<li>${escapeEmailHtml(task.title)}${task.project_name ? ` · ${escapeEmailHtml(task.project_name)}` : ''}${task.subproject_name ? ` / ${escapeEmailHtml(task.subproject_name)}` : ''}${task.due_date ? ` · due ${escapeEmailHtml(formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale))}` : task.reminder_date ? ` · reminder ${escapeEmailHtml(formatDateKey(String(task.reminder_date).slice(0,10), dateFormat, locale))}` : ''}</li>`).join('')}</ul>` : '<p>No upcoming tasks.</p>'}`
+    : '';
   const areaComparison = comparisonBreakdownHtml(current, previous);
   const headlineMetric = rows[0];
-  const text = `${subject}\n\n${range.label}: ${rows.map(row => `${row[0]} ${row[1]}`).join(' · ')}.\n${compare.label}: ${rows.map(row => `${row[0]} ${row[2]}`).join(' · ')}.\n\n${rows.map(row => `${row[0]}: ${row[1]} · previous ${row[2]}${row[3] ? ` · ${row[3]}` : ''}`).join('\n')}${areaComparison.text}${peopleText}\n\nManage email reports in PlotHour.`;
-  const html = `<main style="font:14px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:24px;margin:10px 0">${escapeEmailHtml(range.label)} comparison</h1><p style="color:#666b80">${escapeEmailHtml(formatDateRange(range.from, range.to, dateFormat, locale))} compared with ${escapeEmailHtml(formatDateRange(compare.from, compare.to, dateFormat, locale))}</p>${headlineMetric ? `<div style="padding:16px;background:#f2f3fc;border-radius:12px"><strong style="font-size:26px;color:#6872c5">${escapeEmailHtml(headlineMetric[1])}</strong><div>${escapeEmailHtml(headlineMetric[0])}${headlineMetric[3] ? ` · ${escapeEmailHtml(headlineMetric[3])} vs previous` : ''}</div></div>` : ''}<table style="width:100%;border-collapse:collapse;margin-top:16px"><thead><tr><th align="left">Metric</th><th align="right">This period</th><th align="right">Previous</th><th align="right">Change</th></tr></thead><tbody>${rows.map(row => `<tr><td style="padding:10px 2px;border-bottom:1px solid #eee">${escapeEmailHtml(row[0])}</td><td align="right">${escapeEmailHtml(row[1])}</td><td align="right">${escapeEmailHtml(row[2])}</td><td align="right">${escapeEmailHtml(row[3])}</td></tr>`).join('')}</tbody></table>${areaComparison.html}${peopleHtml}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
+  const text = `${subject}\n\n${range.label}: ${rows.map(row => `${row[0]} ${row[1]}`).join(' · ')}.\n${compare.label}: ${rows.map(row => `${row[0]} ${row[2]}`).join(' · ')}.\n\n${rows.map(row => `${row[0]}: ${row[1]} · previous ${row[2]}${row[3] ? ` · ${row[3]} change` : ''}`).join('\n')}${areaComparison.text}${peopleText}${upcomingTaskText}\n\nManage email reports in PlotHour.`;
+  const html = `<main style="font:14px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:24px;margin:10px 0">${escapeEmailHtml(range.label)} comparison</h1><p style="color:#666b80">${escapeEmailHtml(formatDateRange(range.from, range.to, dateFormat, locale))} compared with ${escapeEmailHtml(formatDateRange(compare.from, compare.to, dateFormat, locale))}</p>${headlineMetric ? `<div style="padding:16px;background:#f2f3fc;border-radius:12px"><strong style="font-size:26px;color:#6872c5">${escapeEmailHtml(headlineMetric[1])}</strong><div>${escapeEmailHtml(headlineMetric[0])}${headlineMetric[3] ? ` · <span style="color:${emailChangeColor(headlineMetric[3])};font-weight:700">${escapeEmailHtml(headlineMetric[3])}</span> vs previous` : ''}</div></div>` : ''}<table style="width:100%;border-collapse:collapse;margin-top:16px"><thead><tr><th align="left">Metric</th><th align="right">This period</th><th align="right">Previous</th><th align="right">Change</th></tr></thead><tbody>${rows.map(row => `<tr><td style="padding:10px 2px;border-bottom:1px solid #eee">${escapeEmailHtml(row[0])}</td><td align="right">${escapeEmailHtml(row[1])}</td><td align="right">${escapeEmailHtml(row[2])}</td><td align="right" style="color:${emailChangeColor(row[3])};font-weight:700">${escapeEmailHtml(row[3])}</td></tr>`).join('')}</tbody></table>${areaComparison.html}${peopleHtml}${upcomingTaskHtml}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
   return { subject, text, html, range };
 }
 
 async function getDestinations(userId) {
-  const userResult = await query('SELECT email,email_verified,display_name,timezone FROM users WHERE id=$1', [userId]);
+  const userResult = await query('SELECT email,email_verified,display_name,timezone,week_starts_on FROM users WHERE id=$1', [userId]);
   const user = userResult.rows[0];
   if (!user || !user.email_verified) throw Object.assign(new Error('Verify your account email before sending reports.'), { status: 403 });
   const extra = await query(`SELECT email,unsubscribe_token_hash FROM email_report_recipients WHERE user_id=$1 AND status='active'`, [userId]);
   return { user, destinations: [{ email: user.email, unsubscribeToken: null }, ...extra.rows.map(row => ({ email: row.email, unsubscribeToken: makeUnsubscribeToken(userId, row.email) }))] };
+}
+
+async function enforceOnDemandSendLimit(userId) {
+  const account = await query('SELECT is_admin FROM users WHERE id=$1', [userId]);
+  if (account.rows[0]?.is_admin) return;
+  const recentSends = await query(
+    `SELECT COUNT(*)::int AS count FROM email_report_deliveries
+     WHERE user_id=$1 AND schedule_id=ANY($2::text[]) AND status='sent'
+       AND delivered_at > now() - interval '1 hour'`,
+    [userId, ['manual', 'manual-task-info']]
+  );
+  if (recentSends.rows[0].count >= 10) throw Object.assign(new Error('You’ve reached the 10 on-demand emails per hour limit.'), { status: 429 });
 }
 
 async function sendReportToUser(userId, schedule, forcedFormat = null) {
@@ -343,8 +475,9 @@ emailReportsRouter.put('/', async (req, res) => {
   const settings = req.body?.settings;
   if (!settings || typeof settings !== 'object' || Array.isArray(settings) || !Array.isArray(settings.schedules) || settings.schedules.length > 20 || !Array.isArray(settings.taskRules) || settings.taskRules.length > 500) return res.status(400).json({ error: 'Email-report settings are incomplete or too large.' });
   if (settings.schedules.some(item => !validId(item.id) || !allowedReportTypes.has(item.type) || !['Daily','Weekly','Monthly','Quarterly','Yearly'].includes(item.frequency) || !validTime(item.time))) return res.status(400).json({ error: 'Check your report schedule options.' });
+  if (settings.schedules.some(item => item.includeUpcomingTasks !== undefined && typeof item.includeUpcomingTasks !== 'boolean')) return res.status(400).json({ error: 'Choose whether each report should include upcoming tasks.' });
   if (settings.taskRules.some(rule => !validTaskId(rule.id) || typeof rule.enabled !== 'boolean' || !Array.isArray(rule.reminders) || rule.reminders.length > 20 || rule.reminders.some(reminder => !validId(reminder.id) || !validTime(reminder.time) || !(reminder.offset === 'On due date' || /^(?:[1-9]|[1-9]\d|[12]\d\d|3[0-5]\d|36[0-5]) days before$/.test(reminder.offset))))) return res.status(400).json({ error: 'Check your task reminder rules.' });
-  if (typeof settings.enabled !== 'boolean' || typeof settings.allTasksEnabled !== 'boolean' || !['html','text'].includes(settings.format)) return res.status(400).json({ error: 'Check your email delivery preferences.' });
+  if (typeof settings.enabled !== 'boolean' || typeof settings.allTasksEnabled !== 'boolean' || typeof settings.taskRemindersEnabled !== 'boolean' || !['html','text'].includes(settings.format)) return res.status(400).json({ error: 'Check your email delivery preferences.' });
   if (settings.dateFormat && !supportedDateFormats.has(settings.dateFormat)) return res.status(400).json({ error: 'Choose a supported date format.' });
   if (settings.locale && safeLocale(settings.locale) !== settings.locale) return res.status(400).json({ error: 'Choose a valid language and region.' });
   if (settings.timezone) { try { new Intl.DateTimeFormat('en-US', { timeZone: settings.timezone }).format(); } catch { return res.status(400).json({ error: 'Choose a valid local timezone.' }); } }
@@ -395,8 +528,7 @@ emailReportsRouter.post('/send', async (req, res) => {
     schedule.timezone = schedule.timezone || saved.rows[0]?.settings?.timezone || 'UTC';
     schedule.dateFormat = schedule.dateFormat || saved.rows[0]?.settings?.dateFormat || 'system';
     schedule.locale = schedule.locale || saved.rows[0]?.settings?.locale || 'en-US';
-    const recentSends = await query(`SELECT COUNT(*)::int AS count FROM email_report_deliveries WHERE user_id=$1 AND schedule_id='manual' AND status='sent' AND delivered_at > now() - interval '1 hour'`, [req.userId]);
-    if (recentSends.rows[0].count >= 10) return res.status(429).json({ error: 'You’ve reached the 10 on-demand reports per hour limit.' });
+    await enforceOnDemandSendLimit(req.userId);
     const result = await sendReportToUser(req.userId, schedule);
     await query(`INSERT INTO email_report_deliveries(user_id,schedule_id,period_key,status) VALUES($1,'manual',$2,'sent')`, [req.userId, randomBytes(12).toString('hex')]);
     return res.json({ sent: true, ...result });
@@ -412,8 +544,7 @@ emailReportsRouter.post('/send-task-info', async (req, res) => {
     const selectedIds = settings.allTasksEnabled ? null : (settings.taskRules || []).filter(rule => rule.enabled).map(rule => rule.id).filter(validTaskId);
     if (!settings.allTasksEnabled && !selectedIds?.length) return res.status(400).json({ error: 'Choose at least one task, or include all open tasks, before sending a task update.' });
 
-    const recentSends = await query(`SELECT COUNT(*)::int AS count FROM email_report_deliveries WHERE user_id=$1 AND schedule_id='manual-task-info' AND status='sent' AND delivered_at > now() - interval '1 hour'`, [req.userId]);
-    if (recentSends.rows[0].count >= 10) return res.status(429).json({ error: 'You’ve reached the 10 on-demand task updates per hour limit.' });
+    await enforceOnDemandSendLimit(req.userId);
 
     const taskResult = await query(
       `SELECT id,title,project_name,subproject_name,due_date,reminder_date
@@ -505,14 +636,14 @@ export async function processScheduledEmailReports() {
       try { await sendReportToUser(user.id, { ...schedule, timezone, dateFormat: settings.dateFormat, locale: safeLocale(settings.locale), format: settings.format || 'html' }); await query(`UPDATE email_report_deliveries SET status='sent',delivered_at=now() WHERE id=$1`, [claimed.rows[0].id]); }
       catch (error) { await query('DELETE FROM email_report_deliveries WHERE id=$1', [claimed.rows[0].id]); console.error('[Scheduled email report]', error.message); }
     }
-    if (!settings.enabled || !emailDeliveryConfigured()) continue;
+    if (!settings.enabled || !settings.taskRemindersEnabled || !emailDeliveryConfigured()) continue;
     const timezone = settings.timezone || user.timezone || 'UTC';
     const tasksResult = await query(`SELECT id,title,project_name,subproject_name,due_date,reminder_date FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NOT NULL OR reminder_date IS NOT NULL)`, [user.id]);
     const rulesByTask = new Map((settings.taskRules || []).map(rule => [rule.id, rule]));
     for (const task of tasksResult.rows) {
       const taskRule = rulesByTask.get(task.id);
-      if (taskRule && !taskRule.enabled) continue;
-      const reminders = [...(taskRule?.reminders || (settings.allTasksEnabled && task.due_date ? [3,2,1,0].map(days => ({ id: `default-${days}`, offset: days ? `${days} days before` : 'On due date', time: '08:00' })) : [])), ...(task.reminder_date ? [{ id: 'existing-reminder-date', offset: 'On reminder date', date: String(task.reminder_date).slice(0,10), time: '08:00' }] : [])];
+      if (settings.allTasksEnabled ? (taskRule && !taskRule.enabled) : (!taskRule || !taskRule.enabled)) continue;
+      const reminders = [...(taskRule?.enabled ? taskRule.reminders : (settings.allTasksEnabled && task.due_date ? [3,2,1,0].map(days => ({ id: `default-${days}`, offset: days ? `${days} days before` : 'On due date', time: '08:00' })) : [])), ...(task.reminder_date ? [{ id: 'existing-reminder-date', offset: 'On reminder date', date: String(task.reminder_date).slice(0,10), time: '08:00' }] : [])];
         const dueDate = task.due_date ? String(task.due_date).slice(0, 10) : 'No due date';
         const dueDateLabel = task.due_date ? formatDateKey(dueDate, settings.dateFormat, safeLocale(settings.locale)) : dueDate;
       const today = localToday(timezone);

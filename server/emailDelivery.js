@@ -14,9 +14,16 @@ function getTransporter() {
 
 export const emailDeliveryConfigured = () => Boolean(getTransporter() || (process.env.RESEND_API_KEY && process.env.EMAIL_FROM));
 
-export async function sendEmail({ to, subject, text, html }) {
+export function getBrandedEmailFrom() {
+  const configured = process.env.EMAIL_FROM || '';
+  const address = configured.match(/<\s*([^<>\s]+@[^<>\s]+)\s*>/)?.[1]
+    || configured.match(/^\s*([^<>\s]+@[^<>\s]+)\s*$/)?.[1];
   const smtpEmail = process.env.SMTP_USER?.includes('@') ? process.env.SMTP_USER : `${process.env.SMTP_USER || 'no-reply'}@thoughtpolice.space`;
-  const from = process.env.EMAIL_FROM || `PlotHour <${smtpEmail}>`;
+  return `PlotHour <${address || smtpEmail}>`;
+}
+
+export async function sendEmail({ to, subject, text, html }) {
+  const from = getBrandedEmailFrom();
   const smtp = getTransporter();
   if (smtp) return smtp.sendMail({ from, to, subject, text, ...(html ? { html } : {}) });
   if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
