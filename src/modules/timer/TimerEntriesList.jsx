@@ -119,13 +119,15 @@ export const EditSelect = ({ value, options, onChange, label }) => {
       window.removeEventListener('scroll', reposition, true);
     };
   }, [open, positionMenu]);
-  return <div className="entry-edit-select" ref={rootRef}>
+  const insideDialog = Boolean(rootRef.current?.closest('dialog'));
+  const menu = <div ref={menuRef} className={`entry-edit-select-menu${insideDialog ? ' is-inline-menu' : ' is-portal-menu'}`} style={insideDialog ? undefined : menuPosition} role="listbox" aria-label={label}>
+    {options.map((option) => <button key={option.value || 'none'} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : ''} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
+  </div>;
+  return <div className={`entry-edit-select${open ? ' is-open' : ''}`} ref={rootRef}>
     <button type="button" className="entry-edit-select-trigger" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
       <span>{selected?.label || 'Select'}</span><ChevronDown size={14} aria-hidden="true" />
     </button>
-    {open && menuPosition && createPortal(<div ref={menuRef} className="entry-edit-select-menu is-portal-menu" style={menuPosition} role="listbox" aria-label={label}>
-      {options.map((option) => <button key={option.value || 'none'} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : ''} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
-    </div>, rootRef.current?.closest('dialog') || document.body)}
+    {open && (insideDialog ? menu : menuPosition && createPortal(menu, document.body))}
   </div>;
 };
 

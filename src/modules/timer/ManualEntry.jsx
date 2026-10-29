@@ -26,7 +26,7 @@ export const ManualEntry = ({ projects, onSave }) => {
         <label>Project<EditSelect label="Entry project" value={projectId} options={projects.map(p => ({ value:p.id,label:p.name }))} onChange={id => { setProject(id); setSubject(''); }} /></label>
         <label>Subproject<EditSelect label="Entry subproject" value={subjectId} options={[{value:'',label:'No subproject'},...(project?.subjects || []).map(s => ({value:s.id,label:s.name}))]} onChange={setSubject} /></label>
         <label>Date<SessionDatePicker value={date} onChange={setDate} /></label>
-        <label>Start time<input required type="time" name="start" /></label><label>End time<input required type="time" name="end" /></label>
+        <label>Start time<input required className="manual-time-input" type="text" inputMode="numeric" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="Use 24-hour time, for example 09:30" placeholder="HH:MM" name="start" /></label><label>End time<input required className="manual-time-input" type="text" inputMode="numeric" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="Use 24-hour time, for example 10:45" placeholder="HH:MM" name="end" /></label>
         <label className="manual-entry-note">Session note<input name="note" maxLength={240} placeholder="What did you work on?" /></label>
       </div>{error && <p role="alert">{error}</p>}<footer><button type="button" onClick={() => dialog.current.close()}>Cancel</button><button className="entry-save-btn" type="submit">Save entry</button></footer>
     </form></dialog></>;
