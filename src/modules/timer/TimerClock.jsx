@@ -231,7 +231,7 @@ export const AnalogueClockFace = ({ now }) => {
 };
 
 /* ── Precision Chronograph Stopwatch (Active Timer State) ── */
-export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
+export const StopwatchFace = ({ elapsed, isRunning, targetSeconds, size = 280, compact = false }) => {
   const canvasRef = useRef(null);
   const { theme } = useTheme();
 
@@ -240,7 +240,7 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
     if (!canvas) return;
 
     const dpr = window.devicePixelRatio || 2;
-    const S = 280;
+    const S = size;
     canvas.width = S * dpr;
     canvas.height = S * dpr;
     canvas.style.width = `${S}px`;
@@ -254,7 +254,8 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
     const accentColor = isDark ? darkAccent : '#8086d4';
     const cx = S / 2;
     const cy = S / 2;
-    const R = S / 2 - 12;
+    const scale = S / 280;
+    const R = S / 2 - Math.max(6, 12 * scale);
 
     ctx.clearRect(0, 0, S, S);
 
@@ -292,7 +293,7 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
       const isSecond = i % 5 === 0;
       const isMajor = i % 25 === 0; // Every 5 seconds
 
-      const len = isMajor ? 11 : isSecond ? 6 : 3;
+      const len = (isMajor ? 11 : isSecond ? 6 : 3) * scale;
       const r1 = R - 10 - len;
       const r2 = R - 10;
 
@@ -305,20 +306,20 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
         : isSecond
         ? (isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(17, 24, 39, 0.55)')
         : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(17, 24, 39, 0.16)');
-      ctx.lineWidth = isMajor ? 1.8 : 1;
+      ctx.lineWidth = (isMajor ? 1.8 : 1) * Math.max(.72, scale);
       ctx.lineCap = 'round';
       ctx.stroke();
     }
 
     // 3. Chronograph Numbers (05, 10, 15... 60)
-    ctx.font = '700 9px -apple-system, BlinkMacSystemFont, "Inter", sans-serif';
+    ctx.font = `700 ${Math.max(5.5, 9 * scale)}px -apple-system, BlinkMacSystemFont, "Inter", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = isDark ? '#f9fafb' : '#111827';
 
     for (let s = 5; s <= 60; s += 5) {
       const a = (s * 6 - 90) * (Math.PI / 180);
-      const numR = R - 28;
+      const numR = R - 28 * scale;
       const nx = cx + numR * Math.cos(a);
       const ny = cy + numR * Math.sin(a);
       ctx.fillText(String(s).padStart(2, '0'), nx, ny);
@@ -331,15 +332,15 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
       ctx.beginPath();
       ctx.arc(cx, cy, R - 38, -Math.PI / 2, -Math.PI / 2 + progressFraction * Math.PI * 2);
       ctx.strokeStyle = accentColor;
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = Math.max(2, 3.5 * scale);
       ctx.lineCap = 'round';
       ctx.stroke();
     }
 
     // 5. Upper 30-Minute Chronograph Sub-Dial
     const subCx = cx;
-    const subCy = cy - 46;
-    const subR = 27;
+    const subCy = cy - 46 * scale;
+    const subR = 27 * scale;
 
     ctx.beginPath();
     ctx.arc(subCx, subCy, subR, 0, Math.PI * 2);
@@ -360,7 +361,7 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
       ctx.stroke();
     }
 
-    ctx.font = '600 7px -apple-system, sans-serif';
+    ctx.font = `600 ${Math.max(4.5, 7 * scale)}px -apple-system, sans-serif`;
     ctx.fillStyle = isDark ? '#f9fafb' : '#111827';
     ctx.fillText('30', subCx, subCy - subR + 8);
     ctx.fillText('15', subCx, subCy + subR - 8);
@@ -372,11 +373,11 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
     ctx.moveTo(subCx, subCy);
     ctx.lineTo(subCx + (subR - 6) * Math.cos(subRad), subCy + (subR - 6) * Math.sin(subRad));
     ctx.strokeStyle = accentColor;
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = Math.max(1, 1.6 * scale);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(subCx, subCy, 2.5, 0, Math.PI * 2);
+    ctx.arc(subCx, subCy, Math.max(1.5, 2.5 * scale), 0, Math.PI * 2);
     ctx.fillStyle = accentColor;
     ctx.fill();
 
@@ -386,33 +387,92 @@ export const StopwatchFace = ({ elapsed, isRunning, targetSeconds }) => {
 
     ctx.beginPath();
     // Counterbalance tail
-    ctx.moveTo(cx - 22 * Math.cos(secRad), cy - 22 * Math.sin(secRad));
+    ctx.moveTo(cx - 22 * scale * Math.cos(secRad), cy - 22 * scale * Math.sin(secRad));
     ctx.lineTo(cx + (R - 12) * Math.cos(secRad), cy + (R - 12) * Math.sin(secRad));
     ctx.strokeStyle = accentColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = Math.max(1.2, 2 * scale);
     ctx.lineCap = 'round';
     ctx.stroke();
 
     // Counterbalance eyelet
-    const tailX = cx - 14 * Math.cos(secRad);
-    const tailY = cy - 14 * Math.sin(secRad);
+    const tailX = cx - 14 * scale * Math.cos(secRad);
+    const tailY = cy - 14 * scale * Math.sin(secRad);
     ctx.beginPath();
-    ctx.arc(tailX, tailY, 3, 0, Math.PI * 2);
+    ctx.arc(tailX, tailY, Math.max(1.6, 3 * scale), 0, Math.PI * 2);
     ctx.strokeStyle = accentColor;
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = Math.max(1, 1.6 * scale);
     ctx.stroke();
 
     // Center Chronograph Pivot
     ctx.beginPath();
-    ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+    ctx.arc(cx, cy, Math.max(3.5, 6.5 * scale), 0, Math.PI * 2);
     ctx.fillStyle = accentColor;
     ctx.fill();
 
     ctx.beginPath();
-    ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+    ctx.arc(cx, cy, Math.max(1.5, 2.5 * scale), 0, Math.PI * 2);
     ctx.fillStyle = isDark ? '#0a0e17' : '#ffffff';
     ctx.fill();
-  }, [elapsed, isRunning, targetSeconds, theme]);
+  }, [compact, elapsed, isRunning, size, targetSeconds, theme]);
 
-  return <canvas ref={canvasRef} className="horology-stopwatch-canvas" />;
+  return <canvas ref={canvasRef} className={`horology-stopwatch-canvas${compact ? ' is-compact' : ''}`} />;
+};
+
+/* ── Compact stopwatch for the running-session summary ── */
+export const CompactStopwatchFace = ({ elapsed, targetSeconds = 0 }) => {
+  const seconds = elapsed % 60;
+  const minutes = (elapsed / 60) % 60;
+  const secondAngle = seconds * 6;
+  const minuteAngle = minutes * 6;
+  const progress = targetSeconds > 0 ? Math.min(1, elapsed / targetSeconds) : 0;
+  return (
+    <svg className="compact-stopwatch" viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <radialGradient id="compactWatchDial" cx="42%" cy="32%" r="72%">
+          <stop offset="0" stopColor="var(--sd-bg-surface)" />
+          <stop offset="1" stopColor="var(--sd-bg-subtle)" />
+        </radialGradient>
+        <filter id="compactWatchShadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="var(--sd-shadow-color)" floodOpacity=".18" />
+        </filter>
+      </defs>
+
+      <circle className="compact-stopwatch-case" cx="60" cy="60" r="56" filter="url(#compactWatchShadow)" />
+      <circle className="compact-stopwatch-dial" cx="60" cy="60" r="52" />
+      {targetSeconds > 0 && (
+        <circle
+          className="compact-stopwatch-target"
+          cx="60"
+          cy="60"
+          r="53"
+          pathLength="1"
+          strokeDasharray={`${progress} 1`}
+        />
+      )}
+
+      <g className="compact-stopwatch-ticks">
+        {Array.from({ length: 60 }, (_, index) => (
+          <line
+            key={index}
+            className={index % 5 === 0 ? 'is-major' : ''}
+            x1="60"
+            y1={index % 5 === 0 ? '12' : '10'}
+            x2="60"
+            y2="15"
+            transform={`rotate(${index * 6} 60 60)`}
+          />
+        ))}
+      </g>
+
+      <text className="compact-stopwatch-mark" x="60" y="23" textAnchor="middle">60</text>
+      <text className="compact-stopwatch-mark" x="98" y="63" textAnchor="middle">15</text>
+      <text className="compact-stopwatch-mark" x="60" y="102" textAnchor="middle">30</text>
+      <text className="compact-stopwatch-mark" x="22" y="63" textAnchor="middle">45</text>
+
+      <line className="compact-stopwatch-minute-hand" x1="60" y1="66" x2="60" y2="35" transform={`rotate(${minuteAngle} 60 60)`} />
+      <line className="compact-stopwatch-second-hand" x1="60" y1="72" x2="60" y2="17" transform={`rotate(${secondAngle} 60 60)`} />
+      <circle className="compact-stopwatch-hub" cx="60" cy="60" r="4.5" />
+      <circle className="compact-stopwatch-pin" cx="60" cy="60" r="1.7" />
+    </svg>
+  );
 };

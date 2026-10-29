@@ -4,11 +4,13 @@ import {
   Square,
   Pause,
   Trash2,
+  Save,
   Target,
   Search,
 } from 'lucide-react';
-import { AnalogueClockFace, HorologyArt } from './TimerClock';
+import { AnalogueClockFace, CompactStopwatchFace, HorologyArt } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
+import { TimerPlaceholderPanel } from './TimerPlaceholderPanel';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
@@ -830,12 +832,8 @@ export const TimerPage = ({ user }) => {
                     {activeTimer.subjectName && <b style={{ color: sessionSubject?.color || sessionProject?.color || activeTimer.color || 'var(--sd-coral)' }}>{activeTimer.subjectName}</b>}
                   </div>
                   <span className="timer-running-divider" aria-hidden="true" />
-                  <div className="timer-running-progress" role="progressbar" aria-label="Timer target progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={sessionProgress}>
-                    <svg viewBox="0 0 120 120" aria-hidden="true">
-                      <circle className="timer-running-progress-track" cx="60" cy="60" r="52" />
-                      <circle className="timer-running-progress-value" cx="60" cy="60" r="52" style={{ '--running-progress': sessionGoal.seconds ? sessionProgress : Math.min(96, (elapsed % 3600) / 36) }} />
-                      {Array.from({ length: 60 }, (_, index) => <line key={index} x1="60" y1="10" x2="60" y2={index % 5 === 0 ? '14' : '12'} transform={`rotate(${index * 6} 60 60)`} />)}
-                    </svg>
+                  <div className="timer-running-progress" role="timer" aria-label={`Elapsed stopwatch ${fmtClock(elapsed)}`}>
+                    <CompactStopwatchFace elapsed={elapsed} targetSeconds={sessionGoal.seconds} />
                   </div>
                   <div className="timer-running-elapsed" aria-live="polite">
                     <div><span>{fmtClock(elapsed)}</span><small>.{String(Math.floor(now.getMilliseconds() / 10)).padStart(2, '0')}</small></div>
@@ -867,7 +865,10 @@ export const TimerPage = ({ user }) => {
                     maxLength={240}
                     aria-label="Session note to save with this entry"
                   />
-                  <button type="button" onClick={(event) => event.currentTarget.blur()} aria-label="Save session note">↵ Save Note</button>
+                  <button type="button" onClick={(event) => event.currentTarget.blur()} aria-label="Save session note">
+                    <Save size={12} aria-hidden="true" />
+                    Save
+                  </button>
                 </label>
               </section>
             ) : (
@@ -907,13 +908,7 @@ export const TimerPage = ({ user }) => {
 
           </div>
 
-          <section className="timer-horology-placeholder" aria-labelledby="timer-placeholder-title">
-            <header className="timer-horology-placeholder-header">
-              <span className="timer-horology-placeholder-mark" aria-hidden="true" />
-              <h2 id="timer-placeholder-title">PLACEHOLDER</h2>
-            </header>
-            <div className="timer-horology-placeholder-body" aria-hidden="true" />
-          </section>
+          <TimerPlaceholderPanel />
         </div>
       </section>
 

@@ -755,6 +755,72 @@
   height: 118px;
 }
 
+.compact-stopwatch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.compact-stopwatch-case {
+  fill: color-mix(in srgb, var(--sd-bg-surface) 96%, var(--sd-coral));
+  stroke: color-mix(in srgb, var(--sd-border-strong) 78%, var(--sd-coral));
+  stroke-width: 1.2;
+}
+
+.compact-stopwatch-dial {
+  fill: url(#compactWatchDial);
+  stroke: var(--sd-border-glass);
+  stroke-width: 1;
+}
+
+.compact-stopwatch-target {
+  fill: none;
+  stroke: var(--sd-coral);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 60px 60px;
+  opacity: .9;
+}
+
+.compact-stopwatch-ticks line {
+  stroke: var(--sd-text-muted);
+  stroke-width: .55;
+  opacity: .48;
+}
+
+.compact-stopwatch-ticks line.is-major {
+  stroke: var(--sd-text-primary);
+  stroke-width: 1.15;
+  opacity: .72;
+}
+
+.compact-stopwatch-mark {
+  fill: var(--sd-text-secondary);
+  font-family: inherit;
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.compact-stopwatch-minute-hand {
+  stroke: var(--sd-text-primary);
+  stroke-width: 2.7;
+  stroke-linecap: round;
+  transition: transform 280ms linear;
+}
+
+.compact-stopwatch-second-hand {
+  stroke: var(--sd-coral);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  transition: transform 280ms linear;
+}
+
+.compact-stopwatch-hub { fill: var(--sd-coral); }
+.compact-stopwatch-pin { fill: var(--sd-bg-surface); }
+
 .timer-running-progress svg {
   width: 100%;
   height: 100%;
@@ -877,14 +943,32 @@
 }
 
 .timer-running-note button {
-  padding: 7px 8px;
-  border: 0;
-  background: transparent;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--sd-border-glass);
+  border-radius: var(--sd-radius-md);
+  background: color-mix(in srgb, var(--sd-bg-surface) 92%, var(--sd-coral));
   color: var(--sd-text-secondary);
   font-size: 10px;
-  font-weight: 650;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--sd-shadow-color) 13%, transparent);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.timer-running-note button:hover {
+  border-color: color-mix(in srgb, var(--sd-coral) 45%, var(--sd-border-glass));
+  background: color-mix(in srgb, var(--sd-bg-surface) 82%, var(--sd-coral));
+  color: var(--sd-text-primary);
+  transform: translateY(-1px);
+}
+
+.timer-running-note button:active {
+  transform: translateY(0);
 }
 
 @media (min-width: 1081px) {
