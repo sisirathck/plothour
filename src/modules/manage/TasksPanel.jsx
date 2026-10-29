@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './TasksPanel.css';
 import { CalendarDays, ArrowUpRight, Check, Clock3 } from 'lucide-react';
 import { EditSelect, SessionDatePicker } from '../timer/TimerEntriesList';
@@ -91,12 +91,40 @@ export const TasksPanel = ({ user, projects }) => {
 
 export const TaskAgenda = ({ user, projects, studyPlan = [], onStart }) => {
   const { tasks, error, mutate } = useTasks(user);
+  const [completingIds, setCompletingIds] = useState([]);
+  const [undoTasks, setUndoTasks] = useState([]);
+  const undoTimers = useRef(new Map());
+  useEffect(() => () => { undoTimers.current.forEach(timer => clearTimeout(timer)); }, []);
+  useEffect(() => {
+    setCompletingIds(ids => ids.filter(id => !tasks.some(task => task.id === id && task.completed)));
+  }, [tasks]);
+  const completeTask = async (task) => {
+    setCompletingIds(ids => [...ids, task.id]);
+    const saved = await mutate(`/${task.id}`, 'PATCH', { completed: true });
+    if (saved) {
+      setUndoTasks(items => [...items, task]);
+      undoTimers.current.set(task.id, setTimeout(() => {
+        setUndoTasks(items => items.filter(item => item.id !== task.id));
+        undoTimers.current.delete(task.id);
+      }, 3500));
+    } else {
+      setCompletingIds(ids => ids.filter(id => id !== task.id));
+    }
+  };
+  const undoComplete = async (task) => {
+    clearTimeout(undoTimers.current.get(task.id));
+    undoTimers.current.delete(task.id);
+    setUndoTasks(items => items.filter(item => item.id !== task.id));
+    if (await mutate(`/${task.id}`, 'PATCH', { completed: false })) {
+      setCompletingIds(ids => ids.filter(id => id !== task.id));
+    }
+  };
   const [today, setToday] = useState(() => new Date());
   useEffect(() => { const tick = setInterval(() => setToday(new Date()), 60000); return () => clearInterval(tick); }, []);
   const key = dateKey(today);
   const orderedPlan = [...studyPlan].sort((a,b) => Number(a.progress >= 100) - Number(b.progress >= 100));
   const items = [
-    ...tasks.map(t => ({ ...t, date: (t.due_date || '').slice(0,10), reminder: (t.reminder_date || '').slice(0,10) })),
+    ...tasks.filter(t => !t.completed && !completingIds.includes(t.id)).map(t => ({ ...t, date: (t.due_date || '').slice(0,10), reminder: (t.reminder_date || '').slice(0,10) })),
     ...projects.flatMap(p => (p.subjects || []).filter(s => s.deadline).map(s => ({ id: `deadline-${s.id}`, title: s.name, project_name: p.name, date: s.deadline.slice(0,10), deadline: true }))),
   ].sort((a,b) => Number(Boolean(a.completed)) - Number(Boolean(b.completed)) || (a.date || a.reminder || '9999').localeCompare(b.date || b.reminder || '9999'));
   const duration = (seconds) => { const minutes = Math.ceil(Math.max(0, seconds) / 60); return minutes >= 60 ? `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}` : `${minutes}m`; };
@@ -117,12 +145,14 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart }) => {
       </div></section><section className="agenda-tasks-section"><div className="agenda-section-label">TASKS & DEADLINES<span>{items.filter(item => !item.completed).length} open</span></div>
       <div className="agenda-column-items" tabIndex={0} role="region" aria-label="Tasks and deadlines">
       {!items.length && <p className="agenda-empty">No upcoming deadlines. You’re all caught up.</p>}{items.map(item => <div className={`task-line${item.completed ? ' is-completed' : item.date && item.date < key ? ' is-overdue' : ''}`} key={item.id}>
-      {!item.deadline && <input type="checkbox" checked={Boolean(item.completed)} aria-label={`Complete ${item.title}`} onChange={() => mutate(`/${item.id}`, 'PATCH', { completed: !item.completed })} />}
+      {!item.deadline && <input type="checkbox" checked={false} aria-label={`Complete ${item.title}`} onChange={() => completeTask(item)} />}
       <div><strong>{item.title}</strong><small>{item.project_name || 'Personal'}</small></div>
       <span className={`agenda-due${item.date === key ? ' is-today' : ''}`} title={item.date || item.reminder || undefined}>{item.completed ? 'Done' : item.date ? dueLabel(item.date) : item.reminder ? `Remind ${dueLabel(item.reminder)}` : 'Anytime'}</span>
       {item.date && !item.completed && <div className="agenda-deadline-bar" role="meter" aria-label={`Time remaining for ${item.title}; full bar means seven days or more`} aria-valuemin={0} aria-valuemax={7} aria-valuenow={Math.min(7, Math.max(0, (new Date(`${item.date}T23:59:59`).getTime() - today.getTime()) / 86400000))} aria-valuetext={dueLabel(item.date)} title="Full bar = 7+ days remaining">
         <i style={{ width: `${Math.min(100, Math.max(0, (new Date(`${item.date}T23:59:59`).getTime() - today.getTime()) / (7 * 86400000) * 100))}%` }} />
       </div>}
-    </div>)}</div></section></div>
+    </div>)}</div>
+      {undoTasks.length > 0 && <div className="agenda-undo-notices" aria-live="polite">{undoTasks.map(task => <div className="agenda-undo-notice" key={task.id}><span title={task.title}>Completed · {task.title}</span><button type="button" onClick={() => undoComplete(task)}>Undo</button><i className="agenda-undo-progress" aria-hidden="true" /></div>)}</div>}
+      </section></div>
   </section>;
 };

@@ -70,3 +70,10 @@
 [data-theme='dark'] .task-agenda .agenda-tasks-section .is-overdue .agenda-deadline-bar{background:#b5757e}
 [data-theme='dark'] .task-agenda .agenda-tasks-section .is-completed strong{color:#a1adbb;font-weight:500}
 [data-theme='dark'] .task-agenda .agenda-tasks-section .is-completed .agenda-due{color:#b0bac8;background:#252a30}
+.agenda-undo-notices{flex-shrink:0;display:grid;gap:4px;padding-top:6px}
+.agenda-undo-notice{position:relative;display:flex;align-items:center;gap:8px;overflow:hidden;padding:7px 9px 9px;border:1px solid var(--sd-border-glass);border-radius:8px;background:var(--sd-bg-subtle);font-size:10px;color:var(--sd-text-secondary)}
+.agenda-undo-notice>span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agenda-undo-notice button{flex-shrink:0;border:0;background:transparent;color:var(--sd-coral);font:inherit;font-weight:700;padding:3px 0;cursor:pointer}
+.agenda-undo-notice button:focus-visible{outline:2px solid var(--sd-coral);outline-offset:2px;border-radius:3px}
+.agenda-undo-progress{position:absolute;right:0;bottom:0;left:0;height:2px;transform-origin:left;background:var(--sd-coral);animation:agenda-undo-drain 3.5s linear forwards}
+@keyframes agenda-undo-drain{to{transform:scaleX(0)}}
