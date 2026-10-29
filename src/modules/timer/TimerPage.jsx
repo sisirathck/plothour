@@ -12,6 +12,7 @@ import { AnalogueClockFace, HorologyArt, SessionTargetRings } from './TimerClock
 import { TimerEntriesList } from './TimerEntriesList';
 import { TaskAgenda } from '../manage/TasksPanel';
 import { ManualEntry } from './ManualEntry';
+import { FocusPlanner } from './FocusPlanner';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
@@ -256,17 +257,6 @@ export const TimerPage = ({ user }) => {
       || (b.targetSeconds - a.targetSeconds)
     ));
   }, [activeProjects, entries, now, activeTimer?.projectId, activeTimer?.subjectId, elapsed]);
-
-  const todayStudyPlanSummary = useMemo(() => {
-    const targetSeconds = todayStudyPlan.reduce((total, item) => total + item.targetSeconds, 0);
-    const completedSeconds = todayStudyPlan.reduce((total, item) => total + item.completedSeconds, 0);
-    return {
-      targetSeconds,
-      completedSeconds,
-      progress: targetSeconds ? Math.min(100, Math.round((completedSeconds / targetSeconds) * 100)) : 0,
-      nextFocus: todayStudyPlan.find((item) => item.remainingSeconds > 0) || null,
-    };
-  }, [todayStudyPlan]);
 
   // Top 5 Frequently Used Combos
   const topCombos = useMemo(() => {
@@ -728,8 +718,7 @@ export const TimerPage = ({ user }) => {
                     className={`timer-insights-tab${activeStudyPanelTab === 'plan' ? ' is-active' : ''}`}
                     onClick={() => setStudyPanelTab('plan')}
                   >
-                    <span>TODAY’S STUDY PLAN</span>
-                    <small>{todayStudyPlan.length}</small>
+                    <span>FOCUS PLANNER</span>
                   </button>
                 )}
               </div>
@@ -801,70 +790,7 @@ export const TimerPage = ({ user }) => {
               })}
             </div>
             ) : (
-              <div className="timer-study-plan-content timer-study-plan-content-embedded">
-                {todayStudyPlan.length > 0 && (
-                  <div className="timer-study-plan-overview">
-                    <div className="timer-study-plan-total">
-                      <span className="timer-study-plan-overview-label">TODAY’S PLANNED GOALS</span>
-                      <strong>{fmtDur(todayStudyPlanSummary.completedSeconds)} <small>of {fmtDur(todayStudyPlanSummary.targetSeconds)}</small></strong>
-                      <div className="timer-study-plan-total-track" role="progressbar" aria-label="Total daily study goals" aria-valuemin={0} aria-valuemax={100} aria-valuenow={todayStudyPlanSummary.progress}>
-                        <span style={{ width: `${todayStudyPlanSummary.progress}%` }} />
-                      </div>
-                      <span className="timer-study-plan-total-percent">{todayStudyPlanSummary.progress}% complete</span>
-                      <small className="timer-study-plan-summary-note">Goals and study days come from Manage. Logged time counts here when the subject is planned for today.</small>
-                    </div>
-                    <div className="timer-study-plan-recommendation">
-                      <span className="timer-study-plan-overview-label"><Target size={12} /> FOCUS NEXT</span>
-                      {todayStudyPlanSummary.nextFocus ? (
-                        <>
-                          <div className="timer-study-plan-recommendation-focus">
-                            <div className="timer-study-plan-recommendation-copy">
-                              <strong>{todayStudyPlanSummary.nextFocus.subjectName}</strong>
-                              <small>{todayStudyPlanSummary.nextFocus.projectName}</small>
-                            </div>
-                            <button
-                              type="button"
-                              className="timer-study-plan-start"
-                              onClick={() => startTimer(todayStudyPlanSummary.nextFocus.projectId, todayStudyPlanSummary.nextFocus.subjectId)}
-                            >
-                              <Play size={13} fill="currentColor" /> Start timer
-                            </button>
-                          </div>
-                          <span className="timer-study-plan-recommendation-progress">{todayStudyPlanSummary.nextFocus.progress}% done · {fmtDur(todayStudyPlanSummary.nextFocus.remainingSeconds)} remaining</span>
-                        </>
-                      ) : (
-                        <strong>All today’s planned goals are complete</strong>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {todayStudyPlan.length ? todayStudyPlan.map((item) => (
-                  <article className="timer-study-plan-row" key={`${item.projectId}:${item.subjectId}`}>
-                    <div className="timer-study-plan-copy">
-                      <strong><span>{item.projectName}</span><i aria-hidden="true">·</i>{item.subjectName || 'General Study'}</strong>
-                      <small>{`${item.goalBasis[0].toUpperCase()}${item.goalBasis.slice(1)} goal · ${item.goalDaysLabel || 'all days'}`}</small>
-                    </div>
-                    <div className="timer-study-plan-progress-copy">
-                      <span>{fmtDur(item.completedSeconds)} / {fmtDur(item.targetSeconds)}</span>
-                      <strong>{item.progress}%</strong>
-                      <small>{item.remainingSeconds > 0 ? `${fmtDur(item.remainingSeconds)} left` : 'Goal complete'}</small>
-                    </div>
-                    <button
-                      type="button"
-                      className="timer-study-plan-start timer-study-plan-row-start"
-                      onClick={() => startTimer(item.projectId, item.subjectId)}
-                      aria-label={`Start timer for ${item.projectName}${item.subjectName ? `, ${item.subjectName}` : ''}`}
-                    >
-                      <Play size={12} fill="currentColor" /> Start timer
-                    </button>
-                    <div className="timer-study-plan-track" role="progressbar" aria-label={`${item.subjectName} daily goal`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.progress}>
-                      <span style={{ width: `${item.progress}%`, '--plan-color': item.color }} />
-                    </div>
-                  </article>
-                )) : (
-                  <p className="timer-study-plan-empty">No study goals are scheduled for today. Choose study days in Manage to add items to this plan.</p>
-                )}
-              </div>
+              <FocusPlanner projects={activeProjects} entries={entries} activeTimer={activeTimer} elapsed={elapsed} now={now} weekStart={timerPreferences.weekStart || 'monday'} onStart={startTimer} />
             )}
             </div>
           </section>

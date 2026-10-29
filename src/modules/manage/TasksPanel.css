@@ -36,3 +36,19 @@
 .agenda-study-row{padding:7px 0;gap:6px}.agenda-study-copy small{font-size:9px;margin:2px 0 4px}.agenda-study-row button{font-size:9px;padding:4px 6px}.agenda-study-row button svg{display:none}.agenda-plan-icon{width:15px}.agenda-section-label{font-size:8px;letter-spacing:.06em;padding-top:10px}.task-agenda .task-line{gap:6px;flex-wrap:wrap;padding:7px 0}.task-agenda .task-line strong{font-size:11px}.task-agenda .task-line small{font-size:9px}.task-agenda .agenda-due{font-size:8px;padding:2px 5px;margin-left:auto}
 @media(max-width:1100px){.tasks-create{grid-template-columns:1fr 1fr}.tasks-create>button{margin-top:0}.tasks-panel{padding:20px}}
 @media(max-width:600px){.task-agenda-list{grid-template-columns:1fr}.agenda-tasks-section{border-left:0;padding-left:0}.tasks-create{grid-template-columns:1fr}.tasks-page-heading h2{font-size:21px}}
+
+.task-status-tabs{display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid var(--sd-border-glass);padding:0 0 12px;margin-bottom:4px}
+.task-agenda header>a{padding:6px 0 6px 10px;border:0;border-radius:0;background:none;font-size:11px;font-weight:600;color:var(--sd-text-secondary);box-shadow:none}.task-agenda header>a:hover{background:none;color:var(--sd-coral);text-decoration:underline;text-underline-offset:4px}
+.task-status-tabs button{display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:8px;background:transparent;padding:8px 12px;color:var(--sd-text-muted);font:inherit;font-size:12px;cursor:pointer}
+.task-status-tabs button[aria-selected='true']{background:var(--sd-bg-subtle);border-color:var(--sd-border-glass);color:var(--sd-text-primary)}
+.task-status-tabs button span{font-size:10px;font-variant-numeric:tabular-nums;opacity:.7}
+.is-completed strong{text-decoration:line-through;color:var(--sd-text-muted)}
+.is-completed .agenda-progress{opacity:.45}.is-completed .agenda-due{color:var(--sd-text-muted)}
+.task-agenda-list{overflow:hidden;align-content:stretch;min-height:0;grid-template-rows:minmax(0,1fr)}
+.agenda-study-section,.agenda-tasks-section{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden}
+.agenda-section-label{flex-shrink:0}
+.agenda-column-items{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:grid;grid-auto-rows:minmax(44px,1fr);scrollbar-width:thin;scrollbar-color:var(--sd-border-glass) transparent;padding-right:3px}
+.agenda-column-items:focus-visible{outline:1px solid var(--sd-coral);outline-offset:-1px;border-radius:5px}
+.agenda-column-items .agenda-study-row,.agenda-column-items .task-line{box-sizing:border-box;margin:0;min-height:44px;align-self:stretch}
+.agenda-column-items>.agenda-empty{align-self:start}
+@media(max-width:600px){.task-agenda-list{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}.agenda-tasks-section{border-top:1px solid var(--sd-border-glass)}}
