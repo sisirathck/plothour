@@ -270,7 +270,7 @@
 .t-select-opt.sel {
   font-weight: 600;
   color: var(--sd-coral);
-  background: rgba(243, 149, 127, 0.08);
+  background: color-mix(in srgb, var(--sd-coral) 11%, var(--sd-popover-bg));
 }
 
 /* Preset Segmented Mode Pills */
