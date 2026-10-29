@@ -1,0 +1,35 @@
+import { escapeEmailHtml as escape } from './emailDelivery.js';
+
+export const reportLetterCopy = {
+  agenda: ['Daily agenda', 'Make room for what matters today.', 'A clear target and your project plan for the day ahead.', 'Open today’s plan'],
+  'weekly-plan': ['Weekly plan', 'A clear start to the week ahead.', 'Your goals and planned study days, gathered in one place.', 'View your weekly plan'],
+  'weekly-recap': ['Weekly recap', 'A little focus. Meaningful progress.', 'Here’s a look at the time you made for learning, and how it added up.', 'View your progress'],
+  'monthly-recap': ['Monthly report', 'Your month, in perspective.', 'See where your time went and the habits you built along the way.', 'Explore your month'],
+  comparison: ['Progress comparison', 'See what changed. Find your next step.', 'A closer look at your focus across two periods.', 'Explore your comparison'],
+  'task-reminder': ['Task reminder', 'A small reminder. A clearer next step.', 'You asked for a reminder about an upcoming deadline.', 'Review your task'],
+  'task-update': ['Task update', 'Your next steps, in one place.', 'A clear view of the open tasks you chose to keep in sight.', 'Review your tasks'],
+};
+
+// Internal report fragments already escape dynamic content. Keep their complete
+// data while giving every table and section consistent email-safe inline styles.
+export function styleReportContent(content = '') {
+  const styles = {
+    section: 'margin-top:28px', h2: 'font:600 15px Arial,sans-serif;margin:28px 0 12px;color:#34314f',
+    table: 'width:100%;border-collapse:collapse;table-layout:auto;font:12px Arial,sans-serif',
+    th: 'padding:10px 5px;border-bottom:1px solid #dedce8;color:#858095;font-size:10px;font-weight:500;vertical-align:bottom',
+    td: 'padding:14px 5px;border-bottom:1px solid #eeedf2;vertical-align:top;overflow-wrap:anywhere;line-height:1.6',
+    p: 'font-size:13px;line-height:1.8;color:#777489;margin:12px 0',
+    li: 'padding:6px 0;font-size:13px;line-height:1.7',
+  };
+  return content.replace(/\sstyle="[^"]*"/g, '').replace(/<(section|h2|table|th|td|p|li)(\s[^>]*|)>/g, (_, tag, attrs) => `<${tag}${attrs} style="${styles[tag]}">`);
+}
+
+export function renderReportLetter({ type, date = '', name = '', metric, metricLabel = '', context = '', progress, stats = [], content = '', footer = 'Manage email reports in PlotHour.', baseUrl = process.env.APP_BASE_URL || 'https://plothour.com' }) {
+  const [kind, title, intro, action] = reportLetterCopy[type] || reportLetterCopy['monthly-recap'];
+  const base = baseUrl.replace(/\/$/, '');
+  const preferencesUrl = `${base}/manage?tab=email`;
+  const target = `${base}/${type.startsWith('task') ? 'manage?tab=tasks' : type === 'agenda' || type === 'weekly-plan' ? 'manage?tab=projects' : type === 'comparison' ? 'compare' : 'dashboard'}`;
+  const e = escape;
+  const percentage = Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : null;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${e(kind)}</title><style>@media(max-width:600px){.letter-pad{padding:26px 22px!important}.letter-title{font-size:28px!important}.letter-metric{font-size:40px!important}}</style></head><body style="margin:0;padding:0;background:#eeedf5;color:#28283d;font:14px Arial,Helvetica,sans-serif"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all">${e(`${kind} · ${date} · ${context || intro}`)}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eeedf5"><tr><td align="center" style="padding:32px 12px"><table role="presentation" width="616" cellspacing="0" cellpadding="0" style="width:100%;max-width:616px;background:#ffffff;border:1px solid #e1e0eb"><tr><td class="letter-pad" style="padding:38px 40px 32px"><table role="presentation" width="100%" style="border-collapse:collapse;border-bottom:1px solid #eae9f0"><tr><td style="padding-bottom:25px"><img src="${e(base)}/plothour-logo-light.png" width="116" alt="PlotHour" style="display:block;width:116px;height:auto;border:0"></td><td align="right" style="padding-bottom:25px;font:10px Arial,sans-serif;letter-spacing:1px;color:#858398">YOUR STUDY LETTER</td></tr></table><p style="font-size:10px;letter-spacing:1.2px;color:#7773b5;font-weight:600;margin:32px 0 12px">${e(kind.toUpperCase())}${date ? ` · ${e(date)}` : ''}</p><h1 class="letter-title" style="font-size:32px;line-height:1.18;letter-spacing:-1px;font-weight:500;margin:0 0 16px;color:#28283e">${e(title)}</h1><p style="font-size:14px;line-height:1.85;color:#777589;margin:0 0 30px">${name ? `Hi ${e(name)},<br>` : ''}${e(intro)}</p>${metric !== undefined ? `<table role="presentation" width="100%" style="border-collapse:collapse;border-top:1px solid #eae9f0;border-bottom:1px solid #eae9f0"><tr><td style="padding:26px 0"><div style="font-size:11px;color:#7b788e;letter-spacing:.4px">${e(metricLabel.toUpperCase())}</div><div class="letter-metric" style="font-size:48px;line-height:1.2;letter-spacing:-2px;font-weight:500;margin:8px 0 12px;color:#34314f">${e(String(metric))}</div><div style="font-size:12px;line-height:1.7;color:#777489">${e(context)}</div>${percentage !== null ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:18px;background:#eeedf5"><tr><td width="${percentage}%" style="height:3px;background:#827bb9;font-size:0;line-height:0">&nbsp;</td>${percentage < 100 ? `<td style="height:3px;font-size:0;line-height:0">&nbsp;</td>` : ''}</tr></table>` : ''}${stats.length ? `<table role="presentation" width="100%" style="margin-top:24px;border-collapse:collapse"><tr>${stats.map(([value, label]) => `<td style="vertical-align:top;padding-right:12px"><div style="font-size:19px;color:#34314f;margin-bottom:6px">${e(String(value))}</div><div style="font-size:11px;line-height:1.6;color:#858195">${e(label)}</div></td>`).join('')}</tr></table>` : ''}</td></tr></table>` : ''}${styleReportContent(content)}<p style="font-size:13px;line-height:1.8;color:#777489;margin:26px 0 22px">${type.startsWith('task') ? 'A little time today can make the next step feel lighter.' : 'Keep building at a pace that works for you. Every focused session counts.'}</p><table role="presentation" cellspacing="0" cellpadding="0"><tr><td bgcolor="#746eac" style="border-radius:5px"><a href="${e(target)}" style="display:inline-block;padding:14px 20px;color:#fff;font:12px Arial,sans-serif;text-decoration:none">${e(action)} →</a></td></tr></table><div style="font-size:11px;color:#9691a4;line-height:1.8;margin-top:30px;padding-top:22px;border-top:1px solid #eeedf2">You’re receiving this because email reports or reminders are enabled in PlotHour.<br>${footer}</div></td></tr></table><p style="font:10px Arial,sans-serif;color:#9a95a8;line-height:2;text-align:center;margin:22px 0">PlotHour · Turn time into progress<br><a href="${e(preferencesUrl)}" style="color:#79738e">Email preferences</a></p></td></tr></table></body></html>`;
+}

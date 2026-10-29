@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BellRing, CalendarClock, Check, ChevronDown, Clock3, FileText, LoaderCircle, Mail, Plus, Send, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import './EmailReportsPanel.css';
+import { WorkspaceHeader } from './WorkspaceHeader';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
 const reportTypes = [
@@ -178,20 +179,20 @@ export const EmailReportsPanel = ({ user }) => {
     </button>;
   };
   const addTaskRule = (task) => setTaskRules(items => items.some(item => item.id === task.id) ? items : [...items, { id: task.id, title: task.title, project: task.project_name, subproject: task.subproject_name, due: task.due_date, enabled: true, reminders: [{ id: crypto.randomUUID(), offset: '1 day before', time: '08:00' }] }]);
-  return <section className="email-studio">
-    <header className="email-studio-heading">
-      <div className="email-studio-title-wrap"><span className="email-studio-icon"><Mail size={20} /></span><div><span className="email-studio-eyebrow">YOUR STUDY, DELIVERED</span><h1>Email reports</h1><p>Thoughtful updates that help you plan ahead and see your progress.</p></div></div>
+  return <section className="email-studio email-settings">
+    <WorkspaceHeader title="Email reports" description="Your progress, on your schedule. Manage reports, reminders, and recipients.">
       <span className={`email-prototype-badge ${saveState === 'error' || loadError ? 'is-error' : ''}`} title={loadError || (saveState === 'error' ? actionError : undefined)}><span /> {loading ? 'Loading settings…' : loadError ? 'Could not load settings' : saveState === 'saving' ? 'Saving changes…' : saveState === 'error' ? 'Could not save' : 'Settings saved'}</span>
-    </header>
+    </WorkspaceHeader>
 
-    <div className="email-studio-toolbar"><span className="email-format-note"><ShieldCheck size={15} /> HTML reports include a plain-text alternative · recipients can unsubscribe any time</span></div>
+    <div className="email-studio-toolbar"><span className="email-format-note"><ShieldCheck size={15} /> HTML reports include a plain-text alternative · recipients can unsubscribe any time</span><a className="email-design-preview-link" href="/previews/email-design.html" target="_blank" rel="noreferrer">Preview all email designs ↗</a></div>
 
     <div className="email-studio-grid">
       <section className="email-card email-schedules-card">
-        <div className="email-card-heading"><div><span className="email-section-kicker">MAKE IT YOURS</span><h2>Your delivery schedule</h2><p>Choose what arrives and when. Each report has its own schedule.</p></div><label className="email-scope-toggle"><input type="checkbox" checked={reportsEnabled} onChange={event => setReportsEnabled(event.target.checked)} /><span>{reportsEnabled ? 'Email on' : 'Email off'}</span></label></div>
-        {!deliveryConfigured && <p className="email-delivery-warning"><ShieldCheck size={14} /> Email delivery is not configured on this server yet. Your preferences can be saved, but messages won’t go out until SMTP or Resend is configured.</p>}
-        {!accountVerified && <p className="email-delivery-warning"><ShieldCheck size={14} /> Verify your PlotHour account email before enabling report delivery.</p>}
+        <div className="email-card-heading"><div><span className="email-section-kicker">REPORT DELIVERY</span><h2>Delivery schedule</h2><p>Choose what arrives and when. Each report has its own schedule.</p></div><label className="email-scope-toggle"><input type="checkbox" checked={reportsEnabled} onChange={event => setReportsEnabled(event.target.checked)} /><span>{reportsEnabled ? 'Email on' : 'Email off'}</span></label></div>
+        {settingsLoaded && !deliveryConfigured && <p className="email-delivery-warning"><ShieldCheck size={14} /> Email delivery is not configured on this server yet. Your preferences can be saved, but messages won’t go out until SMTP or Resend is configured.</p>}
+        {settingsLoaded && !accountVerified && <p className="email-delivery-warning"><ShieldCheck size={14} /> Verify your PlotHour account email before enabling report delivery.</p>}
         <div className="email-schedule-list">
+          {!schedules.length && <div className="email-empty-state"><span>01 / REPORTS</span><h3>{loading ? 'Loading your reports…' : loadError ? 'Your reports are unavailable' : 'Build your reporting routine'}</h3><p>{loadError ? 'We couldn’t load your preferences. Refresh the page to reconnect to your account.' : 'Add a daily agenda, weekly recap, or monthly report. You choose the timing and what’s included.'}</p></div>}
           {schedules.map(schedule => {
             const selectedType = reportTypes.find(item => item.id === schedule.type) || reportTypes[0];
             const Icon = selectedType.icon;
@@ -221,7 +222,7 @@ export const EmailReportsPanel = ({ user }) => {
             </article>;
           })}
         </div>
-        <button type="button" className="email-add-schedule" onClick={addSchedule} disabled={schedules.length >= scheduledReportTypes.length}><Plus size={15} /> Add another report</button>
+        <button type="button" className="email-add-schedule" onClick={addSchedule} disabled={!settingsLoaded || schedules.length >= scheduledReportTypes.length}><Plus size={15} /> {schedules.length ? 'Add another report' : 'Add a report'}</button>
       <div className="email-task-reminder-schedule">
         <div className="email-task-schedule-heading"><div><span className="email-section-kicker">TASK ALERTS</span><h3>Task reminders</h3><p>Choose which deadlines to include and when reminders arrive.</p></div><div className="email-task-heading-actions"><label className="email-schedule-reminder-toggle"><input type="checkbox" checked={taskRemindersEnabled} onChange={event => setTaskRemindersEnabled(event.target.checked)} /><span>Automatic reminders {taskRemindersEnabled ? 'On' : 'Off'}</span></label>{renderSendButton('task-info', sendTaskInfoNow, !deliveryConfigured || !accountVerified || loading || (!allTasksEnabled && !taskRules.some(task => task.enabled)), 'Send task info now', !deliveryConfigured ? 'Email delivery is not configured on this server' : !accountVerified ? 'Verify your account email before sending' : 'Send the current task selection now')}</div></div>
         <div className="email-reminder-scope"><div><strong>Apply reminders to</strong><small>Choose all open tasks or customize each task below.</small></div><label className="email-scope-toggle"><input type="checkbox" checked={allTasksEnabled} onChange={event => setAllTasksEnabled(event.target.checked)} /><span>{allTasksEnabled ? 'All open tasks' : 'Selected tasks'}</span></label></div>
@@ -239,9 +240,9 @@ export const EmailReportsPanel = ({ user }) => {
       <aside className="email-side-column">
         <section className="email-card email-recipients-card">
           <div className="email-card-heading compact"><div><span className="email-section-kicker">DELIVER TO</span><h2>Recipients</h2><p>Only recipients who accepted their invitation receive reports.</p></div></div>
-          <div className="email-recipient-row"><span className="email-recipient-avatar">{accountEmail.slice(0,1).toUpperCase()}</span><span className="email-recipient-address"><strong>{accountEmail}</strong><small>Your account email</small></span><span className={accountVerified ? 'email-verified-pill' : 'email-pending-pill'}>{accountVerified ? <><Check size={12} /> Verified</> : 'Verify account'}</span></div>
+          <div className="email-recipient-row"><span className="email-recipient-avatar">{accountEmail.slice(0,1).toUpperCase()}</span><span className="email-recipient-address"><strong>{accountEmail}</strong><small>Your account email</small></span><span className={accountVerified ? 'email-verified-pill' : 'email-pending-pill'}>{!settingsLoaded ? 'Unavailable' : accountVerified ? <><Check size={12} /> Verified</> : 'Verify account'}</span></div>
           {recipients.map(item => <div className={`email-recipient-row ${item.status === 'active' ? 'is-verified' : 'is-pending'}`} key={item.id}><span className="email-recipient-avatar is-pending"><Mail size={14} /></span><span className="email-recipient-address"><strong>{item.email}</strong><small>{item.status === 'active' ? 'Accepted invitation' : item.status === 'unsubscribed' ? 'Unsubscribed' : 'Invitation sent · awaiting acceptance'}</small></span><span className={item.status === 'active' ? 'email-verified-pill' : 'email-pending-pill'}>{item.status === 'active' ? 'Active' : item.status === 'unsubscribed' ? 'Stopped' : 'Pending'}</span><button type="button" aria-label={`Remove ${item.email}`} onClick={() => removeRecipient(item)}><Trash2 size={14} /></button></div>)}
-          <form className="email-add-recipient" onSubmit={addRecipient}><label htmlFor="email-additional-recipient">Invite recipients in a batch</label><textarea id="email-additional-recipient" placeholder="Paste addresses separated by commas or new lines" value={emailInput} onChange={event => setEmailInput(event.target.value)} rows={3} /><button type="submit" className="email-invite-batch" disabled={!emailInput.trim() || !deliveryConfigured}><Mail size={14} /> Send invitations</button>{addError && <small role="alert">{addError}</small>}</form>
+          <form className="email-add-recipient" onSubmit={addRecipient}><label htmlFor="email-additional-recipient">Invite recipients</label><textarea id="email-additional-recipient" placeholder="Paste addresses separated by commas or new lines" value={emailInput} onChange={event => setEmailInput(event.target.value)} rows={3} /><button type="submit" className="email-invite-batch" disabled={!emailInput.trim() || !deliveryConfigured}><Mail size={14} /> Send invitations</button>{addError && <small role="alert">{addError}</small>}</form>
           <p className="email-verification-note"><ShieldCheck size={13} /> New recipients accept once, then can receive future reports. They can unsubscribe at any time.</p>
         </section>
       </aside>
@@ -260,17 +261,4 @@ export const EmailPreviewsGallery = () => {
   </section></div>;
 };
 
-const EmailMockup = ({ email, large = false }) => <div className={`email-mockup email-kind-${email.type || 'weekly-recap'}${large ? ' is-large' : ''}`}>
-  <div className="email-mockup-topbar"><span /><span /><span /><small>PlotHour · {email.type === 'task-reminder' ? 'task alert' : 'study letter'}</small></div>
-  <article className="email-mockup-paper">
-    <header><span className="email-mockup-brand"><img className="email-real-logo" src="/plothour-logo-light.png" alt="PlotHour" /><small className="email-brand-tagline">Turn time into progress</small></span><span className="email-mockup-date">{email.eyebrow}</span></header>
-    {email.type === 'task-reminder' && <div className="email-task-alert-banner"><span className="email-task-alert-icon"><BellRing size={14} /></span><span><strong>Deadline approaching</strong><small>One of your saved tasks needs attention</small></span><b>2 DAYS</b></div>}
-    <div className="email-mockup-hero"><span className="email-mockup-eyebrow">{email.eyebrow}</span><h3>{email.title}</h3><p>{email.intro}</p></div>
-    <div className="email-mockup-metric"><strong>{email.metric}</strong><span>{email.metricLabel}</span></div>
-    {email.callout && <div className="email-plan-callout"><span><Clock3 size={13} /> {email.callout.label}</span><strong>{email.callout.value}</strong><small>{email.callout.detail}</small></div>}
-    {email.comparisonRows ? <div className="email-comparison-table"><div className="email-comparison-table-head"><span>STUDY METRIC</span><span>THIS PERIOD</span><span>PREVIOUS</span><span>CHANGE</span></div>{email.comparisonRows.map(row => <div className="email-comparison-table-row" key={row.id}><strong>{row.label}</strong><span>{row.current}</span><span>{row.previous}</span><b className={row.change.startsWith('+') ? 'is-up' : ''}>{row.change}</b></div>)}</div> : <div className="email-mockup-list">{email.rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>}
-    {email.areaRows && <div className="email-preview-area-breakdown"><strong>{email.comparisonRows ? 'Study time by project and subject' : 'Project and subproject detail'}</strong>{email.areaRows.map(area => <div key={`${area.project}-${area.subject}`}><span><b>{area.project}</b><small>{area.subject}</small></span><span><b>{area.time}</b><small>{area.detail}</small></span></div>)}</div>}
-    <button type="button" className="email-mockup-cta">{email.type === 'task-reminder' ? 'Review this task' : email.type === 'comparison' ? 'Explore your comparison' : 'Open your study dashboard'} <span>→</span></button>
-    <footer>Made for your momentum. <span>Manage email preferences</span></footer>
-  </article>
-</div>;
+const EmailMockup = ({ email }) => <iframe className="email-production-preview" title={`${reportTypes.find(type => type.id === email.type)?.name || 'Report'} email preview · sample data`} src={`/previews/email-letters/${email.type || 'weekly-recap'}.html`} />;

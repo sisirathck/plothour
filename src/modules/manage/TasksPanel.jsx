@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TasksPanel.css';
-import { CalendarDays, Check, Clock3 } from 'lucide-react';
+import { WorkspaceHeader } from './WorkspaceHeader';
+import { Check, Clock3 } from 'lucide-react';
 import { EditSelect, SessionDatePicker } from '../timer/TimerEntriesList';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
@@ -72,7 +73,7 @@ export const TasksPanel = ({ user, projects }) => {
     setBusy(true); if (await mutate('', 'POST', body)) { form.reset(); setDue(''); setReminder(''); setProject(''); setSubproject(''); } setBusy(false);
   };
   return <section className="tasks-panel">
-    <div className="tasks-page-heading"><span className="agenda-icon"><CalendarDays size={19} /></span><div><h2>Tasks & reminders</h2><p>Keep your next steps and deadlines in one place.</p></div><span className="tasks-open-count">{tasks.filter(t => !t.completed).length} open</span></div>
+    <WorkspaceHeader title="Tasks & reminders" description="Keep your next steps and deadlines in one place."><span>{tasks.filter(t => !t.completed).length} open tasks</span></WorkspaceHeader>
     <form className="tasks-create" onSubmit={add}>
       <label>Task<input required maxLength={240} name="title" placeholder="What needs to get done?" /></label>
       <label><span className="tasks-field-label">Project <em>Optional</em></span><EditSelect label="Task project" value={project} options={[{value:'',label:'Personal / unassigned'},...projects.map(p => ({value:p.name,label:p.name}))]} onChange={value => { setProject(value); setSubproject(''); }} /></label>

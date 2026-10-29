@@ -692,3 +692,27 @@
 .manage-card-actions button[aria-pressed="true"],.manage-card-actions button[aria-expanded="true"] { color:var(--manage-accent); background:var(--manage-accent-soft); }
 .manage-card-actions button:focus-visible,.manage-bulk-toolbar button:focus-visible { outline:2px solid var(--manage-accent); outline-offset:2px; }
 @media (max-width:600px) { .manage-bulk-toolbar { flex-wrap:wrap; padding:10px 12px; } .manage-project-card-top { flex-wrap:wrap; } }
+
+/* One header system for every workspace section. */
+.workspace-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0 30px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid var(--manage-line);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--manage-text);
+}
+.workspace-section-eyebrow { display: block; margin-bottom: 12px; color: var(--manage-muted); font-size: 10px; font-weight: 600; letter-spacing: .12em; }
+.workspace-section-header h1 { margin: 0 0 10px; font-size: clamp(28px, 3vw, 36px); line-height: 1.15; font-weight: 650; letter-spacing: -.045em; }
+.workspace-section-header p { margin: 0; color: var(--manage-muted); font-size: 13px; line-height: 1.7; }
+.workspace-section-meta { flex: 0 0 auto; color: var(--manage-muted); font-size: 11px; }
+.manage-module-container .tasks-panel { padding: 0; border: 0; background: transparent; border-radius: 0; }
+.manage-module-container .email-settings { max-width: none; }
+.manage-module-container select { color-scheme: light; }
+.manage-module-container select option { background: #fbfaff; color: var(--sd-text-primary); }
+:root[data-theme='dark'] .manage-module-container select { color-scheme: dark; }
+:root[data-theme='dark'] .manage-module-container select option { background: var(--sd-bg-elevated, #262626); color: var(--sd-text-primary); }
+@media(max-width:620px) { .workspace-section-header { align-items: flex-start; flex-direction: column; gap: 16px; padding: 16px 0 24px; } }

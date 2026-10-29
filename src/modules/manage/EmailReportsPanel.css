@@ -39,3 +39,96 @@
 .email-reminder-days{display:flex;align-items:center}.email-reminder-days input{width:46px;min-height:28px;padding:0 5px;border:1px solid var(--email-line);border-radius:7px;background:var(--sd-bg-surface);color:var(--email-text);font:inherit;font-size:9px;text-align:center}
 .email-preview-area-breakdown{display:grid;gap:0;margin-top:14px;padding-top:10px;border-top:1px solid #e9eaf1;color:#41445f;font-family:Arial,sans-serif}.email-preview-area-breakdown>strong{margin-bottom:5px;font-size:9px}.email-preview-area-breakdown>div{display:flex;justify-content:space-between;gap:10px;padding:7px 1px;border-bottom:1px solid #eeeef4}.email-preview-area-breakdown>div>span{display:grid;gap:3px;min-width:0}.email-preview-area-breakdown>div>span:last-child{text-align:right}.email-preview-area-breakdown b{font-size:8px;font-weight:650}.email-preview-area-breakdown small{color:#777d93;font-size:7px}.email-mockup.is-large .email-preview-area-breakdown{margin-top:18px;padding-top:12px}.email-mockup.is-large .email-preview-area-breakdown>strong{font-size:10px}.email-mockup.is-large .email-preview-area-breakdown>div{padding:9px 1px}.email-mockup.is-large .email-preview-area-breakdown b{font-size:9px}.email-mockup.is-large .email-preview-area-breakdown small{font-size:8px}
 .email-type-trigger{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:4px 18px 4px 0;border:0;background:transparent;color:var(--email-text);font:inherit;font-size:12px;font-weight:680;text-align:left;cursor:pointer}.email-type-trigger>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.email-type-trigger>svg{position:absolute;top:50%;right:0;flex:0 0 auto;transform:translateY(-50%);color:var(--email-muted);pointer-events:none}.email-type-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:80;isolation:isolate;width:max-content;min-width:min(210px,calc(100vw - 36px));max-width:min(280px,calc(100vw - 36px));max-height:min(260px,50vh);overflow:auto;padding:5px;border:1px solid var(--email-line);border-radius:10px;background-color:#fff;background-image:none;opacity:1;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 12px 30px rgba(35,42,81,.17)}:root[data-theme='dark'] .email-type-menu{background-color:#20212a}.email-type-menu button{display:block;width:100%;padding:8px 9px;border:0;border-radius:7px;background:transparent;color:var(--email-muted);font:inherit;font-size:10px;text-align:left;cursor:pointer}.email-type-menu button:hover,.email-type-menu button.is-selected{background:color-mix(in srgb,var(--email-accent) 9%,#fff);color:var(--email-text)}:root[data-theme='dark'] .email-type-menu button:hover,:root[data-theme='dark'] .email-type-menu button.is-selected{background:color-mix(in srgb,var(--email-accent) 18%,#20212a)}.email-type-menu button.is-selected{font-weight:700}
+
+/* Report settings: quiet surfaces, clear hierarchy, shared workspace palette. */
+.email-settings {
+  --email-accent: var(--manage-accent, #777dd0);
+  --email-line: var(--sd-border-soft);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.email-settings .email-studio-heading { padding: 24px 0 30px; margin-bottom: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.email-settings .email-studio-eyebrow { color: var(--email-muted); font-size: 10px; font-weight: 600; letter-spacing: .12em; margin-bottom: 12px; }
+.email-settings .email-studio-heading h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -.045em; font-weight: 650; margin: 0 0 10px; }
+.email-settings .email-studio-heading p { font-size: 13px; line-height: 1.7; }
+.email-settings .email-prototype-badge { border: 0; background: transparent; padding: 0; font-size: 11px; font-weight: 400; }
+.email-settings .email-prototype-badge>span { width: 5px; height: 5px; box-shadow: none; background: var(--email-muted); }
+.email-settings .email-studio-toolbar { padding: 14px 0; margin-bottom: 24px; border-top: 1px solid var(--email-line); border-bottom: 1px solid var(--email-line); }
+.email-settings .email-format-note { font-size: 11px; line-height: 1.6; }
+.email-settings .email-format-note svg, .email-settings .email-verification-note svg, .email-settings .email-prototype-footer svg { color: var(--email-muted); }
+.email-settings .email-studio-grid { grid-template-columns: minmax(0, 1fr) minmax(310px, .46fr); gap: 24px; }
+.email-settings .email-card { padding: 28px; border-radius: 12px; box-shadow: 0 2px 5px #15152c03; }
+.email-settings .email-card-heading { margin-bottom: 24px; gap: 20px; }
+.email-settings .email-section-kicker { color: var(--email-muted); font-size: 10px; font-weight: 600; letter-spacing: .1em; margin-bottom: 9px; }
+.email-settings .email-card-heading h2, .email-settings .email-card-heading.compact h2 { font-size: 20px; font-weight: 600; letter-spacing: -.035em; margin: 0 0 8px; }
+.email-settings .email-card-heading p, .email-settings .email-task-schedule-heading p { font-size: 12px; line-height: 1.7; }
+.email-settings .email-delivery-warning { background: transparent; border: 0; border-left: 2px solid var(--sd-border-strong); border-radius: 0; padding: 5px 12px; margin-bottom: 14px; color: var(--sd-text-secondary); font-size: 11px; }
+.email-empty-state { padding: 28px 0 32px; max-width: 430px; }
+.email-empty-state>span { color: var(--email-accent); font-size: 10px; letter-spacing: .1em; font-weight: 600; }
+.email-empty-state h3 { font-size: 22px; letter-spacing: -.035em; font-weight: 500; margin: 14px 0 10px; }
+.email-empty-state p { font-size: 13px; line-height: 1.8; color: var(--email-muted); margin: 0; }
+.email-settings .email-add-schedule { width: auto; min-height: 38px; padding: 0 16px; margin-top: 16px; border: 1px solid var(--email-line); border-radius: 7px; background: var(--sd-bg-subtle); color: var(--email-text); font-size: 12px; font-weight: 500; }
+.email-settings .email-add-schedule:hover:not(:disabled) { border-color: var(--email-accent); }
+.email-settings .email-schedule-list { gap: 0; }
+.email-settings .email-schedule-row { grid-template-columns: minmax(0,1fr); padding: 24px 0; border: 0; border-top: 1px solid var(--email-line); border-radius: 0; background: transparent; }
+.email-settings .email-schedule-icon { display: none; }
+.email-settings .email-type-trigger { font-size: 15px; font-weight: 600; }
+.email-settings .email-schedule-main>p { font-size: 12px; line-height: 1.6; margin: 5px 0 18px; }
+.email-settings .email-control-field { font-size: 11px; gap: 8px; min-width: 110px; }
+.email-settings .email-control-select select, .email-settings .email-time-field input { height: 38px; font-size: 12px; border-radius: 6px; }
+.email-settings .email-schedule-controls { gap: 12px; }
+.email-settings .email-next-send { font-size: 11px; margin-top: 16px; }
+.email-settings .email-include-upcoming-tasks { background: transparent; border: 0; padding: 16px 0 0; gap: 10px; }
+.email-settings .email-include-upcoming-tasks strong { font-size: 12px; }
+.email-settings .email-include-upcoming-tasks small { font-size: 11px; margin-top: 4px; }
+.email-settings .email-scope-toggle, .email-settings .email-schedule-reminder-toggle { border: 0; background: transparent; font-size: 11px; padding: 7px 0; gap: 8px; }
+.email-settings input[type=checkbox] { accent-color: var(--email-accent); width: 15px; height: 15px; }
+.email-settings .email-task-reminder-schedule { margin-top: 30px; padding-top: 28px; }
+.email-settings .email-task-schedule-heading { flex-wrap: wrap; gap: 18px; margin-bottom: 20px; }
+.email-settings .email-task-schedule-heading h3 { font-size: 20px; font-weight: 600; margin: 0 0 8px; }
+.email-settings .email-task-heading-actions { justify-content: flex-start; gap: 16px; }
+.email-settings .email-reminder-scope { padding: 16px 0; background: transparent; border: 0; border-top: 1px solid var(--email-line); border-bottom: 1px solid var(--email-line); border-radius: 0; }
+.email-settings .email-reminder-scope strong { font-size: 12px; font-weight: 500; }
+.email-settings .email-reminder-scope small { font-size: 11px; margin-top: 6px; line-height: 1.6; }
+.email-settings .email-task-add-select { font-size: 11px; margin-top: 20px; gap: 9px; }
+.email-settings .email-reminder-note, .email-settings .email-all-tasks-state { padding: 12px 0 0; border: 0; border-radius: 0; background: transparent; color: var(--email-muted); font-size: 11px; line-height: 1.7; }
+.email-settings .email-recipient-row { flex-wrap: wrap; gap: 10px; padding: 18px 0; }
+.email-settings .email-recipient-avatar, .email-settings .email-recipient-row.is-verified .email-recipient-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--sd-bg-subtle); color: var(--email-muted); font-size: 11px; font-weight: 500; }
+.email-settings .email-recipient-address strong { font-size: 12px; font-weight: 500; }
+.email-settings .email-recipient-address small { font-size: 11px; margin-top: 5px; }
+.email-settings .email-verified-pill, .email-settings .email-pending-pill { background: transparent; color: var(--email-muted); font-size: 10px; font-weight: 500; padding: 0; }
+.email-settings .email-add-recipient { margin-top: 24px; gap: 10px; }
+.email-settings .email-add-recipient>label { font-size: 12px; font-weight: 500; }
+.email-settings .email-add-recipient>textarea { min-height: 104px; padding: 12px; font-size: 12px; line-height: 1.7; border-radius: 6px; background: var(--sd-bg-subtle); }
+.email-settings .email-send-now, .email-settings .email-invite-batch { min-height: 34px; padding: 0 12px; font-size: 11px; border-radius: 6px; border-color: var(--email-line); background: transparent; color: var(--email-text); font-weight: 500; }
+.email-settings .email-invite-batch { background: var(--email-accent); color: white; border-color: var(--email-accent); margin-top: 2px; }
+.email-settings .email-verification-note { font-size: 11px; line-height: 1.8; margin-top: 18px; gap: 8px; }
+.email-settings .email-row-actions>label { font-size: 11px; gap: 6px; }
+.email-settings .email-prototype-footer { justify-content: flex-start; font-size: 10px; line-height: 1.8; margin-top: 24px; }
+.email-settings .email-action-feedback { background: transparent; border: 0; border-left: 2px solid var(--sd-border-strong); border-radius: 0; color: var(--sd-text-secondary); font-size: 12px; }
+.email-settings :is(button,input,select,textarea):focus-visible { outline: 2px solid var(--email-accent); outline-offset: 3px; }
+.email-settings .email-task-rule { background: transparent; border-radius: 7px; padding: 16px; }
+.email-settings .email-task-choice strong { font-size: 12px; }
+.email-settings .email-task-choice small, .email-settings .email-rule-count, .email-settings .email-add-reminder-rule { font-size: 11px; }
+@media(max-width:1100px) { .email-settings .email-studio-grid { grid-template-columns: minmax(0,1fr); } .email-settings .email-side-column { grid-template-columns: 1fr; } }
+@media(max-width:620px) { .email-settings .email-studio-heading { padding: 16px 0 24px; gap: 16px; } .email-settings .email-card { padding: 20px; } .email-settings .email-card-heading { flex-wrap: wrap; } .email-settings .email-schedule-row { grid-template-columns: minmax(0,1fr); } .email-settings .email-row-actions { justify-content: flex-start; } .email-settings .email-control-field { min-width: calc(50% - 6px); } .email-settings .email-recipient-address strong { overflow-wrap: anywhere; white-space: normal; } }
+.email-settings :is(.email-scope-toggle,.email-schedule-reminder-toggle) input { appearance: none; position: relative; flex: 0 0 auto; width: 28px; height: 16px; border-radius: 16px; border: 1px solid var(--sd-border-strong); background: var(--sd-bg-subtle); cursor: pointer; transition: background .15s; }
+.email-settings :is(.email-scope-toggle,.email-schedule-reminder-toggle) input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--email-muted); transition: transform .15s; }
+.email-settings :is(.email-scope-toggle,.email-schedule-reminder-toggle) input:checked { background: var(--email-accent); border-color: var(--email-accent); }
+.email-settings :is(.email-scope-toggle,.email-schedule-reminder-toggle) input:checked::after { transform: translateX(12px); background: white; }
+.email-settings :is(.email-metric-config,.email-custom-range,.email-comparison-controls) { background: transparent; border-radius: 6px; }
+.email-settings :is(.email-comparison-label,.email-metric-config>div:first-child strong,.email-metric-options label,.email-custom-range label) { font-size: 11px; }
+.email-settings :is(.email-comparison-controls>small,.email-metric-config>div:first-child small) { font-size: 10px; line-height: 1.6; }
+.email-settings :is(.email-custom-range input,.email-task-reminder-rule>input,.email-reminder-days input) { min-height: 34px; font-size: 12px; }
+.email-settings .email-people-pills button { font-size: 11px; min-height: 32px; }
+/* Opaque menus inherit the same theme and accent as their controls. */
+.email-settings .email-type-menu { background: #fbfaff; border-color: var(--sd-border-strong); box-shadow: 0 8px 24px #15152c16; }
+:root[data-theme='dark'] .email-settings .email-type-menu { background: var(--sd-bg-elevated, #262626); border-color: var(--sd-border-strong); box-shadow: 0 8px 24px #0005; }
+.email-settings .email-type-menu button { font-size: 12px; padding: 10px 12px; color: var(--sd-text-secondary); }
+.email-settings .email-type-menu button:hover, .email-settings .email-type-menu button.is-selected { background: color-mix(in srgb, var(--email-accent) 12%, transparent); color: var(--email-text); }
+.email-settings .email-type-trigger:focus-visible { outline: 2px solid var(--email-accent); outline-offset: 3px; border-radius: 4px; }
+.email-settings .email-studio-toolbar { border-top: 0; padding-top: 0; }
+.email-production-preview { display: block; width: 100%; min-width: 0; height: 1150px; border: 0; background: #eeedf5; border-radius: 6px; }
+.email-large-mockup-wrap:has(.email-production-preview) { padding: 0; border: 0; background: transparent; }
+.email-design-preview-link { color: var(--email-accent); font-size: 12px; line-height: 1.6; text-underline-offset: 4px; flex-shrink: 0; }

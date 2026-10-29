@@ -21,6 +21,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import './Manage.css';
+import { WorkspaceHeader } from './WorkspaceHeader';
 import { TasksPanel } from './TasksPanel';
 import { EmailReportsPanel } from './EmailReportsPanel';
 import { formatDisplayDate } from '../../utils/dateFormat';
@@ -642,6 +643,7 @@ export const ManagePage = ({ user }) => {
         <button role="tab" aria-selected={workspaceTab === 'email'} className={workspaceTab === 'email' ? 'selected' : ''} onClick={() => setWorkspaceTab('email')}>Email reports</button>
       </div>
       {workspaceTab === 'email' ? <EmailReportsPanel user={user} /> : workspaceTab === 'tasks' ? <TasksPanel user={user} projects={activeProjects} /> : <>
+      <WorkspaceHeader title={text('manage', 'title', 'Projects')} description={text('manage', 'subtitle', 'Shape your study plan, set targets, and keep completed projects within reach.')}><span>{activeProjects.length} active projects</span></WorkspaceHeader>
       {projectPendingDelete && (
         <div
           className="manage-delete-backdrop"
@@ -681,7 +683,7 @@ export const ManagePage = ({ user }) => {
               <Archive size={14} /> {text('manage', 'archivedTab', 'Archived')} <span>{archivedProjects.length}</span>
             </button>
           </div>
-          <p className="manage-toolbar-description">{text('manage', 'subtitle', 'Shape your study plan, set targets, and keep completed projects within reach.')}</p>
+          
           <label className="manage-search">
             <Search size={16} />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={text('manage', 'searchPlaceholder', 'Find a project')} aria-label="Find a project" />
