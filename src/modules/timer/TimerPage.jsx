@@ -30,7 +30,7 @@ import {
   rj,
 } from './TimerSupport';
 import './Timer.css';
-export const TimerPage = ({ user }) => {
+export const TimerPage = ({ user, onNavigate }) => {
   const { config, text } = useSiteCustomization();
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : K_PROJECTS;
   const activeKey = user?.id ? `studyduel_user_${user.id}_active_timer` : K_ACTIVE;
@@ -911,7 +911,7 @@ export const TimerPage = ({ user }) => {
 
           </div>
 
-          <TaskAgenda user={user} projects={activeProjects} studyPlan={todayStudyPlan} onStart={startTimer} />
+          <TaskAgenda user={user} projects={activeProjects} studyPlan={todayStudyPlan} onStart={startTimer} onManageTasks={() => onNavigate?.('manage', { tab: 'tasks' })} />
         </div>
       </section>
 

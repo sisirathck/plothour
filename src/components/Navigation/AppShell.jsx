@@ -278,10 +278,14 @@ export const AppShell = ({ user, onLogout }) => {
     };
   }, [currentRoute, user?.id]);
 
-  const navigateTo = (route) => {
-    window.history.pushState({}, '', `/${route}`);
+  const navigateTo = (route, options = {}) => {
+    const query = route === 'manage' && options.tab ? `?tab=${encodeURIComponent(options.tab)}` : '';
+    window.history.pushState({}, '', `/${route}${query}`);
     setVisitedRoutes((current) => current.has(route) ? current : new Set([...current, route]));
     setCurrentRoute(route);
+    if (route === 'manage' && options.tab) {
+      window.dispatchEvent(new CustomEvent('manage-workspace-tab', { detail: options.tab }));
+    }
   };
 
   const isSettings = currentRoute === 'settings';

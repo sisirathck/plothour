@@ -625,7 +625,14 @@ export const ManagePage = ({ user }) => {
       : project
   )));
 
-  const [workspaceTab, setWorkspaceTab] = useState('projects');
+  const [workspaceTab, setWorkspaceTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'tasks' ? 'tasks' : 'projects');
+  useEffect(() => {
+    const selectWorkspaceTab = (event) => {
+      if (event.detail === 'tasks' || event.detail === 'projects') setWorkspaceTab(event.detail);
+    };
+    window.addEventListener('manage-workspace-tab', selectWorkspaceTab);
+    return () => window.removeEventListener('manage-workspace-tab', selectWorkspaceTab);
+  }, []);
   return (
     <main className="manage-module-container" style={getSiteFontStyle(config, 'manage')}>
       <div className="manage-view-tabs" role="tablist" aria-label="Workspace sections" style={{ marginBottom: 20 }}>
