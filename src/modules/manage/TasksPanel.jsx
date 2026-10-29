@@ -64,6 +64,7 @@ export const TasksPanel = ({ user, projects }) => {
     .sort((a, b) => Number(a.completed) - Number(b.completed) || (a.due_date || '9999').localeCompare(b.due_date || '9999'));
   const add = async (event) => {
     event.preventDefault(); const form = event.currentTarget;
+    if (due && due < todayKey) { setDue(todayKey); return; }
     const body = { ...Object.fromEntries(new FormData(form)), project_name: project, due_date: due, reminder_date: reminder };
     setBusy(true); if (await mutate('', 'POST', body)) { form.reset(); setDue(''); setReminder(''); setProject(''); } setBusy(false);
   };
@@ -72,8 +73,8 @@ export const TasksPanel = ({ user, projects }) => {
     <form className="tasks-create" onSubmit={add}>
       <label>Task<input required maxLength={240} name="title" placeholder="What needs to get done?" /></label>
       <label>Project<EditSelect label="Task project" value={project} options={[{value:'',label:'Personal / unassigned'},...projects.map(p => ({value:p.name,label:p.name}))]} onChange={setProject} /></label>
-      <label>Due date<SessionDatePicker value={due} onChange={setDue} />{due && <button type="button" className="task-clear-date" onClick={() => setDue('')}>Clear date</button>}{!due && <small>Optional</small>}</label>
-      <label>Remind me on<SessionDatePicker value={reminder} onChange={setReminder} />{reminder && <button type="button" className="task-clear-date" onClick={() => setReminder('')}>Clear reminder</button>}{!reminder && <small>Optional</small>}</label>
+      <label>Due date<SessionDatePicker value={due} onChange={setDue} minDate={todayKey} />{due && <button type="button" className="task-clear-date" onClick={() => setDue('')}>Clear date</button>}{!due && <small>Optional</small>}</label>
+      <label><span className="tasks-field-label">Remind me on <em>Optional</em></span><SessionDatePicker value={reminder} onChange={setReminder} />{reminder && <button type="button" className="task-clear-date" onClick={() => setReminder('')}>Clear reminder</button>}</label>
       <button disabled={busy}>{busy ? 'Saving…' : 'Add task'}</button>
     </form>
     {error && <p role="alert">{error}</p>}

@@ -2317,7 +2317,9 @@
 .entry-date-weekdays span { padding: 3px 0 6px; text-align: center; color: var(--sd-text-muted); font-size: 9px; font-weight: 800; }
 .entry-date-grid button { aspect-ratio: 1; border: 0; border-radius: 7px; background: transparent; color: var(--sd-text-secondary); font: inherit; font-size: 11px; cursor: pointer; }
 .entry-date-grid button:hover { background: var(--sd-bg-subtle); color: var(--sd-text-primary); }
+.entry-date-grid button:disabled { opacity: .2; cursor: not-allowed; background: transparent; color: var(--sd-text-muted); }
 .entry-date-grid button.is-outside { opacity: .35; }
+.entry-date-grid button.is-outside:disabled { opacity: .12; }
 .entry-date-grid button.is-selected { background: var(--sd-coral); color: #fff; font-weight: 800; box-shadow: 0 3px 9px var(--sd-coral-glow); opacity: 1; }
 
 :root[data-theme='dark'] .timer-root .entry-edit-select-menu,

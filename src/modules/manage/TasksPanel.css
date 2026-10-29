@@ -29,6 +29,7 @@
 .tasks-page-heading{display:flex;align-items:center;gap:12px}.tasks-page-heading h2{font-family:inherit;font-size:24px;font-weight:650;letter-spacing:-.035em;margin:0}.tasks-page-heading p{font-size:13px;color:var(--sd-text-muted);margin:5px 0 0}.tasks-open-count{margin-left:auto;font-size:12px;color:var(--sd-text-muted)}
 .tasks-create{display:grid;grid-template-columns:minmax(210px,2fr) minmax(160px,1.25fr) repeat(2,minmax(150px,1fr)) auto;align-items:start;padding:20px;background:var(--sd-bg-subtle);border:1px solid var(--sd-border-glass);border-radius:14px;margin:24px 0}
 .tasks-create label{min-width:0;font-size:11px;font-weight:600;gap:8px}.tasks-create input{height:38px;box-sizing:border-box;font-size:13px;background:var(--sd-bg-surface)}
+.tasks-field-label{display:flex;align-items:center;gap:7px}.tasks-field-label em{padding:3px 6px;border:1px solid color-mix(in srgb,var(--sd-coral) 30%,var(--sd-border-glass));border-radius:999px;background:color-mix(in srgb,var(--sd-coral) 10%,transparent);color:var(--sd-coral);font-size:9px;font-style:normal;font-weight:750;letter-spacing:.03em;text-transform:uppercase}
 .tasks-create .entry-edit-select-trigger,.tasks-create .entry-date-trigger{height:38px;font-family:inherit;font-size:12px;box-sizing:border-box;background:var(--sd-bg-surface)}
 .tasks-create>button{margin-top:22px;min-height:38px;background:var(--sd-coral);color:var(--sd-bg-surface);font-family:inherit;font-size:12px;font-weight:650;border-radius:9px;white-space:nowrap}.tasks-create small{font-size:10px;color:var(--sd-text-muted);font-weight:400}.tasks-create .task-clear-date{padding:0;border:0;background:none;font:inherit;font-size:10px;text-align:left;color:var(--sd-text-muted);cursor:pointer}
 .tasks-panel>.task-line{padding:15px 4px}.tasks-panel .task-line strong{font-size:14px;font-weight:600}.tasks-panel .task-line small{font-size:11px}.tasks-panel .task-line button{font-size:11px;cursor:pointer}
@@ -48,6 +49,7 @@
 .agenda-study-section,.agenda-tasks-section{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden}
 .agenda-section-label{flex-shrink:0}
 .agenda-column-items{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:grid;grid-auto-rows:minmax(44px,1fr);scrollbar-width:thin;scrollbar-color:var(--sd-border-glass) transparent;padding-right:3px}
+.agenda-tasks-section .agenda-column-items{flex:0 1 220px;max-height:220px;grid-auto-rows:44px}
 .agenda-column-items:focus-visible{outline:1px solid var(--sd-coral);outline-offset:-1px;border-radius:5px}
 .agenda-column-items .agenda-study-row,.agenda-column-items .task-line{box-sizing:border-box;margin:0;min-height:44px;align-self:stretch}
 .agenda-column-items>.agenda-empty{align-self:start}
