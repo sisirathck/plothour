@@ -104,7 +104,8 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart, onManageTa
   useEffect(() => {
     setCompletingIds(ids => ids.filter(id => {
       const task = tasks.find(item => item.id === id);
-      if (!task || !task.completed) return false;
+      if (!task) return false;
+      if (!task.completed) return true;
       return !undoTasks.some(item => item.id === id);
     }));
   }, [tasks, undoTasks]);
