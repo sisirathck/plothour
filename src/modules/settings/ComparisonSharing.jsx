@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Check, Eye, LockKeyhole, Users } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, ChevronDown, Eye, LockKeyhole, Users } from 'lucide-react';
 
 export function ComparisonSharing({ user }) {
   const [data, setData] = useState(null);
@@ -8,6 +8,9 @@ export function ComparisonSharing({ user }) {
   const [names, setNames] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef(null);
+  const pickerButtonRef = useRef(null);
 
   useEffect(() => {
     if (!user?.id) return undefined;
@@ -21,6 +24,25 @@ export function ComparisonSharing({ user }) {
       .catch((error) => { if (alive) setMessage(error.message); });
     return () => { alive = false; };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!pickerOpen) return undefined;
+    const closeOutside = (event) => {
+      if (!pickerRef.current?.contains(event.target)) setPickerOpen(false);
+    };
+    const closeEscape = (event) => {
+      if (event.key === 'Escape') {
+        setPickerOpen(false);
+        pickerButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('keydown', closeEscape);
+    };
+  }, [pickerOpen]);
 
   const selectPartner = (id) => {
     setPartner(id);
@@ -79,13 +101,29 @@ export function ComparisonSharing({ user }) {
         : !data ? <div className="comparison-sharing-state" role="status">{message || 'Loading sharing settings…'}</div>
           : !data.partners.length ? <div className="comparison-sharing-state comparison-sharing-empty"><Users size={20} /><div><strong>No connections yet</strong><span>Add a study partner below. You can choose their access here afterward.</span></div></div>
             : <div className="comparison-sharing-body">
-              <label className="comparison-sharing-field" htmlFor="comparison-sharing-person">
+              <div className="comparison-sharing-field" ref={pickerRef}>
                 <span>Connection</span>
-                <select id="comparison-sharing-person" value={partner} onChange={(event) => selectPartner(event.target.value)}>
-                  <option value="">Choose a connection</option>
-                  {data.partners.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
-                </select>
-              </label>
+                <button ref={pickerButtonRef} id="comparison-sharing-person" type="button" className={`comparison-sharing-picker-trigger${pickerOpen ? ' is-open' : ''}`} aria-haspopup="listbox" aria-expanded={pickerOpen} aria-controls="comparison-sharing-people" onClick={() => setPickerOpen((open) => !open)} onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setPickerOpen(true);
+                    requestAnimationFrame(() => pickerRef.current?.querySelector('[role="option"]')?.focus());
+                  }
+                }}>
+                  <span>{data.partners.find((person) => person.id === partner)?.name || 'Choose a connection'}</span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </button>
+                {pickerOpen && <div className="comparison-sharing-picker-menu" id="comparison-sharing-people" role="listbox" aria-label="Choose a connection">
+                  {data.partners.map((person) => <button key={person.id} type="button" role="option" aria-selected={partner === person.id} onClick={() => { selectPartner(person.id); setPickerOpen(false); pickerButtonRef.current?.focus(); }} onKeyDown={(event) => {
+                    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+                    event.preventDefault();
+                    const options = Array.from(event.currentTarget.parentElement.querySelectorAll('[role="option"]'));
+                    const index = options.indexOf(event.currentTarget);
+                    const next = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+                    options[next]?.focus();
+                  }}><span>{person.name}</span>{partner === person.id && <Check size={15} aria-hidden="true" />}</button>)}
+                </div>}
+              </div>
 
               {partner && <>
                 <div className="comparison-sharing-section-heading">
