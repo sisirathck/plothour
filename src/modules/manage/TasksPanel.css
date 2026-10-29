@@ -19,7 +19,7 @@
 .agenda-study-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--sd-border-glass)}
 .agenda-plan-icon{color:var(--sd-text-muted);display:grid;place-items:center;width:22px;flex-shrink:0}.agenda-plan-icon.is-complete{color:var(--sd-coral)}
 .agenda-study-copy{flex:1;min-width:0}.agenda-study-copy strong{font-size:12px;font-weight:650;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agenda-study-copy small{font-size:10px;color:var(--sd-text-muted);display:block;margin:3px 0 5px}
-.agenda-progress{height:3px;width:100%;max-width:170px;background:var(--sd-track-bg);border-radius:8px;overflow:hidden}.agenda-progress i{height:100%;display:block;background:var(--sd-coral);border-radius:inherit}
+.agenda-progress{height:3px;width:100%;background:var(--sd-track-bg);border-radius:8px;overflow:hidden}.agenda-progress i{height:100%;display:block;background:var(--sd-coral);border-radius:inherit}
 .agenda-study-row button{display:flex;align-items:center;gap:4px;background:var(--sd-bg-subtle);border:1px solid var(--sd-border-glass);border-radius:7px;color:var(--sd-text-secondary);font:inherit;font-size:10px;padding:6px 9px;cursor:pointer}.agenda-study-row button:hover{color:var(--sd-coral);border-color:var(--sd-coral)}
 .task-agenda .task-line{padding:9px 0;gap:10px}.task-agenda .task-line input{accent-color:var(--sd-coral);width:13px;height:13px;margin:0}.task-agenda .task-line strong{font-size:12px;font-weight:550}.task-agenda .task-line small{font-size:10px}
 .agenda-due{padding:4px 7px;background:var(--sd-bg-subtle);border-radius:6px;font-variant-numeric:tabular-nums}.agenda-due.is-today{color:var(--sd-coral)}.is-overdue .agenda-due{background:color-mix(in srgb,#c16d72 9%,transparent)}
