@@ -7,7 +7,7 @@ import {
   Target,
   Search,
 } from 'lucide-react';
-import { AnalogueClockFace, StopwatchFace, HorologyArt } from './TimerClock';
+import { AnalogueClockFace, HorologyArt } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
@@ -140,7 +140,6 @@ export const TimerPage = ({ user }) => {
   const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch';
   const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[2];
   const sessionProgress = sessionGoal.seconds ? Math.min(100, Math.round((elapsed / sessionGoal.seconds) * 100)) : 0;
-  const sessionRemaining = sessionGoal.seconds ? Math.max(0, sessionGoal.seconds - elapsed) : 0;
   const focusSchedule = getSubjectStudySchedule(sessionSubject);
   const focusGoalSecs = focusSchedule.targetHours * 3600;
   const focusIsPlannedToday = focusSchedule.studyDays.includes(now.getDay());
@@ -817,109 +816,39 @@ export const TimerPage = ({ user }) => {
         {/* ── RIGHT COLUMN: Horological Center (Clock -> Stopwatch) ── */}
         <div className="timer-horology-column">
           <div className={`horology-face-container${activeTimer ? ' mode-stopwatch' : ' mode-clock'}`}>
-            {/* Minimalist Horology Dial Halo Artwork */}
-            <HorologyArt isRunning={!!activeTimer || !!pendingSelection} />
-
-            {/* Central Dial: Swiss Analogue Clock -> High-Precision Chronograph */}
-            <div className="horology-dial-wrapper">
-              <div className="horology-dial-mode" key={activeTimer ? 'stopwatch' : pendingSelection ? 'preview' : 'clock'}>
-              {activeTimer ? (
-                <StopwatchFace
-                  elapsed={elapsed}
-                  isRunning={!isPaused}
-                  targetSeconds={sessionGoal.seconds || null}
-                />
-              ) : pendingSelection ? (
-                <div key={pendingSelection.expiresAt} className="horology-selection-preview">
-                  <span className="selection-preview-kicker">SELECTED FOR THIS SESSION</span>
-                  <strong className="selection-preview-project">{pendingSelection.projectName}</strong>
-                  <span className="selection-preview-divider" />
-                  <span className="selection-preview-subject">{pendingSelection.subjectName}</span>
-                  <span className="selection-preview-caption">Ready when you are</span>
-                  <span className="selection-preview-timeout" aria-hidden="true"><i /></span>
-                </div>
-              ) : (
-                <AnalogueClockFace now={now} />
-              )}
-              </div>
-              <svg
-                className={`horology-focus-ring${activeTimer && sessionGoal.seconds ? ' is-targeted' : ''}`}
-                viewBox="0 0 320 320"
-                aria-hidden="true"
-              >
-                <circle className="horology-focus-ring-track" cx="160" cy="160" r="150" />
-                {activeTimer && sessionGoal.seconds > 0 && (
-                  <circle
-                    className="horology-focus-ring-progress"
-                    cx="160"
-                    cy="160"
-                    r="150"
-                    style={{ '--focus-progress': sessionProgress }}
-                  />
-                )}
-              </svg>
-            </div>
-
-            {/* Digital Readout & Status */}
             {activeTimer ? (
-              <div className="chronograph-digital-block" aria-live="polite">
-                <div className="chrono-status-line">
-                  <span className="chrono-dot live" />
-                  <span className="chrono-tag">
-                    <span className="chrono-project-name">
-                      {activeTimer.projectName}
-                    </span>
-                    {activeTimer.subjectName && <>
-                      <span className="chrono-name-separator" aria-hidden="true">·</span>
-                      <span className="chrono-subject-name" style={{ color: sessionSubject?.color || sessionProject?.color || activeTimer.color || 'var(--sd-coral)' }}>
-                        {activeTimer.subjectName}
-                      </span>
-                    </>}
-                  </span>
+              <section className="timer-running-session-card" aria-label="Running study session">
+                <div className="timer-running-status" role="status">
+                  <span aria-hidden="true" />
+                  {isPaused ? 'PAUSED' : 'RUNNING'}
                 </div>
-                <div className="chrono-elapsed-digits">
-                  <span className="chrono-main">{fmtClock(elapsed)}</span>
-                  <span className="chrono-ms">.{Math.floor((now.getMilliseconds() / 100)) % 10}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="horology-wall-block">
-                <time className="horology-wall-time">
-                  {now.toLocaleTimeString(undefined, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: true,
-                  })}
-                </time>
-                <span className="horology-wall-date">
-                  {formatDisplayDate(now, {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </span>
-              </div>
-            )}
 
-            {/* Action Buttons */}
-            <div className="horology-actions">
-              {activeTimer ? (
-                <div className="chronograph-buttons">
-                  <button
-                    type="button"
-                    className="horology-btn-stop"
-                    onClick={stopTimer}
-                  >
+                <div className="timer-running-hero">
+                  <div className="timer-running-identity">
+                    <span>PROJECT &amp; SUBPROJECT</span>
+                    <strong>{activeTimer.projectName}</strong>
+                    {activeTimer.subjectName && <b style={{ color: sessionSubject?.color || sessionProject?.color || activeTimer.color || 'var(--sd-coral)' }}>{activeTimer.subjectName}</b>}
+                  </div>
+                  <span className="timer-running-divider" aria-hidden="true" />
+                  <div className="timer-running-progress" role="progressbar" aria-label="Timer target progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={sessionProgress}>
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                      <circle className="timer-running-progress-track" cx="60" cy="60" r="52" />
+                      <circle className="timer-running-progress-value" cx="60" cy="60" r="52" style={{ '--running-progress': sessionGoal.seconds ? sessionProgress : Math.min(96, (elapsed % 3600) / 36) }} />
+                      {Array.from({ length: 60 }, (_, index) => <line key={index} x1="60" y1="10" x2="60" y2={index % 5 === 0 ? '14' : '12'} transform={`rotate(${index * 6} 60 60)`} />)}
+                    </svg>
+                  </div>
+                  <div className="timer-running-elapsed" aria-live="polite">
+                    <div><span>{fmtClock(elapsed)}</span><small>.{String(Math.floor(now.getMilliseconds() / 10)).padStart(2, '0')}</small></div>
+                    <p>{sessionGoal.seconds ? `Target: ${sessionGoal.label}` : 'Open timer'}</p>
+                  </div>
+                </div>
+
+                <div className="timer-running-actions">
+                  <button type="button" className="horology-btn-stop" onClick={stopTimer}>
                     <Square size={16} fill="currentColor" strokeWidth={0} />
                     {text('timer', 'stopSaveButton', 'Stop & Save')}
                   </button>
-
-                  <button
-                    type="button"
-                    className={`horology-btn-sub${isPaused ? ' paused' : ''}`}
-                    onClick={togglePause}
-                  >
+                  <button type="button" className={`horology-btn-sub${isPaused ? ' paused' : ''}`} onClick={togglePause}>
                     {isPaused ? <Play size={15} fill="currentColor" /> : <Pause size={15} />}
                     {isPaused ? text('timer', 'resumeButton', 'Resume') : text('timer', 'pauseButton', 'Pause')}
                   </button>
@@ -928,39 +857,63 @@ export const TimerPage = ({ user }) => {
                     Discard
                   </button>
                 </div>
-              ) : (
-                <div className="horology-idle-actions">
-                  <button
-                    type="button"
-                    className="horology-btn-start"
-                    onClick={() => startTimer()}
-                    disabled={!projects.length}
-                  >
-                    <Play size={16} fill="currentColor" strokeWidth={0} />
-                    {text('timer', 'startSessionButton', 'Start Session')}
-                  </button>
-                </div>
-              )}
-            </div>
 
-            {activeTimer && (
-              <section className="timer-context-card is-running" aria-label="Current session note">
-                <label className="timer-session-note-wrap">
-                  <span>SESSION NOTE</span>
-                  <textarea
-                    className="timer-session-note"
+                <label className="timer-running-note">
+                  <span><i aria-hidden="true" /> SESSION NOTE</span>
+                  <input
                     value={activeTimer.note || ''}
                     onChange={(event) => setActiveTimer((current) => current ? { ...current, note: event.target.value } : current)}
                     placeholder={text('timer', 'sessionNotePlaceholder', 'Add a note about this session…')}
                     maxLength={240}
-                    rows={1}
                     aria-label="Session note to save with this entry"
                   />
+                  <button type="button" onClick={(event) => event.currentTarget.blur()} aria-label="Save session note">↵ Save Note</button>
                 </label>
               </section>
+            ) : (
+              <>
+                <HorologyArt isRunning={!!pendingSelection} />
+                <div className="horology-dial-wrapper">
+                  <div className="horology-dial-mode" key={pendingSelection ? 'preview' : 'clock'}>
+                    {pendingSelection ? (
+                      <div key={pendingSelection.expiresAt} className="horology-selection-preview">
+                        <span className="selection-preview-kicker">SELECTED FOR THIS SESSION</span>
+                        <strong className="selection-preview-project">{pendingSelection.projectName}</strong>
+                        <span className="selection-preview-divider" />
+                        <span className="selection-preview-subject">{pendingSelection.subjectName}</span>
+                        <span className="selection-preview-caption">Ready when you are</span>
+                        <span className="selection-preview-timeout" aria-hidden="true"><i /></span>
+                      </div>
+                    ) : <AnalogueClockFace now={now} />}
+                  </div>
+                  <svg className="horology-focus-ring" viewBox="0 0 320 320" aria-hidden="true">
+                    <circle className="horology-focus-ring-track" cx="160" cy="160" r="150" />
+                  </svg>
+                </div>
+                <div className="horology-wall-block">
+                  <time className="horology-wall-time">{now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</time>
+                  <span className="horology-wall-date">{formatDisplayDate(now, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                </div>
+                <div className="horology-actions">
+                  <div className="horology-idle-actions">
+                    <button type="button" className="horology-btn-start" onClick={() => startTimer()} disabled={!projects.length}>
+                      <Play size={16} fill="currentColor" strokeWidth={0} />
+                      {text('timer', 'startSessionButton', 'Start Session')}
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
           </div>
+
+          <section className="timer-horology-placeholder" aria-labelledby="timer-placeholder-title">
+            <header className="timer-horology-placeholder-header">
+              <span className="timer-horology-placeholder-mark" aria-hidden="true" />
+              <h2 id="timer-placeholder-title">PLACEHOLDER</h2>
+            </header>
+            <div className="timer-horology-placeholder-body" aria-hidden="true" />
+          </section>
         </div>
       </section>
 
