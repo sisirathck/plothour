@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TasksPanel.css';
-import { CalendarDays, ArrowUpRight, Check, Clock3 } from 'lucide-react';
+import { CalendarDays, Check, Clock3 } from 'lucide-react';
 import { EditSelect, SessionDatePicker } from '../timer/TimerEntriesList';
 import { formatDisplayDate } from '../../utils/dateFormat';
 
@@ -160,7 +160,7 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart, onManageTa
       {orderedPlan.map(item => <div className={`agenda-study-row${item.progress >= 100 ? ' is-completed' : ''}`} key={`${item.projectId}-${item.subjectId}`}>
         <span className={`agenda-plan-icon${item.progress >= 100 ? ' is-complete' : ''}`}>{item.progress >= 100 ? <Check size={13} /> : <Clock3 size={13} />}</span>
         <div className="agenda-study-copy"><strong>{item.subjectName}</strong><small>{item.projectName} · {duration(item.completedSeconds)} / {duration(item.targetSeconds)}</small><div className="agenda-progress"><i style={{ width: `${Math.min(100, item.progress)}%` }} /></div></div>
-        <button type="button" onClick={() => onStart?.(item.projectId, item.subjectId)} aria-label={`Start ${item.subjectName}`}>{item.progress >= 100 ? 'Study' : 'Start'} <ArrowUpRight size={11} /></button>
+        <button type="button" onClick={() => onStart?.(item.projectId, item.subjectId)} aria-label={`${item.progress >= 100 ? 'Study' : 'Start'} ${item.subjectName}`}>{item.progress >= 100 ? 'Study' : 'Start'}</button>
       </div>)}
       </div></section>{showTaskColumn && <section className="agenda-tasks-section"><div className="agenda-section-label">TASKS & DEADLINES<span>{items.filter(item => !item.completed).length} open</span></div>
       <div className="agenda-column-items" tabIndex={0} role="region" aria-label="Tasks and deadlines">
