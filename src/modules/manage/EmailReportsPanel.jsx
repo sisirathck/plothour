@@ -26,11 +26,11 @@ const defaultComparisonMetrics = comparisonMetrics.map(metric => metric.id);
 
 const previewCopy = {
   agenda: { eyebrow: 'THURSDAY · OCTOBER 29', title: 'Your day, with a little more focus.', intro: 'Here’s what’s on your study plan today.', metric: '3h 15m', metricLabel: 'planned study time', rows: [['Algorithms', '1 hour'], ['Database Systems', '45 minutes'], ['Submit graph algorithms assignment', 'Due today']] },
-  'weekly-plan': { eyebrow: 'NEXT WEEK · NOV 2–8', title: 'A clear plan for the week ahead.', intro: 'Your study goals, gathered in one place.', metric: '12h', metricLabel: 'weekly study goal', callout: { label: 'Daily pace to reach your goal', value: '1h 43m each day', detail: 'Spread across 7 days, that adds up to 12 focused hours.' }, rows: [['Computer Science', '5h planned'], ['Mathematics', '4h planned'], ['Japanese', '3h planned']] },
-  'weekly-recap': { eyebrow: 'WEEKLY RECAP · OCT 19–25', title: 'Look how far you moved things forward.', intro: 'A quick reflection on your study week.', metric: '8h 42m', metricLabel: 'focused this week', rows: [['Study sessions', '14 sessions'], ['Active days', '5 days'], ['Weekly goal', '82% complete']] },
-  'monthly-recap': { eyebrow: 'MONTHLY REPORT · OCTOBER', title: 'Your October, in perspective.', intro: 'Small sessions added up to meaningful progress.', metric: '36h 20m', metricLabel: 'focused this month', rows: [['Active days', '18 days'], ['Study sessions', '61 sessions'], ['Best streak', '6 days']] },
-  comparison: { eyebrow: 'PERIOD COMPARISON', title: 'You studied 5h 35m more this month.', intro: 'October 1–29 compared with September 1–30. Here’s how your study habits changed.', metric: '+18%', metricLabel: 'total study time', comparisonRows: comparisonMetrics },
-  'task-reminder': { eyebrow: 'UPCOMING DEADLINE', title: 'A gentle nudge for what matters next.', intro: 'You asked to be reminded before this deadline.', metric: '2 days', metricLabel: 'until it’s due', rows: [['Finish statistics problem set', 'Mathematics'], ['Due date', 'Saturday, Oct 31'], ['Your reminder', 'Thursday, Oct 29 · 8:00 AM']] },
+  'weekly-plan': { eyebrow: 'NEXT WEEK · NOV 2–8', title: 'A clear plan for the week ahead.', intro: 'Your study goals, gathered in one place.', metric: '12h', metricLabel: 'weekly study goal', callout: { label: 'Daily pace to reach your goal', value: '1h 43m each day', detail: 'Spread across 7 days, that adds up to 12 focused hours.' }, rows: [['Projects in your plan', '3'], ['Subjects and subprojects', '6'], ['Planned study days', 'Mon · Tue · Thu · Sat']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '2h 40m', detail: '3h goal · 20m remaining' }, { project: 'Computer Science', subject: 'Database Systems', time: '1h 15m', detail: '2h goal · 45m remaining' }, { project: 'Mathematics', subject: 'Statistics', time: '45m', detail: '2h goal · 1h 15m remaining' }] },
+  'weekly-recap': { eyebrow: 'WEEKLY RECAP · OCT 19–25', title: 'Look how far you moved things forward.', intro: 'A quick reflection on your study week.', metric: '8h 42m', metricLabel: 'focused this week', rows: [['Study sessions', '14 sessions'], ['Active days', '5 days'], ['Weekly goal', '82% complete']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '3h 10m', detail: '5 sessions' }, { project: 'Japanese', subject: 'Listening Practice', time: '2h 05m', detail: '4 sessions' }, { project: 'Mathematics', subject: 'Statistics', time: '1h 40m', detail: '3 sessions' }] },
+  'monthly-recap': { eyebrow: 'MONTHLY REPORT · OCTOBER', title: 'Your October, in perspective.', intro: 'Small sessions added up to meaningful progress.', metric: '36h 20m', metricLabel: 'focused this month', rows: [['Active days', '18 days'], ['Study sessions', '61 sessions'], ['Best streak', '6 days']], areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '12h 20m', detail: '18 sessions' }, { project: 'Japanese', subject: 'Listening Practice', time: '8h 05m', detail: '14 sessions' }, { project: 'Mathematics', subject: 'Statistics', time: '6h 40m', detail: '11 sessions' }] },
+  comparison: { eyebrow: 'PERIOD COMPARISON', title: 'You studied 5h 35m more this month.', intro: 'October 1–29 compared with September 1–30. Here’s how your study habits changed.', metric: '+18%', metricLabel: 'total study time', comparisonRows: comparisonMetrics, areaRows: [{ project: 'Computer Science', subject: 'Algorithms', time: '12h 20m', detail: '10h 05m before · +2h 15m' }, { project: 'Japanese', subject: 'Listening Practice', time: '8h 05m', detail: '6h 40m before · +1h 25m' }, { project: 'Mathematics', subject: 'Statistics', time: '6h 40m', detail: '7h 15m before · −35m' }] },
+  'task-reminder': { eyebrow: 'UPCOMING DEADLINE', title: 'A gentle nudge for what matters next.', intro: 'You asked to be reminded before this deadline.', metric: '2 days', metricLabel: 'until it’s due', rows: [['Task', 'Finish statistics problem set'], ['Project / subject', 'Mathematics / Statistics'], ['Due date', 'Saturday, Oct 31'], ['Your reminder', 'Thursday, Oct 29 · 8:00 AM']] },
 };
 
 const timeLabel = (time) => {
@@ -76,15 +76,17 @@ export const EmailReportsPanel = ({ user }) => {
   const [taskOptions, setTaskOptions] = useState([]);
   const [friendOptions, setFriendOptions] = useState([]);
   const [reportsEnabled, setReportsEnabled] = useState(false);
-  const [format, setFormat] = useState('html');
   const [dateFormat, setDateFormat] = useState(() => document.documentElement.dataset.dateFormat || 'system');
   const [locale, setLocale] = useState(() => navigator.language || 'en-US');
   const [loading, setLoading] = useState(true);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [saveState, setSaveState] = useState('saved');
   const [deliveryConfigured, setDeliveryConfigured] = useState(false);
   const [accountVerified, setAccountVerified] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   const [actionError, setActionError] = useState('');
+  const [sendingTaskInfo, setSendingTaskInfo] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [addError, setAddError] = useState('');
   const accountEmail = user?.email || 'alex.morgan@example.com';
@@ -112,25 +114,25 @@ export const EmailReportsPanel = ({ user }) => {
       setAllTasksEnabled(settings.allTasksEnabled || false);
       setTaskRules(settings.taskRules || []);
       setReportsEnabled(settings.enabled || false);
-      setFormat(settings.format || 'html');
       setDeliveryConfigured(Boolean(payload.deliveryConfigured));
       setAccountVerified(Boolean(payload.account?.email_verified));
       setTaskOptions(taskPayload.tasks || []);
       setFriendOptions(friendPayload.friends || []);
+      setSettingsLoaded(true);
       setLoading(false);
-    }).catch(error => { if (alive) { setActionError(error.message); setLoading(false); } });
+    }).catch(error => { if (alive) { setLoadError(error.message); setActionError(error.message); setLoading(false); } });
     return () => { alive = false; };
   }, []);
 
   useEffect(() => {
-    if (loading) return undefined;
+    if (loading || !settingsLoaded) return undefined;
     setSaveState('saving');
     const timer = window.setTimeout(() => {
-      emailApi('/', { method: 'PUT', body: JSON.stringify({ settings: { enabled: reportsEnabled, format, schedules, allTasksEnabled, taskRules, dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) })
+      emailApi('/', { method: 'PUT', body: JSON.stringify({ settings: { enabled: reportsEnabled, format: 'html', schedules, allTasksEnabled, taskRules, dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) })
         .then(() => setSaveState('saved')).catch(error => { setSaveState('error'); setActionError(error.message); });
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [loading, reportsEnabled, format, schedules, allTasksEnabled, taskRules, dateFormat, locale]);
+  }, [loading, settingsLoaded, reportsEnabled, schedules, allTasksEnabled, taskRules, dateFormat, locale]);
 
   const updateSchedule = (id, patch) => setSchedules(items => items.map(item => item.id === id ? { ...item, ...patch } : item));
   const addSchedule = () => {
@@ -150,16 +152,25 @@ export const EmailReportsPanel = ({ user }) => {
   const removeRecipient = (recipient) => emailApi(`/recipients/${recipient.id}`, { method: 'DELETE' }).then(() => setRecipients(items => items.filter(item => item.id !== recipient.id))).catch(error => setActionError(error.message));
   const sendNow = (schedule) => {
     setActionError(''); setActionMessage('Sending your report…');
-    emailApi('/send', { method: 'POST', body: JSON.stringify({ schedule: { ...schedule, format, dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) }).then(result => setActionMessage(`Report sent to ${result.count} verified recipient${result.count === 1 ? '' : 's'}.`)).catch(error => { setActionMessage(''); setActionError(error.message); });
+    emailApi('/send', { method: 'POST', body: JSON.stringify({ schedule: { ...schedule, format: 'html', dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) }).then(result => setActionMessage(`Report sent to ${result.count} verified recipient${result.count === 1 ? '' : 's'}.`)).catch(error => { setActionMessage(''); setActionError(error.message); });
   };
-  const addTaskRule = (task) => setTaskRules(items => items.some(item => item.id === task.id) ? items : [...items, { id: task.id, title: task.title, project: task.project_name, due: task.due_date, enabled: true, reminders: [{ id: crypto.randomUUID(), offset: '1 day before', time: '08:00' }] }]);
+  const sendTaskInfoNow = () => {
+    setSendingTaskInfo(true);
+    setActionError('');
+    setActionMessage('Sending your task update…');
+    emailApi('/send-task-info', { method: 'POST' })
+      .then(result => setActionMessage(`Task update sent to ${result.count} verified recipient${result.count === 1 ? '' : 's'} with ${result.taskCount} task${result.taskCount === 1 ? '' : 's'}.`))
+      .catch(error => { setActionMessage(''); setActionError(error.message); })
+      .finally(() => setSendingTaskInfo(false));
+  };
+  const addTaskRule = (task) => setTaskRules(items => items.some(item => item.id === task.id) ? items : [...items, { id: task.id, title: task.title, project: task.project_name, subproject: task.subproject_name, due: task.due_date, enabled: true, reminders: [{ id: crypto.randomUUID(), offset: '1 day before', time: '08:00' }] }]);
   return <section className="email-studio">
     <header className="email-studio-heading">
       <div className="email-studio-title-wrap"><span className="email-studio-icon"><Mail size={20} /></span><div><span className="email-studio-eyebrow">YOUR STUDY, DELIVERED</span><h1>Email reports</h1><p>Thoughtful updates that help you plan ahead and see your progress.</p></div></div>
-      <span className={`email-prototype-badge ${saveState === 'error' ? 'is-error' : ''}`}><span /> {loading ? 'Loading settings…' : saveState === 'saving' ? 'Saving changes…' : saveState === 'error' ? 'Could not save' : 'Settings saved'}</span>
+      <span className={`email-prototype-badge ${saveState === 'error' || loadError ? 'is-error' : ''}`} title={loadError || (saveState === 'error' ? actionError : undefined)}><span /> {loading ? 'Loading settings…' : loadError ? 'Could not load settings' : saveState === 'saving' ? 'Saving changes…' : saveState === 'error' ? 'Could not save' : 'Settings saved'}</span>
     </header>
 
-    <div className="email-studio-toolbar"><span className="email-format-note"><ShieldCheck size={15} /> Changes save automatically · recipients can unsubscribe any time</span><label className="email-format-select"><span>Format</span><span className="email-control-select"><select value={format} onChange={event => setFormat(event.target.value)}><option value="html">HTML + plain text</option><option value="text">Plain text only</option></select><ChevronDown size={13} /></span></label></div>
+    <div className="email-studio-toolbar"><span className="email-format-note"><ShieldCheck size={15} /> HTML reports include a plain-text alternative · recipients can unsubscribe any time</span></div>
 
     <div className="email-studio-grid">
       <section className="email-card email-schedules-card">
@@ -197,10 +208,10 @@ export const EmailReportsPanel = ({ user }) => {
       </section>
 
       <section className="email-card email-task-reminders-card">
-        <div className="email-card-heading"><div><span className="email-section-kicker">RIGHT ON TIME</span><h2>Task reminders</h2><p>Pick the tasks, lead times, and send times for each reminder.</p></div><span className="email-reminder-enabled"><span /> Custom rules</span></div>
+        <div className="email-card-heading"><div><span className="email-section-kicker">RIGHT ON TIME</span><h2>Task reminders</h2><p>Pick the tasks, lead times, and send times for each reminder.</p></div><div className="email-task-heading-actions"><button type="button" className="email-send-now" onClick={sendTaskInfoNow} disabled={sendingTaskInfo || !deliveryConfigured || !accountVerified || loading || (!allTasksEnabled && !taskRules.some(task => task.enabled))} title={!deliveryConfigured ? 'Email delivery is not configured on this server' : !accountVerified ? 'Verify your account email before sending' : 'Send the current task selection now'}><Send size={12} />{sendingTaskInfo ? 'Sending…' : 'Send task info now'}</button><span className="email-reminder-enabled"><span /> Custom rules</span></div></div>
         <div className="email-reminder-scope"><div><strong>Apply reminders to</strong><small>Choose all open tasks or customize each task below.</small></div><label className="email-scope-toggle"><input type="checkbox" checked={allTasksEnabled} onChange={event => setAllTasksEnabled(event.target.checked)} /><span>{allTasksEnabled ? 'All open tasks' : 'Selected tasks'}</span></label></div>
         {!allTasksEnabled && <><div className="email-task-rule-list">{taskRules.map(task => <article className={`email-task-rule${task.enabled ? ' is-enabled' : ''}`} key={task.id}>
-          <div className="email-task-rule-head"><label className="email-task-choice"><input type="checkbox" checked={task.enabled} onChange={event => setTaskRules(items => items.map(item => item.id === task.id ? { ...item, enabled: event.target.checked } : item))} /><span className="email-checkmark"><Check size={12} /></span><span><strong>{task.title}</strong><small>{task.project}{task.due ? ` · Due ${formatDisplayDate(task.due, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small></span></label><span className="email-rule-count">{task.enabled ? `${task.reminders.length} reminders` : 'Off'}</span></div>
+          <div className="email-task-rule-head"><label className="email-task-choice"><input type="checkbox" checked={task.enabled} onChange={event => setTaskRules(items => items.map(item => item.id === task.id ? { ...item, enabled: event.target.checked } : item))} /><span className="email-checkmark"><Check size={12} /></span><span><strong>{task.title}</strong><small>{[task.project, task.subproject].filter(Boolean).join(' / ')}{task.due ? ` · Due ${formatDisplayDate(task.due, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small></span></label><span className="email-rule-count">{task.enabled ? `${task.reminders.length} reminders` : 'Off'}</span></div>
           {task.enabled && <div className="email-task-reminder-list">{task.reminders.map(reminder => <div className="email-task-reminder-rule" key={reminder.id}><span className="email-reminder-rule-dot" /><label className="email-reminder-days"><span className="sr-only">Days before due date</span><input type="number" min="0" max="365" value={reminder.offset === 'On due date' ? 0 : Number.parseInt(reminder.offset, 10) || 0} onChange={event => { const days = Math.max(0, Math.min(365, Number(event.target.value) || 0)); setTaskRules(items => items.map(item => item.id !== task.id ? item : { ...item, reminders: item.reminders.map(rule => rule.id === reminder.id ? { ...rule, offset: days ? `${days} days before` : 'On due date' } : rule) })); }} /></label><span className="email-reminder-at">days before · at</span><input aria-label={`Send time for ${task.title} reminder`} type="time" value={reminder.time} onChange={event => setTaskRules(items => items.map(item => item.id !== task.id ? item : { ...item, reminders: item.reminders.map(rule => rule.id === reminder.id ? { ...rule, time: event.target.value } : rule) }))} /><button type="button" aria-label="Remove reminder" onClick={() => setTaskRules(items => items.map(item => item.id === task.id ? { ...item, reminders: item.reminders.filter(rule => rule.id !== reminder.id) } : item))}><Trash2 size={13} /></button></div>)}
             <button type="button" className="email-add-reminder-rule" onClick={() => setTaskRules(items => items.map(item => item.id === task.id ? { ...item, reminders: [...item.reminders, { id: crypto.randomUUID(), offset: '1 day before', time: '08:00' }] } : item))}><Plus size={13} /> Add reminder moment</button>
           </div>}
@@ -242,6 +253,7 @@ const EmailMockup = ({ email, large = false }) => <div className={`email-mockup 
     <div className="email-mockup-metric"><strong>{email.metric}</strong><span>{email.metricLabel}</span></div>
     {email.callout && <div className="email-plan-callout"><span><Clock3 size={13} /> {email.callout.label}</span><strong>{email.callout.value}</strong><small>{email.callout.detail}</small></div>}
     {email.comparisonRows ? <div className="email-comparison-table"><div className="email-comparison-table-head"><span>STUDY METRIC</span><span>THIS PERIOD</span><span>PREVIOUS</span><span>CHANGE</span></div>{email.comparisonRows.map(row => <div className="email-comparison-table-row" key={row.id}><strong>{row.label}</strong><span>{row.current}</span><span>{row.previous}</span><b className={row.change.startsWith('+') ? 'is-up' : ''}>{row.change}</b></div>)}</div> : <div className="email-mockup-list">{email.rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>}
+    {email.areaRows && <div className="email-preview-area-breakdown"><strong>{email.comparisonRows ? 'Study time by project and subject' : 'Project and subproject detail'}</strong>{email.areaRows.map(area => <div key={`${area.project}-${area.subject}`}><span><b>{area.project}</b><small>{area.subject}</small></span><span><b>{area.time}</b><small>{area.detail}</small></span></div>)}</div>}
     <button type="button" className="email-mockup-cta">{email.type === 'task-reminder' ? 'Review this task' : email.type === 'comparison' ? 'Explore your comparison' : 'Open your study dashboard'} <span>→</span></button>
     <footer>Made for your momentum. <span>Manage email preferences</span></footer>
   </article>

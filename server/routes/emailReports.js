@@ -15,6 +15,7 @@ const validTaskId = value => typeof value === 'string' && /^[\da-f]{8}-[\da-f]{4
 const addDays = (value, amount) => { const date = new Date(`${value}T00:00:00Z`); date.setUTCDate(date.getUTCDate() + amount); return date.toISOString().slice(0, 10); };
 const daySpan = (from, to) => Math.max(1, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1);
 const fmtDuration = seconds => { const mins = Math.round((Number(seconds) || 0) / 60); return `${Math.floor(mins / 60)}h ${mins % 60}m`; };
+const areaKey = (project, subject) => `${project || 'Personal'}\u0000${subject || 'No subproject'}`;
 const dateKeyAt = (date, timeZone) => { const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date); const values = Object.fromEntries(parts.map(part => [part.type, part.value])); return `${values.year}-${values.month}-${values.day}`; };
 const localClock = (date, timeZone) => Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', hour: '2-digit', minute: '2-digit', weekday: 'long', day: 'numeric', month: 'numeric', hourCycle: 'h23' }).formatToParts(date).map(part => [part.type, part.value]));
 const localToday = timeZone => dateKeyAt(new Date(), timeZone);
@@ -83,9 +84,17 @@ function previousRange(current, comparison) {
 
 async function reportStats(userId, timezone, range) {
   const result = await query(
-    `SELECT te.started_at, te.ended_at, te.note, p.name AS project_name, s.name AS subject_name
+    `WITH RECURSIVE subproject_tree AS (
+       SELECT id,project_id,parent_subproject_id,name,name::text AS full_name,ARRAY[id] AS visited
+       FROM subprojects WHERE parent_subproject_id IS NULL
+       UNION ALL
+       SELECT child.id,child.project_id,child.parent_subproject_id,child.name,(parent.full_name || ' / ' || child.name)::text, parent.visited || child.id
+       FROM subprojects child JOIN subproject_tree parent ON parent.id=child.parent_subproject_id
+       WHERE NOT child.id=ANY(parent.visited)
+     )
+     SELECT te.started_at, te.ended_at, te.note, p.name AS project_name, s.full_name AS subject_name
      FROM time_entries te JOIN projects p ON p.id = te.project_id
-     LEFT JOIN subprojects s ON s.id = te.subproject_id
+     LEFT JOIN subproject_tree s ON s.id = te.subproject_id
      WHERE te.user_id=$1 AND (te.started_at AT TIME ZONE $2)::date >= $3::date AND (te.started_at AT TIME ZONE $2)::date <= $4::date
      ORDER BY te.started_at`, [userId, timezone, range.from, range.to]
   );
@@ -97,8 +106,42 @@ async function reportStats(userId, timezone, range) {
   for (const day of sortedDays) { const consecutive = lastDay && addDays(lastDay, 1) === day; currentRun = consecutive ? currentRun + 1 : 1; bestStreak = Math.max(bestStreak, currentRun); lastDay = day; }
   const longest = entries.reduce((max, entry) => Math.max(max, (new Date(entry.ended_at) - new Date(entry.started_at)) / 1000), 0);
   const projects = new Map();
-  entries.forEach(entry => { const name = entry.project_name; const item = projects.get(name) || { seconds: 0, sessions: 0 }; item.seconds += Math.max(0, (new Date(entry.ended_at) - new Date(entry.started_at)) / 1000); item.sessions++; projects.set(name, item); });
-  return { entries: entries.length, seconds, activeDays, average: entries.length ? seconds / entries.length : 0, longest, bestStreak, projects: [...projects.entries()].map(([name, values]) => ({ name, ...values })).sort((a,b) => b.seconds-a.seconds).slice(0, 6) };
+  const areas = new Map();
+  entries.forEach(entry => {
+    const project = entry.project_name || 'Personal';
+    const subject = entry.subject_name || 'No subproject';
+    const elapsed = Math.max(0, (new Date(entry.ended_at) - new Date(entry.started_at)) / 1000);
+    const projectItem = projects.get(project) || { name: project, seconds: 0, sessions: 0 };
+    projectItem.seconds += elapsed; projectItem.sessions++; projects.set(project, projectItem);
+    const key = areaKey(project, subject);
+    const area = areas.get(key) || { project, subject, seconds: 0, sessions: 0 };
+    area.seconds += elapsed; area.sessions++; areas.set(key, area);
+  });
+  const areaRows = [...areas.values()].sort((a,b) => b.seconds-a.seconds);
+  return { entries: entries.length, seconds, activeDays, average: entries.length ? seconds / entries.length : 0, longest, bestStreak, projects: [...projects.values()].sort((a,b) => b.seconds-a.seconds), areas: areaRows };
+}
+
+function areaBreakdownText(stats, title = 'Study by project and subproject') {
+  if (!stats.areas.length) return `${title}\nNo study sessions were logged in this period.`;
+  return `${title}\n${stats.areas.map(area => `• ${area.project} / ${area.subject}: ${fmtDuration(area.seconds)} · ${area.sessions} session${area.sessions === 1 ? '' : 's'}`).join('\n')}`;
+}
+
+function areaBreakdownHtml(stats, title = 'Study by project and subproject') {
+  if (!stats.areas.length) return `<section style="margin-top:22px"><h2 style="font-size:17px">${escapeEmailHtml(title)}</h2><p>No study sessions were logged in this period.</p></section>`;
+  return `<section style="margin-top:22px"><h2 style="font-size:17px">${escapeEmailHtml(title)}</h2><table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subject / subproject</th><th align="right">Study time</th><th align="right">Sessions</th></tr></thead><tbody>${stats.areas.map(area => `<tr><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(area.project)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(area.subject)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(area.seconds)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${area.sessions}</td></tr>`).join('')}</tbody></table></section>`;
+}
+
+function comparisonBreakdownHtml(current, previous) {
+  const all = new Map();
+  [...current.areas.map(area => ({ ...area, current: area.seconds, previous: 0 })), ...previous.areas.map(area => ({ ...area, current: 0, previous: area.seconds }))].forEach(area => {
+    const key = areaKey(area.project, area.subject);
+    const item = all.get(key) || { project: area.project, subject: area.subject, current: 0, previous: 0 };
+    item.current += area.current; item.previous += area.previous; all.set(key, item);
+  });
+  const rows = [...all.values()].sort((a,b) => b.current-a.current || b.previous-a.previous);
+  const text = rows.length ? `\n\nStudy time by project and subproject:\n${rows.map(row => `• ${row.project} / ${row.subject}: ${fmtDuration(row.current)} this period · ${fmtDuration(row.previous)} previous`).join('\n')}` : '\n\nNo study sessions were logged in either period.';
+  const html = `<section style="margin-top:22px"><h2 style="font-size:17px">Study time by project and subproject</h2>${rows.length ? `<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subject / subproject</th><th align="right">This period</th><th align="right">Previous</th><th align="right">Change</th></tr></thead><tbody>${rows.map(row => `<tr><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.project)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.subject)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.current)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.previous)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${row.current - row.previous >= 0 ? '+' : '−'}${fmtDuration(Math.abs(row.current-row.previous))}</td></tr>`).join('')}</tbody></table>` : '<p>No study sessions were logged in either period.</p>'}</section>`;
+  return { text, html };
 }
 
 async function renderReport(userId, user, schedule) {
@@ -109,20 +152,56 @@ async function renderReport(userId, user, schedule) {
   range.label = formatDateRange(range.from, range.to, dateFormat, locale);
   if (schedule.type === 'agenda' || schedule.type === 'weekly-plan') {
     const [tasks, stats, goalResult] = await Promise.all([
-      query(`SELECT title, project_name, due_date, reminder_date, completed FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NULL OR due_date >= $2::date) AND (due_date IS NULL OR due_date <= $3::date) ORDER BY due_date NULLS LAST LIMIT 30`, [userId, range.from, range.to]),
+      query(`SELECT title, project_name, subproject_name, due_date, reminder_date, completed FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NULL OR due_date >= $2::date) AND (due_date IS NULL OR due_date <= $3::date) ORDER BY due_date NULLS LAST LIMIT 30`, [userId, range.from, range.to]),
       reportStats(userId, timezone, range),
-      schedule.type === 'weekly-plan' ? query(`SELECT COALESCE(SUM(g.target_hours),0) AS hours,COUNT(DISTINCT d.weekday) AS study_days FROM subproject_goals g JOIN subprojects s ON s.id=g.subproject_id JOIN projects p ON p.id=s.project_id LEFT JOIN subproject_study_days d ON d.subproject_id=s.id WHERE p.user_id=$1 AND g.cadence='weekly'`, [userId]) : Promise.resolve({ rows: [{ hours: 0, study_days: 7 }] }),
+      schedule.type === 'weekly-plan' ? query(`WITH RECURSIVE subproject_tree AS (
+        SELECT id,project_id,parent_subproject_id,name,name::text AS full_name,ARRAY[id] AS visited FROM subprojects WHERE parent_subproject_id IS NULL
+        UNION ALL
+        SELECT child.id,child.project_id,child.parent_subproject_id,child.name,(parent.full_name || ' / ' || child.name)::text,parent.visited || child.id
+        FROM subprojects child JOIN subproject_tree parent ON parent.id=child.parent_subproject_id WHERE NOT child.id=ANY(parent.visited)
+      ) SELECT p.name AS project_name,s.full_name AS subject_name,
+        COALESCE(
+          NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='weekly'),0),
+          NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='daily'),0) * cardinality(COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[])),
+          NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='monthly'),0) / 4.35,
+          0
+        ) AS weekly_hours,
+        COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[]) AS study_days
+        FROM projects p JOIN subproject_tree s ON s.project_id=p.id
+        LEFT JOIN subproject_goals g ON g.subproject_id=s.id
+        LEFT JOIN subproject_study_days d ON d.subproject_id=s.id
+        WHERE p.user_id=$1 GROUP BY p.id,p.name,p.sort_order,s.id,s.full_name ORDER BY p.sort_order,s.full_name`, [userId]) : Promise.resolve({ rows: [] }),
     ]);
-    const taskRows = tasks.rows.map(task => `${task.title}${task.due_date ? ` · due ${formatDateKey(String(task.due_date).slice(0, 10), dateFormat, locale)}` : ''}`);
+    const taskRows = tasks.rows.map(task => `${task.title}${task.project_name ? ` · ${task.project_name}` : ''}${task.subproject_name ? ` / ${task.subproject_name}` : ''}${task.due_date ? ` · due ${formatDateKey(String(task.due_date).slice(0, 10), dateFormat, locale)}` : ''}`);
     const subject = schedule.type === 'agenda' ? 'Your PlotHour day ahead' : `Your PlotHour study plan · ${range.label}`;
-    const weeklyGoalHours = Number(goalResult.rows[0]?.hours) || 0;
-    const daysPerWeek = Math.max(1, Number(goalResult.rows[0]?.study_days) || 7);
-    const remainingStudyDays = Math.max(1, Math.ceil(daysPerWeek * Math.min(7, daySpan(range.from > localToday(timezone) ? range.from : localToday(timezone), range.to)) / 7));
-    const remainingGoalHours = Math.max(0, weeklyGoalHours - stats.seconds / 3600);
+    const actualByArea = new Map(stats.areas.map(area => [areaKey(area.project, area.subject), area]));
+    const periodScale = daySpan(range.from, range.to) / 7;
+    const planRows = goalResult.rows.map(goal => {
+      const key = areaKey(goal.project_name, goal.subject_name);
+      const actual = actualByArea.get(key);
+      return { project: goal.project_name, subject: goal.subject_name, targetHours: Number(goal.weekly_hours || 0) * periodScale, seconds: actual?.seconds || 0, sessions: actual?.sessions || 0, studyDays: goal.study_days.map(Number) };
+    });
+    const goalKeys = new Set(planRows.map(row => areaKey(row.project, row.subject)));
+    stats.areas.filter(area => !goalKeys.has(areaKey(area.project, area.subject))).forEach(area => planRows.push({ ...area, targetHours: 0, studyDays: [] }));
+    planRows.sort((a,b) => b.targetHours-a.targetHours || b.seconds-a.seconds);
+    const today = localToday(timezone);
+    const plannedWeekdays = new Set(planRows.flatMap(row => row.studyDays));
+    if (!plannedWeekdays.size) [0,1,2,3,4,5,6].forEach(day => plannedWeekdays.add(day));
+    const remainingDates = [];
+    for (let date = range.from > today ? range.from : today; date <= range.to; date = addDays(date, 1)) {
+      if (plannedWeekdays.has(new Date(`${date}T00:00:00Z`).getUTCDay())) remainingDates.push(date);
+      if (remainingDates.length >= 366) break;
+    }
+    const remainingStudyDays = Math.max(1, remainingDates.length);
+    const plannedGoalHours = planRows.reduce((sum, row) => sum + row.targetHours, 0);
+    const remainingGoalHours = planRows.reduce((sum, row) => sum + Math.max(0, row.targetHours - row.seconds / 3600), 0);
     const dailyPace = remainingGoalHours / remainingStudyDays;
-    const planPace = schedule.type === 'weekly-plan' ? weeklyGoalHours > 0 ? `${fmtDuration(stats.seconds)} studied so far · ${fmtDuration(remainingGoalHours * 3600)} left across ${remainingStudyDays} planned study day${remainingStudyDays === 1 ? '' : 's'} · ${fmtDuration(dailyPace * 3600)} per day to reach the weekly goal.` : 'No weekly study goal is set yet. Add a recurring goal in Projects to get a recommended daily pace in this report.' : '';
-    const text = `${subject}\n\n${planPace ? `${planPace}\n` : ''}Study time already logged in this period: ${fmtDuration(stats.seconds)}\nOpen tasks: ${tasks.rows.length}\n${taskRows.join('\n') || 'No upcoming tasks.'}\n\nManage email reports in PlotHour.`;
-    const html = `<main style="font:15px Arial,sans-serif;color:#252843;max-width:620px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:22px;color:#525db5">${escapeEmailHtml(subject)}</h1><p>${escapeEmailHtml(range.label)} · ${fmtDuration(stats.seconds)} studied so far</p>${planPace ? `<div style="padding:14px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:8px"><strong>${weeklyGoalHours > 0 ? 'Daily pace to reach your goal' : 'Set a goal for a daily pace'}</strong>${weeklyGoalHours > 0 ? `<div style="font-size:20px;color:#525db5;font-weight:700;margin-top:5px">${fmtDuration(dailyPace * 3600)} per study day</div><small>${escapeEmailHtml(planPace)}</small>` : `<p>${escapeEmailHtml(planPace)}</p>`}</div>` : ''}<h2 style="font-size:16px">Upcoming tasks</h2>${tasks.rows.length ? `<ul>${tasks.rows.map(task => `<li>${escapeEmailHtml(task.title)}${task.due_date ? ` · due ${escapeEmailHtml(formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale))}` : ''}</li>`).join('')}</ul>` : '<p>No upcoming tasks.</p>'}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
+    const planPace = schedule.type === 'weekly-plan' ? plannedGoalHours > 0 ? `${fmtDuration(stats.seconds)} studied in this period · ${fmtDuration(remainingGoalHours * 3600)} of configured project and subject goals remain across ${remainingStudyDays} planned study day${remainingStudyDays === 1 ? '' : 's'} (average ${fmtDuration(dailyPace * 3600)} per study day).` : 'No weekly study goals are set yet. Add targets to projects or subprojects to get a personalized study plan.' : '';
+    const studyDayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const planText = planRows.length ? `\n\nProject and subproject goals:\n${planRows.map(row => `• ${row.project} / ${row.subject}: ${row.targetHours > 0 ? `${fmtDuration(row.targetHours * 3600)} goal · ` : ''}${fmtDuration(row.seconds)} studied · ${row.targetHours > 0 ? `${fmtDuration(Math.max(0, row.targetHours * 3600 - row.seconds))} remaining` : `${row.sessions} sessions`}${row.studyDays.length ? ` · study days ${row.studyDays.map(day => studyDayNames[day]).join(', ')}` : ''}`).join('\n')}` : '\n\nNo project or subproject goals have been set.';
+    const planHtml = `<section style="margin-top:22px"><h2 style="font-size:17px">Project and subproject goals</h2>${planRows.length ? `<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Project</th><th align="left">Subject / subproject</th><th align="left">Study days</th><th align="right">Goal</th><th align="right">Studied</th><th align="right">Remaining</th></tr></thead><tbody>${planRows.map(row => `<tr><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.project)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${escapeEmailHtml(row.subject)}</td><td style="padding:8px 3px;border-bottom:1px solid #eee">${row.studyDays.length ? row.studyDays.map(day => studyDayNames[day]).join(', ') : 'Not set'}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${row.targetHours > 0 ? fmtDuration(row.targetHours*3600) : '—'}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${fmtDuration(row.seconds)}</td><td align="right" style="padding:8px 3px;border-bottom:1px solid #eee">${row.targetHours > 0 ? fmtDuration(Math.max(0,row.targetHours*3600-row.seconds)) : '—'}</td></tr>`).join('')}</tbody></table>` : '<p>No project or subproject goals have been set.</p>'}</section>`;
+    const text = `${subject}\n\n${planPace ? `${planPace}\n` : ''}Study time already logged in this period: ${fmtDuration(stats.seconds)}\n${schedule.type === 'weekly-plan' ? planText : areaBreakdownText(stats)}\n\nOpen tasks: ${tasks.rows.length}\n${taskRows.join('\n') || 'No upcoming tasks.'}\n\nManage email reports in PlotHour.`;
+    const html = `<main style="font:15px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:22px;color:#525db5">${escapeEmailHtml(subject)}</h1><p>${escapeEmailHtml(range.label)} · ${fmtDuration(stats.seconds)} studied in this period</p>${planPace ? `<div style="padding:14px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:8px"><strong>${plannedGoalHours > 0 ? 'Daily pace to reach your project goals' : 'Set a goal for a daily pace'}</strong>${plannedGoalHours > 0 ? `<div style="font-size:20px;color:#525db5;font-weight:700;margin-top:5px">${fmtDuration(dailyPace * 3600)} per study day</div><small>${escapeEmailHtml(planPace)}</small>` : `<p>${escapeEmailHtml(planPace)}</p>`}</div>` : ''}${schedule.type === 'weekly-plan' ? planHtml : areaBreakdownHtml(stats)}<h2 style="font-size:16px;margin-top:22px">Upcoming tasks</h2>${tasks.rows.length ? `<ul>${tasks.rows.map(task => `<li>${escapeEmailHtml(task.title)}${task.project_name ? ` · ${escapeEmailHtml(task.project_name)}` : ''}${task.subproject_name ? ` / ${escapeEmailHtml(task.subproject_name)}` : ''}${task.due_date ? ` · due ${escapeEmailHtml(formatDateKey(String(task.due_date).slice(0,10), dateFormat, locale))}` : ''}</li>`).join('')}</ul>` : '<p>No upcoming tasks.</p>'}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
     return { subject, text, html, range };
   }
   const current = await reportStats(userId, timezone, range);
@@ -168,9 +247,10 @@ async function renderReport(userId, user, schedule) {
   ].filter(metric => wanted.has(metric[0]));
   const peopleText = peopleRows.length && friendMetrics.length ? `\n\nSame-period study partners:\n${peopleRows.map(person => `${person.name}: ${friendMetrics.map(metric => `${metric[1]} ${metric[2](person)}`).join(' · ')}`).join('\n')}` : '';
   const peopleHtml = peopleRows.length && friendMetrics.length ? `<h2 style="font-size:17px;margin-top:24px">Study partners · same period</h2><table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Person</th>${friendMetrics.map(metric => `<th align="right">${escapeEmailHtml(metric[1])}</th>`).join('')}</tr></thead><tbody>${peopleRows.map(person => `<tr><td style="padding:9px 2px;border-bottom:1px solid #eee">${escapeEmailHtml(person.name)}</td>${friendMetrics.map(metric => `<td align="right">${escapeEmailHtml(metric[2](person))}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '';
+  const areaComparison = comparisonBreakdownHtml(current, previous);
   const headlineMetric = rows[0];
-  const text = `${subject}\n\n${range.label}: ${rows.map(row => `${row[0]} ${row[1]}`).join(' · ')}.\n${compare.label}: ${rows.map(row => `${row[0]} ${row[2]}`).join(' · ')}.\n\n${rows.map(row => `${row[0]}: ${row[1]} · previous ${row[2]}${row[3] ? ` · ${row[3]}` : ''}`).join('\n')}${peopleText}\n\nManage email reports in PlotHour.`;
-  const html = `<main style="font:14px Arial,sans-serif;color:#252843;max-width:640px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:24px;margin:10px 0">${escapeEmailHtml(range.label)} comparison</h1><p style="color:#666b80">${escapeEmailHtml(formatDateRange(range.from, range.to, dateFormat, locale))} compared with ${escapeEmailHtml(formatDateRange(compare.from, compare.to, dateFormat, locale))}</p>${headlineMetric ? `<div style="padding:16px;background:#f2f3fc;border-radius:12px"><strong style="font-size:26px;color:#6872c5">${escapeEmailHtml(headlineMetric[1])}</strong><div>${escapeEmailHtml(headlineMetric[0])}${headlineMetric[3] ? ` · ${escapeEmailHtml(headlineMetric[3])} vs previous` : ''}</div></div>` : ''}<table style="width:100%;border-collapse:collapse;margin-top:16px"><thead><tr><th align="left">Metric</th><th align="right">This period</th><th align="right">Previous</th><th align="right">Change</th></tr></thead><tbody>${rows.map(row => `<tr><td style="padding:10px 2px;border-bottom:1px solid #eee">${escapeEmailHtml(row[0])}</td><td align="right">${escapeEmailHtml(row[1])}</td><td align="right">${escapeEmailHtml(row[2])}</td><td align="right">${escapeEmailHtml(row[3])}</td></tr>`).join('')}</tbody></table>${peopleHtml}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
+  const text = `${subject}\n\n${range.label}: ${rows.map(row => `${row[0]} ${row[1]}`).join(' · ')}.\n${compare.label}: ${rows.map(row => `${row[0]} ${row[2]}`).join(' · ')}.\n\n${rows.map(row => `${row[0]}: ${row[1]} · previous ${row[2]}${row[3] ? ` · ${row[3]}` : ''}`).join('\n')}${areaComparison.text}${peopleText}\n\nManage email reports in PlotHour.`;
+  const html = `<main style="font:14px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:24px;margin:10px 0">${escapeEmailHtml(range.label)} comparison</h1><p style="color:#666b80">${escapeEmailHtml(formatDateRange(range.from, range.to, dateFormat, locale))} compared with ${escapeEmailHtml(formatDateRange(compare.from, compare.to, dateFormat, locale))}</p>${headlineMetric ? `<div style="padding:16px;background:#f2f3fc;border-radius:12px"><strong style="font-size:26px;color:#6872c5">${escapeEmailHtml(headlineMetric[1])}</strong><div>${escapeEmailHtml(headlineMetric[0])}${headlineMetric[3] ? ` · ${escapeEmailHtml(headlineMetric[3])} vs previous` : ''}</div></div>` : ''}<table style="width:100%;border-collapse:collapse;margin-top:16px"><thead><tr><th align="left">Metric</th><th align="right">This period</th><th align="right">Previous</th><th align="right">Change</th></tr></thead><tbody>${rows.map(row => `<tr><td style="padding:10px 2px;border-bottom:1px solid #eee">${escapeEmailHtml(row[0])}</td><td align="right">${escapeEmailHtml(row[1])}</td><td align="right">${escapeEmailHtml(row[2])}</td><td align="right">${escapeEmailHtml(row[3])}</td></tr>`).join('')}</tbody></table>${areaComparison.html}${peopleHtml}<p style="color:#82869a;font-size:12px">Manage email reports in PlotHour.</p></main>`;
   return { subject, text, html, range };
 }
 
@@ -235,7 +315,7 @@ emailReportsRouter.use(authenticate);
 
 emailReportsRouter.get('/tasks', async (req, res) => {
   try {
-    const result = await query(`SELECT id,title,project_name,due_date,reminder_date,completed FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NOT NULL OR reminder_date IS NOT NULL) ORDER BY due_date NULLS LAST,created_at DESC`, [req.userId]);
+    const result = await query(`SELECT id,title,project_name,subproject_name,due_date,reminder_date,completed FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NOT NULL OR reminder_date IS NOT NULL) ORDER BY due_date NULLS LAST,created_at DESC`, [req.userId]);
     return res.json({ tasks: result.rows });
   } catch (error) { console.error('[Email report tasks]', error); return res.status(500).json({ error: 'Could not load tasks for reminder settings.' }); }
 });
@@ -324,6 +404,56 @@ emailReportsRouter.post('/send', async (req, res) => {
   catch (error) { console.error('[Send email report]', error); return res.status(error.status || 500).json({ error: error.message || 'Could not send this report.' }); }
 });
 
+emailReportsRouter.post('/send-task-info', async (req, res) => {
+  if (!emailDeliveryConfigured()) return res.status(503).json({ error: 'Email delivery is not configured on this server.' });
+  try {
+    const saved = await query(`SELECT preferences->'emailReports' AS settings FROM user_preferences WHERE user_id=$1`, [req.userId]);
+    const settings = saved.rows[0]?.settings || {};
+    const selectedIds = settings.allTasksEnabled ? null : (settings.taskRules || []).filter(rule => rule.enabled).map(rule => rule.id).filter(validTaskId);
+    if (!settings.allTasksEnabled && !selectedIds?.length) return res.status(400).json({ error: 'Choose at least one task, or include all open tasks, before sending a task update.' });
+
+    const recentSends = await query(`SELECT COUNT(*)::int AS count FROM email_report_deliveries WHERE user_id=$1 AND schedule_id='manual-task-info' AND status='sent' AND delivered_at > now() - interval '1 hour'`, [req.userId]);
+    if (recentSends.rows[0].count >= 10) return res.status(429).json({ error: 'You’ve reached the 10 on-demand task updates per hour limit.' });
+
+    const taskResult = await query(
+      `SELECT id,title,project_name,subproject_name,due_date,reminder_date
+       FROM user_tasks
+       WHERE user_id=$1 AND completed=false
+         AND (due_date IS NOT NULL OR reminder_date IS NOT NULL)
+         AND ($2::uuid[] IS NULL OR id=ANY($2::uuid[]))
+       ORDER BY due_date NULLS LAST,reminder_date NULLS LAST,created_at DESC
+       LIMIT 100`,
+      [req.userId, selectedIds]
+    );
+    const tasks = taskResult.rows;
+    if (!tasks.length) return res.status(400).json({ error: 'There are no open tasks with a due date or reminder in this selection.' });
+
+    const { user, destinations } = await getDestinations(req.userId);
+    const dateFormat = settings.dateFormat || 'system';
+    const locale = safeLocale(settings.locale);
+    const today = localToday(settings.timezone || user.timezone || 'UTC');
+    const subject = `Your PlotHour task update · ${formatDateKey(today, dateFormat, locale)}`;
+    const taskLines = tasks.map(task => {
+      const area = [task.project_name || 'Personal', task.subproject_name].filter(Boolean).join(' / ');
+      const dates = [task.due_date ? `Due ${formatDateKey(task.due_date, dateFormat, locale)}` : '', task.reminder_date ? `Reminder ${formatDateKey(task.reminder_date, dateFormat, locale)}` : ''].filter(Boolean).join(' · ');
+      return { title: task.title, area, dates };
+    });
+    const text = `Your PlotHour task update\n\n${taskLines.map(task => `${task.title}\n${task.area}${task.dates ? ` · ${task.dates}` : ''}`).join('\n\n')}\n\nManage your task reminders in PlotHour.`;
+    const html = `<main style="font:14px Arial,sans-serif;color:#252843;max-width:720px;margin:24px auto;padding:24px">${emailBrandHeader()}<h1 style="font-size:24px;margin:18px 0 6px">Your task update</h1><p style="color:#666b80;margin:0 0 18px">${tasks.length} open task${tasks.length === 1 ? '' : 's'} · ${escapeEmailHtml(formatDateKey(today, dateFormat, locale))}</p><table style="width:100%;border-collapse:collapse">${taskLines.map(task => `<tr><td style="padding:13px 4px;border-bottom:1px solid #e8eaf3"><strong>${escapeEmailHtml(task.title)}</strong><div style="margin-top:4px;color:#70758b;font-size:12px">${escapeEmailHtml(task.area)}${task.dates ? ` · ${escapeEmailHtml(task.dates)}` : ''}</div></td></tr>`).join('')}</table><p style="margin-top:20px;color:#82869a;font-size:12px">Manage your task reminders in PlotHour.</p></main>`;
+    for (const destination of destinations) {
+      const base = process.env.APP_BASE_URL || 'https://plothour.com';
+      const unsubscribe = destination.unsubscribeToken ? `${base}/api/email-reports/recipient/unsubscribe?token=${destination.unsubscribeToken}` : '';
+      const personalizedHtml = unsubscribe ? html.replace('Manage your task reminders in PlotHour.', `<a href="${unsubscribe}">Unsubscribe from these reports</a>`) : html;
+      await sendEmail({ to: destination.email, subject, text: unsubscribe ? `${text}\nUnsubscribe: ${unsubscribe}` : text, html: settings.format === 'text' ? undefined : personalizedHtml });
+    }
+    await query(`INSERT INTO email_report_deliveries(user_id,schedule_id,period_key,status,delivered_at) VALUES($1,'manual-task-info',$2,'sent',now())`, [req.userId, randomBytes(12).toString('hex')]);
+    return res.json({ sent: true, count: destinations.length, taskCount: tasks.length, subject });
+  } catch (error) {
+    console.error('[Send task info now]', error);
+    return res.status(error.status || 500).json({ error: error.message || 'Could not send the task update.' });
+  }
+});
+
 function scheduleOccurrence(schedule, now, timezone) {
   const parts = localClock(now, timezone);
   if (parts.hour === '24') parts.hour = '00';
@@ -377,7 +507,7 @@ export async function processScheduledEmailReports() {
     }
     if (!settings.enabled || !emailDeliveryConfigured()) continue;
     const timezone = settings.timezone || user.timezone || 'UTC';
-    const tasksResult = await query(`SELECT id,title,project_name,due_date,reminder_date FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NOT NULL OR reminder_date IS NOT NULL)`, [user.id]);
+    const tasksResult = await query(`SELECT id,title,project_name,subproject_name,due_date,reminder_date FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NOT NULL OR reminder_date IS NOT NULL)`, [user.id]);
     const rulesByTask = new Map((settings.taskRules || []).map(rule => [rule.id, rule]));
     for (const task of tasksResult.rows) {
       const taskRule = rulesByTask.get(task.id);
@@ -394,8 +524,9 @@ export async function processScheduledEmailReports() {
         const claimed = await query(`INSERT INTO email_report_deliveries(user_id,schedule_id,period_key) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id`, [user.id, key, period]);
         if (!claimed.rows.length) continue;
         const subject = `Task reminder · ${task.title}`;
-        const text = `${task.title}\n${task.project_name ? `${task.project_name}\n` : ''}Due ${dueDateLabel}. This is your ${reminder.offset.toLowerCase()} reminder.\n\nManage your task reminders in PlotHour.`;
-        const html = `<main style="font:15px Arial,sans-serif;max-width:560px;margin:24px auto;padding:24px;color:#252843">${emailBrandHeader()}<h1 style="font-size:23px">${escapeEmailHtml(task.title)}</h1><p>${escapeEmailHtml(task.project_name || 'Personal task')} · due ${escapeEmailHtml(dueDateLabel)}</p><div style="padding:14px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:8px">${escapeEmailHtml(reminder.offset)} · ${escapeEmailHtml(reminder.time)}</div><p style="color:#82869a;font-size:12px">Manage your task reminders in PlotHour.</p></main>`;
+        const taskArea = [task.project_name || 'Personal task', task.subproject_name].filter(Boolean).join(' / ');
+        const text = `${task.title}\n${taskArea}\nDue ${dueDateLabel}. This is your ${reminder.offset.toLowerCase()} reminder.\n\nManage your task reminders in PlotHour.`;
+        const html = `<main style="font:15px Arial,sans-serif;max-width:560px;margin:24px auto;padding:24px;color:#252843">${emailBrandHeader()}<h1 style="font-size:23px">${escapeEmailHtml(task.title)}</h1><p>${escapeEmailHtml(taskArea)} · due ${escapeEmailHtml(dueDateLabel)}</p><div style="padding:14px;background:#f2f3fc;border-left:3px solid #6f78d1;border-radius:8px">${escapeEmailHtml(reminder.offset)} · ${escapeEmailHtml(reminder.time)}</div><p style="color:#82869a;font-size:12px">Manage your task reminders in PlotHour.</p></main>`;
         try { const { destinations } = await getDestinations(user.id); for (const destination of destinations) { const base = process.env.APP_BASE_URL || 'https://plothour.com'; const unsubscribe = destination.unsubscribeToken ? `${base}/api/email-reports/recipient/unsubscribe?token=${destination.unsubscribeToken}` : ''; const personalizedHtml = html.replace('Manage your task reminders in PlotHour.', unsubscribe ? `<a href="${unsubscribe}">Unsubscribe</a>` : 'Manage your task reminders in PlotHour.'); await sendEmail({ to: destination.email, subject, text: unsubscribe ? `${text}\nUnsubscribe: ${unsubscribe}` : text, html: settings.format === 'text' ? undefined : personalizedHtml }); } await query(`UPDATE email_report_deliveries SET status='sent',delivered_at=now() WHERE id=$1`, [claimed.rows[0].id]); }
         catch (error) { await query('DELETE FROM email_report_deliveries WHERE id=$1', [claimed.rows[0].id]); console.error('[Scheduled task reminder]', error.message); }
       }
