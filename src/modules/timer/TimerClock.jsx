@@ -500,12 +500,13 @@ export const SessionTargetRings = ({ rings = [] }) => {
           const progress = Math.max(0, Math.min(100, ring.progress));
           return (
             <g key={ring.id} className={`session-target-ring session-target-ring-${ring.id}`}>
-              <circle className="session-target-ring-track" cx="60" cy="60" r={radius} />
+              <circle className="session-target-ring-track" cx="60" cy="60" r={radius} vectorEffect="non-scaling-stroke" />
               <circle
                 className="session-target-ring-value"
                 cx="60"
                 cy="60"
                 r={radius}
+                vectorEffect="non-scaling-stroke"
                 strokeDasharray={circumference}
                 strokeDashoffset={circumference * (1 - progress / 100)}
                 style={{ stroke: `url(#${gradientId}-${ring.id})`, opacity: progress > 0 ? 1 : 0 }}

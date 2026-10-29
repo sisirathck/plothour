@@ -15,7 +15,7 @@
 /* ── Main Dual-Column Command Deck ────────────────────────────────────────── */
 .timer-deck-card {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(520px, 0.9fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0;
   background: var(--sd-bg-surface);
   border: 1px solid var(--sd-border-glass);
@@ -733,7 +733,7 @@
 .timer-running-hero {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(128px, 1fr) 1px 122px minmax(178px, 1fr);
+  grid-template-columns: minmax(150px, 1.18fr) 1px 118px minmax(170px, .92fr);
   align-items: center;
   gap: 16px;
 }
@@ -755,14 +755,15 @@
 
 .timer-running-identity strong {
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
   color: var(--sd-text-primary);
-  font-size: clamp(23px, 2.1vw, 34px);
+  font-size: clamp(19px, 1.65vw, 28px);
   font-weight: 650;
   line-height: 1.02;
   letter-spacing: -.04em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .timer-running-identity b {
@@ -865,18 +866,20 @@
   height: 100%;
   overflow: visible;
   transform: none;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
 }
 
 .session-target-rings-plate {
   fill: color-mix(in srgb, var(--sd-bg-surface) 96%, var(--sd-coral));
   stroke: var(--sd-border-glass);
   stroke-width: 1;
-  filter: drop-shadow(0 4px 7px color-mix(in srgb, var(--sd-shadow-color) 16%, transparent));
 }
 
 .timer-running-progress .session-target-ring circle {
   fill: none;
-  stroke-width: 6;
+  stroke-width: 5.25;
+  vector-effect: non-scaling-stroke;
 }
 
 .session-target-ring-track {
@@ -887,7 +890,8 @@
   transform: rotate(-90deg);
   transform-origin: 60px 60px;
   stroke-linecap: round;
-  transition: stroke-dashoffset 900ms linear;
+  transition: stroke-dashoffset 400ms cubic-bezier(.22, .8, .3, 1);
+  shape-rendering: geometricPrecision;
 }
 
 .session-target-ring-daily .session-target-ring-value { stroke: var(--sd-coral); }

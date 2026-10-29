@@ -68,14 +68,14 @@ export const TimerPage = ({ user, onNavigate }) => {
 
   // Live clock tick
   useEffect(() => {
-    const tick = setInterval(() => setNow(new Date()), 1000);
+    const tick = setInterval(() => setNow(new Date()), activeTimer && !isPaused ? 40 : 1000);
     const sync = () => setProjects(rj(projectsKey, user ? [] : DEFAULT_PROJECTS));
     window.addEventListener('storage', sync);
     return () => {
       clearInterval(tick);
       window.removeEventListener('storage', sync);
     };
-  }, [projectsKey]);
+  }, [projectsKey, activeTimer, isPaused]);
 
   // Sync state
   useEffect(() => {
@@ -140,6 +140,10 @@ export const TimerPage = ({ user, onNavigate }) => {
     if (isPaused) return pausedElapsed;
     return Math.max(0, Math.floor((now.getTime() - activeTimer.startedAt) / 1000));
   }, [activeTimer, now, isPaused, pausedElapsed]);
+  const elapsedHundredths = useMemo(() => {
+    if (!activeTimer || isPaused) return 0;
+    return Math.floor((Math.max(0, now.getTime() - activeTimer.startedAt) % 1000) / 10);
+  }, [activeTimer, isPaused, now]);
 
   const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch';
   const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[2];
@@ -839,7 +843,7 @@ export const TimerPage = ({ user, onNavigate }) => {
                     )}
                   </div>
                   <div className="timer-running-elapsed" aria-live="polite">
-                    <div><span>{fmtClock(elapsed)}</span><small>.{String(Math.floor(now.getMilliseconds() / 10)).padStart(2, '0')}</small></div>
+                    <div><span>{fmtClock(elapsed)}</span><small>.{String(elapsedHundredths).padStart(2, '0')}</small></div>
                     <p>{sessionGoal.seconds ? `Target: ${sessionGoal.label}` : 'Open timer'}</p>
                   </div>
                 </div>

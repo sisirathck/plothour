@@ -64,8 +64,26 @@ export const EditSelect = ({ value, options, onChange, label }) => {
   const positionMenu = useCallback(() => {
     const rect = rootRef.current?.getBoundingClientRect();
     if (!rect) return;
+    const dialog = rootRef.current?.closest('dialog');
     const gap = 6;
     const viewportPadding = 8;
+    if (dialog) {
+      const dialogRect = dialog.getBoundingClientRect();
+      const availableBelow = dialogRect.bottom - rect.bottom - gap;
+      const desiredHeight = Math.min(260, options.length * 36 + 12);
+      const openUp = availableBelow < Math.min(180, desiredHeight) && rect.top - dialogRect.top > availableBelow;
+      setMenuPosition({
+        position: 'absolute',
+        left: rect.left - dialogRect.left,
+        width: rect.width,
+        maxHeight: Math.max(96, Math.min(260, openUp ? rect.top - dialogRect.top - gap : availableBelow)),
+        zIndex: 20,
+        ...(openUp
+          ? { top: 'auto', bottom: dialogRect.bottom - rect.top + gap }
+          : { top: rect.bottom - dialogRect.top + gap, bottom: 'auto' }),
+      });
+      return;
+    }
     const below = window.innerHeight - rect.bottom - viewportPadding;
     const above = rect.top - viewportPadding;
     const desiredHeight = Math.min(320, options.length * 36 + 12);
