@@ -57,9 +57,9 @@ export const TasksPanel = ({ user, projects }) => {
   const [project, setProject] = useState('');
   const [due, setDue] = useState('');
   const [reminder, setReminder] = useState('');
-  const [tab, setTab] = useState('current');
+  const [tab, setTab] = useState('all');
   const todayKey = dateKey(new Date());
-  const taskTabs = [{ id: 'current', label: 'Current' }, { id: 'overdue', label: 'Overdue' }, { id: 'completed', label: 'Completed' }, { id: 'all', label: 'All' }];
+  const taskTabs = [{ id: 'all', label: 'All' }, { id: 'current', label: 'Current' }, { id: 'overdue', label: 'Overdue' }, { id: 'completed', label: 'Completed' }];
   const visibleTasks = tasks.filter(task => tab === 'all' || taskStatus(task, todayKey) === tab)
     .sort((a, b) => Number(a.completed) - Number(b.completed) || (a.due_date || '9999').localeCompare(b.due_date || '9999'));
   const add = async (event) => {
@@ -120,6 +120,9 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart }) => {
       {!item.deadline && <input type="checkbox" checked={Boolean(item.completed)} aria-label={`Complete ${item.title}`} onChange={() => mutate(`/${item.id}`, 'PATCH', { completed: !item.completed })} />}
       <div><strong>{item.title}</strong><small>{item.project_name || 'Personal'}</small></div>
       <span className={`agenda-due${item.date === key ? ' is-today' : ''}`} title={item.date || item.reminder || undefined}>{item.completed ? 'Done' : item.date ? dueLabel(item.date) : item.reminder ? `Remind ${dueLabel(item.reminder)}` : 'Anytime'}</span>
+      {item.date && !item.completed && <div className="agenda-deadline-bar" role="meter" aria-label={`Time remaining for ${item.title}; full bar means seven days or more`} aria-valuemin={0} aria-valuemax={7} aria-valuenow={Math.min(7, Math.max(0, (new Date(`${item.date}T23:59:59`).getTime() - today.getTime()) / 86400000))} aria-valuetext={dueLabel(item.date)} title="Full bar = 7+ days remaining">
+        <i style={{ width: `${Math.min(100, Math.max(0, (new Date(`${item.date}T23:59:59`).getTime() - today.getTime()) / (7 * 86400000) * 100))}%` }} />
+      </div>}
     </div>)}</div></section></div>
   </section>;
 };

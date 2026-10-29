@@ -51,4 +51,8 @@
 .agenda-column-items:focus-visible{outline:1px solid var(--sd-coral);outline-offset:-1px;border-radius:5px}
 .agenda-column-items .agenda-study-row,.agenda-column-items .task-line{box-sizing:border-box;margin:0;min-height:44px;align-self:stretch}
 .agenda-column-items>.agenda-empty{align-self:start}
+.task-agenda .agenda-tasks-section .task-line{position:relative;border-bottom:0;padding-bottom:10px}
+.agenda-deadline-bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--sd-track-bg);border-radius:3px;overflow:hidden}
+.agenda-deadline-bar i{height:100%;display:block;background:var(--sd-coral);opacity:.55;border-radius:inherit;transition:width 900ms linear}
+.is-overdue .agenda-deadline-bar{background:color-mix(in srgb,#c16d72 40%,transparent)}
 @media(max-width:600px){.task-agenda-list{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}.agenda-tasks-section{border-top:1px solid var(--sd-border-glass)}}
