@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { AnalogueClockFace, HorologyArt, SessionTargetRings } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
-import { TimerPlaceholderPanel } from './TimerPlaceholderPanel';
+import { TaskAgenda } from '../manage/TasksPanel';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
@@ -983,19 +983,7 @@ export const TimerPage = ({ user }) => {
 
           </div>
 
-          <TimerPlaceholderPanel title="THIS WEEK · TASKS & GOALS">
-            <div style={{ height: '100%', overflowY: 'auto', padding: 12 }}>
-              {activeProjects.flatMap((project) => (project.subjects || []).map((subject) => (
-                <div key={subject.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--sd-border-glass)' }}>
-                  <strong>{subject.name}</strong>
-                  <span style={{ color: 'var(--sd-text-muted)', marginLeft: 8, fontSize: 11 }}>{project.name}</span>
-                  {Number(subject.goals?.weekly) > 0 && <p style={{ margin: '5px 0', fontSize: 12 }}>Weekly goal · {fmtDur(Number(subject.goals.weekly) * 3600)}</p>}
-                  {(subject.milestones || []).filter((item) => !item.completed).map((item) => <p key={item.id} style={{ margin: '5px 0', fontSize: 12 }}>○ {item.title}</p>)}
-                  {subject.deadline && <p style={{ margin: '5px 0', fontSize: 11, color: 'var(--sd-coral)' }}>Due {formatDisplayDate(new Date(subject.deadline), { month: 'short', day: 'numeric' })}</p>}
-                </div>
-              )))}
-            </div>
-          </TimerPlaceholderPanel>
+          <TaskAgenda user={user} projects={activeProjects} />
         </div>
       </section>
 

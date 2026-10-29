@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { authRouter } from './routes/auth.js';
 import { projectsRouter } from './routes/projects.js';
 import { timerRouter } from './routes/timer.js';
+import { tasksRouter } from './routes/tasks.js';
 import { workspaceRouter } from './routes/workspace.js';
 import { connectionsRouter } from './routes/connections.js';
 import { adminRouter } from './routes/admin.js';
@@ -93,6 +94,7 @@ app.use('/api/auth', authRouter);
 // Projects and Timer routes
 app.use('/api/projects', projectsRouter);
 app.use('/api/timer', timerRouter);
+app.use('/api/tasks', tasksRouter);
 app.use('/api/workspace', workspaceRouter);
 app.use('/api/connections', connectionsRouter);
 app.use('/api/admin', adminRouter);
@@ -220,6 +222,7 @@ app.listen(PORT, async () => {
       await migrationClient.query(fs.readFileSync(relationalUserDataSchemaPath, 'utf8'));
       await backfillWorkspaceProjections(migrationClient);
     }
+    await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/012_tasks.sql'), 'utf8'));
     databaseReady = true;
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);

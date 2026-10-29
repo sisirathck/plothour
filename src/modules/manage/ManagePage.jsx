@@ -21,6 +21,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import './Manage.css';
+import { TasksPanel } from './TasksPanel';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
 
@@ -624,8 +625,14 @@ export const ManagePage = ({ user }) => {
       : project
   )));
 
+  const [workspaceTab, setWorkspaceTab] = useState('projects');
   return (
     <main className="manage-module-container" style={getSiteFontStyle(config, 'manage')}>
+      <div className="manage-view-tabs" role="tablist" aria-label="Workspace sections" style={{ marginBottom: 20 }}>
+        <button role="tab" aria-selected={workspaceTab === 'projects'} className={workspaceTab === 'projects' ? 'selected' : ''} onClick={() => setWorkspaceTab('projects')}>Projects</button>
+        <button role="tab" aria-selected={workspaceTab === 'tasks'} className={workspaceTab === 'tasks' ? 'selected' : ''} onClick={() => setWorkspaceTab('tasks')}>Tasks & reminders</button>
+      </div>
+      {workspaceTab === 'tasks' ? <TasksPanel user={user} projects={activeProjects} /> : <>
       {projectPendingDelete && (
         <div
           className="manage-delete-backdrop"
@@ -819,6 +826,7 @@ export const ManagePage = ({ user }) => {
           </div>
         )}
       </section>
+      </>}
     </main>
   );
 };

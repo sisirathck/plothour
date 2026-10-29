@@ -1,0 +1,9 @@
+.tasks-panel,.task-agenda{color:var(--sd-text-primary);background:var(--sd-bg-surface);border:1px solid var(--sd-border-glass);border-radius:18px;padding:22px;min-height:0}
+.tasks-panel>p{color:var(--sd-text-muted)}
+.tasks-create{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:24px 0}
+.tasks-create label{display:grid;gap:7px;font-size:12px;flex:1;min-width:140px}
+.tasks-create input,.tasks-create select,.tasks-create button,.task-line button{border:1px solid var(--sd-border-glass);border-radius:9px;background:var(--sd-bg-subtle);color:var(--sd-text-primary);padding:10px;font:inherit}
+.tasks-create button{cursor:pointer;color:var(--sd-coral)}
+.task-line{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--sd-border-glass);font-size:12px}
+.task-line>div{flex:1;min-width:0}.task-line strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.task-line small{display:block;color:var(--sd-text-muted);margin-top:3px}.task-line>span{font-size:10px;color:var(--sd-text-secondary);white-space:nowrap}.task-line.is-overdue>span{color:#c16d72}
+.task-agenda{display:flex;flex-direction:column;overflow:hidden;padding:16px 20px;height:100%;box-sizing:border-box}.task-agenda header{display:flex;justify-content:space-between;gap:10px;font-size:12px}.task-agenda a{color:var(--sd-text-muted);font-size:10px;text-decoration:none}.task-agenda-list{flex:1;overflow:auto;min-height:0;margin-top:8px}.task-agenda footer{color:var(--sd-text-muted);font-size:10px;padding-top:10px}
