@@ -1,226 +1,66 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { pool, query } from '../db.js';
 import { authenticate } from '../middleware.js';
-
+import { serializeTimer, timerSelect, persistTimerWorkspace, finishTimer, canonicalTimerEntries } from '../timerService.js';
 export const timerRouter = Router();
-
 timerRouter.use(authenticate);
-
-/**
- * Get active timer for user
- */
-timerRouter.get('/active', async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT a.user_id, a.project_id, a.subproject_id, a.started_at, a.note,
-              p.name AS project_name, p.color AS project_color,
-              s.name AS subject_name, s.color AS subject_color
-       FROM active_timers a
-       JOIN projects p ON p.id = a.project_id
-       LEFT JOIN subprojects s ON s.id = a.subproject_id
-       WHERE a.user_id = $1`,
-      [req.userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.json({ activeTimer: null });
-    }
-
-    const row = result.rows[0];
-    return res.json({
-      activeTimer: {
-        projectId: row.project_id,
-        projectName: row.project_name,
-        subjectId: row.subproject_id || '',
-        subjectName: row.subject_name || '',
-        color: row.subject_color || row.project_color || '#10b981',
-        startedAt: new Date(row.started_at).getTime(),
-        note: row.note || '',
-      },
-    });
-  } catch (err) {
-    console.error('[Timer Active GET Error]:', err);
-    return res.status(500).json({ error: 'Failed to fetch active timer' });
-  }
+const uuid = value => typeof value === 'string' && /^[\da-f]{8}-[\da-f]{4}-[1-8][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(value);
+timerRouter.get('/active', async (req,res) => {
+  try { res.json({ activeTimer: serializeTimer((await query(timerSelect,[req.userId])).rows[0]), workspaceSynced: true }); }
+  catch { res.status(500).json({ error: 'Could not load your timer. Please retry.' }); }
 });
-
-/**
- * Start or switch active timer
- */
-timerRouter.post('/start', async (req, res) => {
-  const { projectId, subjectId = null, note = '' } = req.body;
-
-  if (!projectId) {
-    return res.status(400).json({ error: 'Project ID is required to start a timer' });
-  }
-
+timerRouter.get('/state', async (req,res) => {
   try {
-    // 1. Verify project belongs to user
-    const pCheck = await query(
-      `SELECT id, name, color FROM projects WHERE id = $1 AND user_id = $2`,
-      [projectId, req.userId]
-    );
-    if (pCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-    const project = pCheck.rows[0];
-
-    let subjectName = '';
-    let subjectColor = project.color;
-    if (subjectId) {
-      const sCheck = await query(
-        `SELECT id, name, color FROM subprojects WHERE id = $1 AND project_id = $2`,
-        [subjectId, projectId]
-      );
-      if (sCheck.rows.length > 0) {
-        subjectName = sCheck.rows[0].name;
-        subjectColor = sCheck.rows[0].color || project.color;
-      }
-    }
-
-    const now = new Date();
-
-    // 2. Check if a timer was already active. If so, close it and record time_entry
-    const existingActive = await query(
-      `SELECT user_id, project_id, subproject_id, started_at, note
-       FROM active_timers
-       WHERE user_id = $1`,
-      [req.userId]
-    );
-
-    if (existingActive.rows.length > 0) {
-      const oldTimer = existingActive.rows[0];
-      const startedAt = new Date(oldTimer.started_at);
-      if (now > startedAt) {
-        await query(
-          `INSERT INTO time_entries (user_id, project_id, subproject_id, started_at, ended_at, note, source)
-           VALUES ($1, $2, $3, $4, $5, $6, 'timer')`,
-          [req.userId, oldTimer.project_id, oldTimer.subproject_id, startedAt, now, oldTimer.note || '']
-        );
-      }
-    }
-
-    // 3. Upsert active timer
-    await query(
-      `INSERT INTO active_timers (user_id, project_id, subproject_id, started_at, note)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (user_id) DO UPDATE SET
-         project_id = EXCLUDED.project_id,
-         subproject_id = EXCLUDED.subproject_id,
-         started_at = EXCLUDED.started_at,
-         note = EXCLUDED.note`,
-      [req.userId, projectId, subjectId || null, now, note || '']
-    );
-
-    return res.json({
-      activeTimer: {
-        projectId: project.id,
-        projectName: project.name,
-        subjectId: subjectId || '',
-        subjectName,
-        color: subjectColor || '#10b981',
-        startedAt: now.getTime(),
-        note: note || '',
-      },
-    });
-  } catch (err) {
-    console.error('[Timer Start Error]:', err);
-    return res.status(500).json({ error: 'Failed to start timer' });
-  }
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN'); await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.userId]);
+      const activeTimer = serializeTimer((await client.query(timerSelect,[req.userId])).rows[0]);
+      const workspace = (await client.query('SELECT data FROM user_workspace_state WHERE user_id=$1',[req.userId])).rows[0]?.data || {};
+      const entries=await canonicalTimerEntries(client,req.userId,workspace);
+      await persistTimerWorkspace(client,req.userId,activeTimer,null,entries);
+      await client.query('COMMIT');
+      res.setHeader('Cache-Control','no-store');
+      res.json({ activeTimer, entries, workspaceSynced:true });
+    } catch(error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+  } catch { res.status(500).json({ error: 'Could not synchronize your timer.' }); }
 });
-
-/**
- * Stop active timer
- */
-timerRouter.post('/stop', async (req, res) => {
+timerRouter.get('/entries', async (req,res) => {
   try {
-    const existing = await query(
-      `SELECT a.user_id, a.project_id, a.subproject_id, a.started_at, a.note,
-              p.name AS project_name, p.color AS project_color,
-              s.name AS subject_name, s.color AS subject_color
-       FROM active_timers a
-       JOIN projects p ON p.id = a.project_id
-       LEFT JOIN subprojects s ON s.id = a.subproject_id
-       WHERE a.user_id = $1`,
-      [req.userId]
-    );
-
-    if (existing.rows.length === 0) {
-      return res.json({ activeTimer: null, entry: null });
-    }
-
-    const timer = existing.rows[0];
-    const startedAt = new Date(timer.started_at);
-    const endedAt = new Date();
-    const durationSeconds = Math.max(1, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000));
-
-    // Insert entry
-    const entryRes = await query(
-      `INSERT INTO time_entries (user_id, project_id, subproject_id, started_at, ended_at, note, source)
-       VALUES ($1, $2, $3, $4, $5, $6, 'timer')
-       RETURNING id, started_at, ended_at, note`,
-      [req.userId, timer.project_id, timer.subproject_id, startedAt, endedAt, timer.note || '']
-    );
-
-    // Remove active timer
-    await query(`DELETE FROM active_timers WHERE user_id = $1`, [req.userId]);
-
-    return res.json({
-      activeTimer: null,
-      entry: {
-        id: entryRes.rows[0].id,
-        projectId: timer.project_id,
-        projectName: timer.project_name,
-        subjectId: timer.subproject_id || '',
-        subjectName: timer.subject_name || '',
-        color: timer.subject_color || timer.project_color || '#10b981',
-        startedAt: startedAt.getTime(),
-        endedAt: endedAt.getTime(),
-        durationSeconds,
-        note: timer.note || '',
-      },
-    });
-  } catch (err) {
-    console.error('[Timer Stop Error]:', err);
-    return res.status(500).json({ error: 'Failed to stop timer' });
-  }
+    const result = await query(`SELECT e.*,p.name AS project_name,s.name AS subject_name,p.color AS project_color FROM time_entries e JOIN projects p ON p.id=e.project_id LEFT JOIN subprojects s ON s.id=e.subproject_id WHERE e.user_id=$1 ORDER BY e.started_at DESC`,[req.userId]);
+    res.json({ entries: result.rows.map(row => ({ ...serializeTimer(row), id: row.id, endedAt: new Date(row.ended_at).getTime(),durationSeconds: (new Date(row.ended_at)-new Date(row.started_at))/1000 })) });
+  } catch { res.status(500).json({error:'Could not load sessions.'}); }
 });
-
-/**
- * Get recent time entries
- */
-timerRouter.get('/entries', async (req, res) => {
+for (const action of ['start','stop','pause','resume','discard']) timerRouter.post(`/${action}`,async(req,res) => {
+  const { projectId, subjectId, taskId, commandId, expectedStartedAt, note='', mode='stopwatch' } = req.body || {};
+  if ((commandId && !uuid(commandId)) || (action==='start' && (!uuid(projectId) || (subjectId && !uuid(subjectId)) || (taskId && !uuid(taskId)) || typeof note!=='string' || note.length>1024 || !(['stopwatch','pomodoro','countdown'].includes(mode) || /^([1-9]\d{0,2})m$/.test(mode))))) return res.status(400).json({error:'Check the project, subproject and session details.'});
+  const client = await pool.connect();
   try {
-    const result = await query(
-      `SELECT e.id, e.project_id, e.subproject_id, e.started_at, e.ended_at, e.note, e.source,
-              p.name AS project_name, p.color AS project_color,
-              s.name AS subject_name, s.color AS subject_color,
-              ROUND(EXTRACT(EPOCH FROM (e.ended_at - e.started_at)))::integer AS duration_seconds
-       FROM time_entries e
-       JOIN projects p ON p.id = e.project_id
-       LEFT JOIN subprojects s ON s.id = e.subproject_id
-       WHERE e.user_id = $1
-       ORDER BY e.started_at DESC
-       LIMIT 50`,
-      [req.userId]
-    );
-
-    const entries = result.rows.map((r) => ({
-      id: r.id,
-      projectId: r.project_id,
-      projectName: r.project_name,
-      subjectId: r.subproject_id || '',
-      subjectName: r.subject_name || '',
-      color: r.subject_color || r.project_color || '#10b981',
-      startedAt: new Date(r.started_at).getTime(),
-      endedAt: new Date(r.ended_at).getTime(),
-      durationSeconds: r.duration_seconds || 0,
-      note: r.note || '',
-    }));
-
-    return res.json({ entries });
-  } catch (err) {
-    console.error('[Timer Entries GET Error]:', err);
-    return res.status(500).json({ error: 'Failed to fetch entries' });
-  }
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.userId]);
+    if(commandId) {
+      const previous=await client.query('SELECT response FROM timer_commands WHERE user_id=$1 AND command_id=$2',[req.userId,commandId]);
+      if(previous.rows.length) { await client.query('COMMIT'); return res.json(previous.rows[0].response); }
+    }
+    const old=(await client.query(timerSelect,[req.userId])).rows[0];
+    const now=(await client.query('SELECT clock_timestamp() AS now')).rows[0].now;
+    if(action==='start' && Object.hasOwn(req.body,'expectedStartedAt') && expectedStartedAt===null && old) throw Object.assign(new Error('A timer is already running on another device. Refresh before switching.'),{status:409});
+    if(expectedStartedAt && old && Math.abs(new Date(old.started_at).getTime()-Number(expectedStartedAt))>1) throw Object.assign(new Error('Your timer changed on another device. Refresh and try again.'),{status:409});
+    let entry=null;
+    if(action==='start') {
+      const project=(await client.query('SELECT id FROM projects WHERE id=$1 AND user_id=$2 AND archived_at IS NULL',[projectId,req.userId])).rows[0];
+      if(!project) throw Object.assign(new Error('This project is unavailable. Refresh your projects.'),{status:404});
+      if(subjectId && !(await client.query('SELECT id FROM subprojects WHERE id=$1 AND project_id=$2 AND archived_at IS NULL',[subjectId,projectId])).rows.length) throw Object.assign(new Error('Choose a subproject belonging to this project.'),{status:400});
+      if(taskId && !(await client.query('SELECT id FROM user_tasks WHERE id=$1 AND user_id=$2 AND completed=false',[taskId,req.userId])).rows.length) throw Object.assign(new Error('This task is unavailable.'),{status:400});
+      entry=await finishTimer(client,req.userId,old,now);
+      await client.query(`INSERT INTO active_timers(user_id,project_id,subproject_id,started_at,note,mode,task_id) VALUES($1,$2,$3,$4,$5,$6,$7)`,[req.userId,projectId,subjectId || null,now,note,mode,taskId || null]);
+    } else if(action==='stop' || action==='discard') entry=await finishTimer(client,req.userId,old,now,action==='discard');
+    else if(old && action==='pause' && !old.paused_at) await client.query('UPDATE active_timers SET paused_at=$2 WHERE user_id=$1',[req.userId,now]);
+    else if(old && action==='resume' && old.paused_at) await client.query('UPDATE active_timers SET paused_seconds=paused_seconds+EXTRACT(EPOCH FROM ($2::timestamptz-paused_at)),paused_at=NULL WHERE user_id=$1',[req.userId,now]);
+    const activeTimer=serializeTimer((await client.query(timerSelect,[req.userId])).rows[0]);
+    await persistTimerWorkspace(client,req.userId,activeTimer,entry);
+    const result={activeTimer,entry,workspaceSynced:true};
+    if(commandId) await client.query('INSERT INTO timer_commands(user_id,command_id,response) VALUES($1,$2,$3)',[req.userId,commandId,JSON.stringify(result)]);
+    await client.query('COMMIT'); return res.json(result);
+  } catch(error) { await client.query('ROLLBACK'); return res.status(error.status || 500).json({error:error.status ? error.message : 'Could not save timer changes. Your previous timer is preserved; please retry.'}); }
+  finally {client.release();}
 });

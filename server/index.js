@@ -1,4 +1,6 @@
 import express from 'express';
+import { backupRouter } from './routes/backup.js';
+import { requestOriginAllowed } from './requestSecurity.js';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
@@ -32,10 +34,15 @@ let databaseReady = false;
 app.use(compression());
 
 // CORS configuration to support browser extensions (chrome-extension://, moz-extension://, safari-web-extension://, etc.)
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
+app.use(cors((req,callback) => callback(null,{origin:requestOriginAllowed(req),credentials:true})));
+
+// Block cross-origin mutations, including simple HTML form requests.
+app.use((req,res,next) => {
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
+  if (!['GET','HEAD','OPTIONS'].includes(req.method) && !requestOriginAllowed(req)) return res.status(403).json({error:'This origin is not allowed.'});
+  next();
+});
 
 // Body & Cookie parsers
 app.use(express.json({ limit: '10mb' }));
@@ -97,6 +104,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/timer', timerRouter);
 app.use('/api/tasks', tasksRouter);
+app.use('/api/backup', backupRouter);
 app.use('/api/workspace', workspaceRouter);
 app.use('/api/connections', connectionsRouter);
 app.use('/api/admin', adminRouter);
@@ -228,6 +236,7 @@ app.listen(PORT, async () => {
     await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/012_tasks.sql'), 'utf8'));
     await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/013_email_reports.sql'), 'utf8'));
     await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/013_task_subprojects.sql'), 'utf8'));
+    await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/014_workspace_reliability.sql'), 'utf8'));
     databaseReady = true;
     const emailScheduleTimer = setInterval(() => {
       if (databaseReady) processScheduledEmailReports().catch((error) => console.error('[Scheduled email reports]', error.message));

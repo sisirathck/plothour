@@ -1,3 +1,4 @@
+import { summarizeSessions, subjectGoalHours } from '../../shared/studyMetrics.js';
 import { Router } from 'express';
 import { renderReportLetter } from '../reportEmailDesign.js';
 import { createHash, createHmac, randomBytes } from 'crypto';
@@ -101,7 +102,9 @@ function previousRange(current, comparison) {
   return { from, to, label: 'Previous comparable period' };
 }
 
-async function reportStats(userId, timezone, range) {
+async function reportStats(userId, timezone, range, viewerId = userId) {
+  let allowedProjects = null;
+  if (viewerId !== userId) allowedProjects = (await query('SELECT project_ids FROM comparison_sharing WHERE user_id=$1 AND partner_id=$2',[userId,viewerId])).rows[0]?.project_ids || [];
   const result = await query(
     `WITH RECURSIVE subproject_tree AS (
        SELECT id,project_id,parent_subproject_id,name,name::text AS full_name,ARRAY[id] AS visited
@@ -114,16 +117,15 @@ async function reportStats(userId, timezone, range) {
      SELECT te.started_at, te.ended_at, te.note, p.name AS project_name, s.full_name AS subject_name
      FROM time_entries te JOIN projects p ON p.id = te.project_id
      LEFT JOIN subproject_tree s ON s.id = te.subproject_id
-     WHERE te.user_id=$1 AND (te.started_at AT TIME ZONE $2)::date >= $3::date AND (te.started_at AT TIME ZONE $2)::date <= $4::date
-     ORDER BY te.started_at`, [userId, timezone, range.from, range.to]
+     WHERE te.user_id=$1 AND ($5::uuid[] IS NULL OR te.project_id=ANY($5::uuid[])) AND (te.started_at AT TIME ZONE $2)::date >= $3::date AND (te.started_at AT TIME ZONE $2)::date <= $4::date
+     ORDER BY te.started_at`, [userId, timezone, range.from, range.to, allowedProjects]
   );
   const entries = result.rows;
-  const seconds = entries.reduce((sum, entry) => sum + Math.max(0, (new Date(entry.ended_at) - new Date(entry.started_at)) / 1000), 0);
-  const activeDays = new Set(entries.map(entry => dateKeyAt(new Date(entry.started_at), timezone))).size;
-  const sortedDays = [...new Set(entries.map(entry => dateKeyAt(new Date(entry.started_at), timezone)))].sort();
-  let currentRun = 0; let bestStreak = 0; let lastDay = null;
-  for (const day of sortedDays) { const consecutive = lastDay && addDays(lastDay, 1) === day; currentRun = consecutive ? currentRun + 1 : 1; bestStreak = Math.max(bestStreak, currentRun); lastDay = day; }
-  const longest = entries.reduce((max, entry) => Math.max(max, (new Date(entry.ended_at) - new Date(entry.started_at)) / 1000), 0);
+  const summary = summarizeSessions(entries.map(entry => ({startedAt:entry.started_at,durationSeconds:Math.max(0,(new Date(entry.ended_at)-new Date(entry.started_at))/1000)})),timezone);
+  const seconds = summary.seconds;
+  const activeDays=summary.activeDays;
+  const bestStreak=summary.longestStreak;
+  const longest=summary.longestSessionSeconds;
   const projects = new Map();
   const areas = new Map();
   entries.forEach(entry => {
@@ -173,23 +175,21 @@ async function renderWeeklyRecap(userId, user, schedule, timezone, range, dateFo
       SELECT child.id,child.project_id,child.parent_subproject_id,child.name,(parent.full_name || ' / ' || child.name)::text,parent.visited || child.id
       FROM subprojects child JOIN subproject_tree parent ON parent.id=child.parent_subproject_id WHERE NOT child.id=ANY(parent.visited)
     ) SELECT p.name AS project_name,s.full_name AS subject_name,
-      COALESCE(
-        NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='weekly'),0),
-        NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='daily'),0) * GREATEST(cardinality(COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[])),1),
-        NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='monthly'),0) / 4.35,
-        0
-      ) AS weekly_hours
+      COALESCE(MAX(g.target_hours) FILTER (WHERE g.cadence='weekly'),0) AS weekly_hours,
+      COALESCE(MAX(g.target_hours) FILTER (WHERE g.cadence='monthly'),0) AS monthly_hours,
+      COALESCE(MAX(g.target_hours) FILTER (WHERE g.cadence='daily'),0) AS daily_hours,
+      COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[]) AS study_days
       FROM projects p JOIN subproject_tree s ON s.project_id=p.id
       LEFT JOIN subproject_goals g ON g.subproject_id=s.id
       LEFT JOIN subproject_study_days d ON d.subproject_id=s.id
-      WHERE p.user_id=$1 GROUP BY p.id,p.name,p.sort_order,s.id,s.full_name ORDER BY p.sort_order,s.full_name`, [userId]),
+      WHERE p.user_id=$1 AND p.archived_at IS NULL AND EXISTS(SELECT 1 FROM subprojects active WHERE active.id=s.id AND active.archived_at IS NULL) GROUP BY p.id,p.name,p.sort_order,s.id,s.full_name ORDER BY p.sort_order,s.full_name`, [userId]),
   ]);
 
   const recapRows = new Map();
   for (const goal of goalResult.rows) {
     const key = areaKey(goal.project_name, goal.subject_name);
     const actual = stats.areas.find(area => areaKey(area.project, area.subject) === key);
-    recapRows.set(key, { project: goal.project_name, subject: goal.subject_name, goalSeconds: Math.max(0, Number(goal.weekly_hours) || 0) * 3600, studiedSeconds: actual?.seconds || 0 });
+    recapRows.set(key, { project: goal.project_name, subject: goal.subject_name, goalSeconds: subjectGoalHours({goals:{weekly:goal.weekly_hours,daily:goal.daily_hours,monthly:goal.monthly_hours},studyDays:goal.study_days},'weekly') * 3600, studiedSeconds: actual?.seconds || 0 });
   }
   for (const area of stats.areas) {
     const key = areaKey(area.project, area.subject);
@@ -217,7 +217,7 @@ async function renderWeeklyRecap(userId, user, schedule, timezone, range, dateFo
   return { subject, text, html, range };
 }
 
-async function renderReport(userId, user, schedule) {
+export async function renderReport(userId, user, schedule) {
   const timezone = schedule.timezone || user.timezone || 'UTC';
   const dateFormat = supportedDateFormats.has(schedule.dateFormat) ? schedule.dateFormat : 'system';
   const locale = safeLocale(schedule.locale);
@@ -247,18 +247,14 @@ async function renderReport(userId, user, schedule) {
         SELECT child.id,child.project_id,child.parent_subproject_id,child.name,(parent.full_name || ' / ' || child.name)::text,parent.visited || child.id
         FROM subprojects child JOIN subproject_tree parent ON parent.id=child.parent_subproject_id WHERE NOT child.id=ANY(parent.visited)
       ) SELECT p.name AS project_name,s.full_name AS subject_name,
-        COALESCE(
-          NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='weekly'),0),
-          NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='daily'),0) * cardinality(COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[])),
-          NULLIF(MAX(g.target_hours) FILTER (WHERE g.cadence='monthly'),0) / 4.35,
-          0
-        ) AS weekly_hours,
+        COALESCE(MAX(g.target_hours) FILTER (WHERE g.cadence='weekly'),0) AS weekly_hours,
+      COALESCE(MAX(g.target_hours) FILTER (WHERE g.cadence='monthly'),0) AS monthly_hours,
         COALESCE(MAX(g.target_hours) FILTER (WHERE g.cadence='daily'),0) AS daily_hours,
         COALESCE(array_agg(DISTINCT d.weekday) FILTER (WHERE d.weekday IS NOT NULL),ARRAY[]::smallint[]) AS study_days
         FROM projects p JOIN subproject_tree s ON s.project_id=p.id
         LEFT JOIN subproject_goals g ON g.subproject_id=s.id
         LEFT JOIN subproject_study_days d ON d.subproject_id=s.id
-        WHERE p.user_id=$1 GROUP BY p.id,p.name,p.sort_order,s.id,s.full_name ORDER BY p.sort_order,s.full_name`, [userId]) : Promise.resolve({ rows: [] }),
+        WHERE p.user_id=$1 AND p.archived_at IS NULL AND EXISTS(SELECT 1 FROM subprojects active WHERE active.id=s.id AND active.archived_at IS NULL) GROUP BY p.id,p.name,p.sort_order,s.id,s.full_name ORDER BY p.sort_order,s.full_name`, [userId]) : Promise.resolve({ rows: [] }),
     ]);
     const taskRows = tasks.rows.map(task => `${task.title}${task.project_name ? ` · ${task.project_name}` : ''}${task.subproject_name ? ` / ${task.subproject_name}` : ''}${task.due_date ? ` · due ${formatDateKey(String(task.due_date).slice(0, 10), dateFormat, locale)}` : ''}${task.reminder_date ? ` · reminder ${formatDateKey(String(task.reminder_date).slice(0, 10), dateFormat, locale)}` : ''}`);
     const subject = schedule.type === 'agenda' ? `Your PlotHour agenda · ${range.label}` : `Your PlotHour study plan · ${range.label}`;
@@ -270,8 +266,8 @@ async function renderReport(userId, user, schedule) {
       const actual = actualByArea.get(key);
       const studyDays = goal.study_days.map(Number);
       const scheduledDays = studyDays.length ? studyDays : [0,1,2,3,4,5,6];
-      const weeklyHours = Number(goal.weekly_hours || 0);
-      const dailyHours = Number(goal.daily_hours || 0) || weeklyHours / scheduledDays.length;
+      const weeklyHours = subjectGoalHours({goals:{weekly:goal.weekly_hours,daily:goal.daily_hours,monthly:goal.monthly_hours},studyDays},'weekly');
+      const dailyHours = subjectGoalHours({goals:{weekly:goal.weekly_hours,daily:goal.daily_hours,monthly:goal.monthly_hours},studyDays},'daily');
       const targetHours = schedule.type === 'agenda'
         ? (scheduledDays.includes(todayWeekday) ? dailyHours : 0)
         : weeklyHours * periodScale;
@@ -318,7 +314,7 @@ async function renderReport(userId, user, schedule) {
     : previousRange(range, schedule.compare);
   compare.label = formatDateRange(compare.from, compare.to, dateFormat, locale);
   const previous = await reportStats(userId, timezone, compare);
-  const goals = await query(`SELECT COALESCE(SUM(g.target_hours),0) AS weekly_hours FROM subproject_goals g JOIN subprojects s ON s.id=g.subproject_id JOIN projects p ON p.id=s.project_id WHERE p.user_id=$1 AND g.cadence='weekly'`, [userId]);
+  const goals = await query(`SELECT COALESCE(SUM(g.target_hours),0) AS weekly_hours FROM subproject_goals g JOIN subprojects s ON s.id=g.subproject_id JOIN projects p ON p.id=s.project_id WHERE p.user_id=$1 AND p.archived_at IS NULL AND s.archived_at IS NULL AND g.cadence='weekly'`, [userId]);
   const weeklyGoalSeconds = (Number(goals.rows[0]?.weekly_hours) || 0) * 3600;
   const currentGoal = weeklyGoalSeconds * daySpan(range.from, range.to) / 7;
   const previousGoal = weeklyGoalSeconds * daySpan(compare.from, compare.to) / 7;
@@ -342,7 +338,7 @@ async function renderReport(userId, user, schedule) {
   const selectedPeople = (schedule.people || []).filter(id => /^[\da-f]{8}-[\da-f]{4}-[1-8][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(id));
   if (schedule.type === 'comparison' && selectedPeople.length) {
     const friends = await query(`SELECT u.id,u.display_name FROM users u JOIN friendships f ON (f.user_low_id=$1 AND f.user_high_id=u.id) OR (f.user_high_id=$1 AND f.user_low_id=u.id) WHERE u.id=ANY($2::uuid[])`, [userId, selectedPeople]);
-    peopleRows = await Promise.all(friends.rows.map(async friend => ({ name: friend.display_name, stats: await reportStats(friend.id, timezone, range) })));
+    peopleRows = await Promise.all(friends.rows.map(async friend => ({ name: friend.display_name, stats: await reportStats(friend.id, timezone, range, userId) })));
   }
   const friendMetrics = [
     ['studyTime', 'Study time', person => fmtDuration(person.stats.seconds)],
@@ -350,7 +346,7 @@ async function renderReport(userId, user, schedule) {
     ['sessions', 'Sessions', person => String(person.stats.entries)],
     ['activeDays', 'Active days', person => String(person.stats.activeDays)],
     ['longestSession', 'Longest session', person => fmtDuration(person.stats.longest)],
-    ['goalProgress', 'Goal completion', person => weeklyGoalSeconds > 0 ? `${Math.round(person.stats.seconds / (weeklyGoalSeconds * daySpan(range.from, range.to) / 7) * 100)}%` : 'No goal'],
+    ['goalProgress', 'Goal completion', () => 'See shared goals in Compare'],
     ['bestStreak', 'Best streak', person => `${person.stats.bestStreak} days`],
   ].filter(metric => wanted.has(metric[0]));
   const peopleText = peopleRows.length && friendMetrics.length ? `\n\nSame-period study partners:\n${peopleRows.map(person => `${person.name}: ${friendMetrics.map(metric => `${metric[1]} ${metric[2](person)}`).join(' · ')}`).join('\n')}` : '';
@@ -447,6 +443,11 @@ emailReportsRouter.get('/tasks', async (req, res) => {
     const result = await query(`SELECT id,title,project_name,subproject_name,due_date,reminder_date,completed FROM user_tasks WHERE user_id=$1 AND completed=false AND (due_date IS NOT NULL OR reminder_date IS NOT NULL) ORDER BY due_date NULLS LAST,created_at DESC`, [req.userId]);
     return res.json({ tasks: result.rows });
   } catch (error) { console.error('[Email report tasks]', error); return res.status(500).json({ error: 'Could not load tasks for reminder settings.' }); }
+});
+
+emailReportsRouter.get('/history', async (req,res) => {
+  try { const result=await query('SELECT schedule_id,period_key,status,delivered_at,error_message,attempts FROM email_report_deliveries WHERE user_id=$1 ORDER BY delivered_at DESC LIMIT 25',[req.userId]);res.setHeader('Cache-Control','no-store');res.json({deliveries:result.rows}); }
+  catch {res.status(500).json({error:'Could not load delivery history.'});}
 });
 
 emailReportsRouter.get('/friends', async (req, res) => {
@@ -617,8 +618,13 @@ function localTimeReached(time, now, timezone) {
   return `${parts.hour}:${parts.minute}` >= time;
 }
 
+let processingReports=false;
 export async function processScheduledEmailReports() {
-  await query(`DELETE FROM email_report_deliveries WHERE status='processing' AND delivered_at < now() - interval '15 minutes'`);
+  if(processingReports)return;processingReports=true;
+  try { await runScheduledEmailReports(); } finally {processingReports=false;}
+}
+async function runScheduledEmailReports() {
+  await query(`UPDATE email_report_deliveries SET status='failed',error_message='The previous delivery attempt was interrupted.',delivered_at=now() WHERE status='processing' AND delivered_at < now() - interval '15 minutes'`);
   const configurations = await query(`SELECT u.id,u.email,u.display_name,u.timezone,u.email_verified,p.preferences->'emailReports' AS settings FROM user_preferences p JOIN users u ON u.id=p.user_id WHERE p.preferences ? 'emailReports'`);
   for (const user of configurations.rows) {
     const settings = user.settings || {};
@@ -628,10 +634,10 @@ export async function processScheduledEmailReports() {
       const occurrenceDate = !settings.enabled || !schedule.enabled ? null : scheduleOccurrence(schedule, new Date(), timezone);
       if (!occurrenceDate) continue;
       const periodKey = occurrenceDate;
-      const claimed = await query(`INSERT INTO email_report_deliveries(user_id,schedule_id,period_key) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id`, [user.id, schedule.id, periodKey]);
+      const claimed = await query(`INSERT INTO email_report_deliveries(user_id,schedule_id,period_key) VALUES($1,$2,$3) ON CONFLICT(user_id,schedule_id,period_key) DO UPDATE SET status='processing',attempts=email_report_deliveries.attempts+1,delivered_at=now() WHERE email_report_deliveries.status='failed' AND email_report_deliveries.attempts<3 AND email_report_deliveries.delivered_at<now()-interval '5 minutes' RETURNING id`, [user.id, schedule.id, periodKey]);
       if (!claimed.rows.length) continue;
       try { await sendReportToUser(user.id, { ...schedule, timezone, dateFormat: settings.dateFormat, locale: safeLocale(settings.locale), format: settings.format || 'html' }); await query(`UPDATE email_report_deliveries SET status='sent',delivered_at=now() WHERE id=$1`, [claimed.rows[0].id]); }
-      catch (error) { await query('DELETE FROM email_report_deliveries WHERE id=$1', [claimed.rows[0].id]); console.error('[Scheduled email report]', error.message); }
+      catch (error) { await query("UPDATE email_report_deliveries SET status='failed',error_message=$2,delivered_at=now() WHERE id=$1", [claimed.rows[0].id,'The email provider did not confirm this attempt.']); console.error('[Scheduled email report]', error.message); }
     }
     if (!settings.enabled || !settings.taskRemindersEnabled || !emailDeliveryConfigured()) continue;
     const timezone = settings.timezone || user.timezone || 'UTC';
@@ -649,14 +655,14 @@ export async function processScheduledEmailReports() {
         const targetDate = reminder.date || (Number.isFinite(days) && task.due_date ? addDays(dueDate, -days) : '');
         if (!targetDate || targetDate !== today || !localTimeReached(reminder.time, new Date(), timezone)) continue;
         const key = `task-${task.id}-${reminder.id}`; const period = `${dueDate}-${reminder.offset}`;
-        const claimed = await query(`INSERT INTO email_report_deliveries(user_id,schedule_id,period_key) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id`, [user.id, key, period]);
+        const claimed = await query(`INSERT INTO email_report_deliveries(user_id,schedule_id,period_key) VALUES($1,$2,$3) ON CONFLICT(user_id,schedule_id,period_key) DO UPDATE SET status='processing',attempts=email_report_deliveries.attempts+1,delivered_at=now() WHERE email_report_deliveries.status='failed' AND email_report_deliveries.attempts<3 AND email_report_deliveries.delivered_at<now()-interval '5 minutes' RETURNING id`, [user.id, key, period]);
         if (!claimed.rows.length) continue;
         const subject = `Task reminder · ${task.title}`;
         const taskArea = [task.project_name || 'Personal task', task.subproject_name].filter(Boolean).join(' / ');
         const text = `${task.title}\n${taskArea}\nDue ${dueDateLabel}. This is your ${reminder.offset.toLowerCase()} reminder.\n\nManage your task reminders in PlotHour.`;
         const html = renderReportLetter({ type: 'task-reminder', date: dueDateLabel, name: user.display_name, metric: task.due_date ? `${Math.max(0, daySpan(today, dueDate) - 1)} days` : undefined, metricLabel: 'Until your deadline', context: `Due ${dueDateLabel}`, content: `<h2>${escapeEmailHtml(task.title)}</h2><p>${escapeEmailHtml(taskArea)}</p><p>${escapeEmailHtml(reminder.offset)} · ${escapeEmailHtml(reminder.time)}</p>`, footer: 'Manage your task reminders in PlotHour.' });
         try { const { destinations } = await getDestinations(user.id); for (const destination of destinations) { const base = process.env.APP_BASE_URL || 'https://plothour.com'; const unsubscribe = destination.unsubscribeToken ? `${base}/api/email-reports/recipient/unsubscribe?token=${destination.unsubscribeToken}` : ''; const personalizedHtml = html.replace('Manage your task reminders in PlotHour.', unsubscribe ? `<a href="${unsubscribe}">Unsubscribe</a>` : 'Manage your task reminders in PlotHour.'); await sendEmail({ to: destination.email, subject, text: unsubscribe ? `${text}\nUnsubscribe: ${unsubscribe}` : text, html: settings.format === 'text' ? undefined : personalizedHtml }); } await query(`UPDATE email_report_deliveries SET status='sent',delivered_at=now() WHERE id=$1`, [claimed.rows[0].id]); }
-        catch (error) { await query('DELETE FROM email_report_deliveries WHERE id=$1', [claimed.rows[0].id]); console.error('[Scheduled task reminder]', error.message); }
+        catch (error) { await query("UPDATE email_report_deliveries SET status='failed',error_message=$2,delivered_at=now() WHERE id=$1", [claimed.rows[0].id,'The email provider did not confirm this attempt.']); console.error('[Scheduled task reminder]', error.message); }
       }
     }
   }

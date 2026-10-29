@@ -71,6 +71,8 @@ async function emailApi(path, options = {}) {
 }
 
 export const EmailReportsPanel = ({ user }) => {
+  const [deliveryHistory, setDeliveryHistory] = useState([]);
+  const [historyError, setHistoryError] = useState('');
   const [schedules, setSchedules] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [allTasksEnabled, setAllTasksEnabled] = useState(false);
@@ -106,6 +108,7 @@ export const EmailReportsPanel = ({ user }) => {
     };
   }, []);
   useEffect(() => {
+    if (!user?.id) { setSettingsLoaded(true); setLoading(false); return; }
     let alive = true;
     Promise.all([emailApi('/'), emailApi('/tasks').catch(() => ({ tasks: [] })), emailApi('/friends').catch(() => ({ friends: [] }))]).then(([payload, taskPayload, friendPayload]) => {
       if (!alive) return;
@@ -129,7 +132,7 @@ export const EmailReportsPanel = ({ user }) => {
   }, []);
 
   useEffect(() => {
-    if (loading || !settingsLoaded) return undefined;
+    if (loading || !settingsLoaded || !user?.id) return undefined;
     setSaveState('saving');
     const timer = window.setTimeout(() => {
       emailApi('/', { method: 'PUT', body: JSON.stringify({ settings: { enabled: reportsEnabled, format: 'html', schedules, allTasksEnabled, taskRemindersEnabled, taskRules, dateFormat, locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }) })
@@ -137,6 +140,11 @@ export const EmailReportsPanel = ({ user }) => {
     }, 650);
     return () => window.clearTimeout(timer);
   }, [loading, settingsLoaded, reportsEnabled, schedules, allTasksEnabled, taskRemindersEnabled, taskRules, dateFormat, locale]);
+
+  useEffect(() => {
+    if(!user?.id)return;
+    emailApi('/history').then(payload=>{setDeliveryHistory(payload.deliveries || []);setHistoryError('');}).catch(()=>setHistoryError('Could not load delivery history.'));
+  },[user?.id,actionMessage,sendButtonStates]);
 
   const updateSchedule = (id, patch) => setSchedules(items => items.map(item => item.id === id ? { ...item, ...patch } : item));
   const addSchedule = () => {
@@ -181,17 +189,18 @@ export const EmailReportsPanel = ({ user }) => {
   const addTaskRule = (task) => setTaskRules(items => items.some(item => item.id === task.id) ? items : [...items, { id: task.id, title: task.title, project: task.project_name, subproject: task.subproject_name, due: task.due_date, enabled: true, reminders: [{ id: crypto.randomUUID(), offset: '1 day before', time: '08:00' }] }]);
   return <section className="email-studio email-settings">
     <WorkspaceHeader title="Email reports" description="Your progress, on your schedule. Manage reports, reminders, and recipients.">
-      <span className={`email-prototype-badge ${saveState === 'error' || loadError ? 'is-error' : ''}`} title={loadError || (saveState === 'error' ? actionError : undefined)}><span /> {loading ? 'Loading settings…' : loadError ? 'Could not load settings' : saveState === 'saving' ? 'Saving changes…' : saveState === 'error' ? 'Could not save' : 'Settings saved'}</span>
+      <span className={`email-prototype-badge ${saveState === 'error' || loadError ? 'is-error' : ''}`} title={loadError || (saveState === 'error' ? actionError : undefined)}><span /> {!user?.id ? 'Demo preview' : loading ? 'Loading settings…' : loadError ? 'Could not load settings' : saveState === 'saving' ? 'Saving changes…' : saveState === 'error' ? 'Could not save' : 'Settings saved'}</span>
     </WorkspaceHeader>
 
-    <div className="email-studio-toolbar"><span className="email-format-note"><ShieldCheck size={15} /> HTML reports include a plain-text alternative · recipients can unsubscribe any time</span><a className="email-design-preview-link" href="/previews/email-design.html" target="_blank" rel="noreferrer">Preview all email designs ↗</a></div>
+    <div className="email-studio-toolbar"><span className="email-format-note"><ShieldCheck size={15} /> HTML reports include a plain-text alternative · recipients can unsubscribe any time</span></div>
 
     <div className="email-studio-grid">
       <section className="email-card email-schedules-card">
         <div className="email-card-heading"><div><span className="email-section-kicker">REPORT DELIVERY</span><h2>Delivery schedule</h2><p>Choose what arrives and when. Each report has its own schedule.</p></div><label className="email-scope-toggle"><input type="checkbox" checked={reportsEnabled} onChange={event => setReportsEnabled(event.target.checked)} /><span>{reportsEnabled ? 'Email on' : 'Email off'}</span></label></div>
-        {settingsLoaded && !deliveryConfigured && <p className="email-delivery-warning"><ShieldCheck size={14} /> Email delivery is not configured on this server yet. Your preferences can be saved, but messages won’t go out until SMTP or Resend is configured.</p>}
-        {settingsLoaded && !accountVerified && <p className="email-delivery-warning"><ShieldCheck size={14} /> Verify your PlotHour account email before enabling report delivery.</p>}
+        {user?.id && settingsLoaded && !deliveryConfigured && <p className="email-delivery-warning"><ShieldCheck size={14} /> Email delivery is not configured on this server yet. Your preferences can be saved, but messages won’t go out until SMTP or Resend is configured.</p>}
+        {user?.id && settingsLoaded && !accountVerified && <p className="email-delivery-warning"><ShieldCheck size={14} /> Verify your PlotHour account email before enabling report delivery.</p>}
         <div className="email-schedule-list">
+          {!user?.id && <p className="email-delivery-warning">Demo preview · Sign in to save report preferences and send emails.</p>}
           {!schedules.length && <div className="email-empty-state"><span>01 / REPORTS</span><h3>{loading ? 'Loading your reports…' : loadError ? 'Your reports are unavailable' : 'Build your reporting routine'}</h3><p>{loadError ? 'We couldn’t load your preferences. Refresh the page to reconnect to your account.' : 'Add a daily agenda, weekly recap, or monthly report. You choose the timing and what’s included.'}</p></div>}
           {schedules.map(schedule => {
             const selectedType = reportTypes.find(item => item.id === schedule.type) || reportTypes[0];
@@ -240,7 +249,7 @@ export const EmailReportsPanel = ({ user }) => {
       <aside className="email-side-column">
         <section className="email-card email-recipients-card">
           <div className="email-card-heading compact"><div><span className="email-section-kicker">DELIVER TO</span><h2>Recipients</h2><p>Only recipients who accepted their invitation receive reports.</p></div></div>
-          <div className="email-recipient-row"><span className="email-recipient-avatar">{accountEmail.slice(0,1).toUpperCase()}</span><span className="email-recipient-address"><strong>{accountEmail}</strong><small>Your account email</small></span><span className={accountVerified ? 'email-verified-pill' : 'email-pending-pill'}>{!settingsLoaded ? 'Unavailable' : accountVerified ? <><Check size={12} /> Verified</> : 'Verify account'}</span></div>
+          <div className="email-recipient-row"><span className="email-recipient-avatar">{accountEmail.slice(0,1).toUpperCase()}</span><span className="email-recipient-address"><strong>{accountEmail}</strong><small>Your account email</small></span><span className={accountVerified ? 'email-verified-pill' : 'email-pending-pill'}>{!user?.id ? 'Demo account' : !settingsLoaded ? 'Unavailable' : accountVerified ? <><Check size={12} /> Verified</> : 'Verify account'}</span></div>
           {recipients.map(item => <div className={`email-recipient-row ${item.status === 'active' ? 'is-verified' : 'is-pending'}`} key={item.id}><span className="email-recipient-avatar is-pending"><Mail size={14} /></span><span className="email-recipient-address"><strong>{item.email}</strong><small>{item.status === 'active' ? 'Accepted invitation' : item.status === 'unsubscribed' ? 'Unsubscribed' : 'Invitation sent · awaiting acceptance'}</small></span><span className={item.status === 'active' ? 'email-verified-pill' : 'email-pending-pill'}>{item.status === 'active' ? 'Active' : item.status === 'unsubscribed' ? 'Stopped' : 'Pending'}</span><button type="button" aria-label={`Remove ${item.email}`} onClick={() => removeRecipient(item)}><Trash2 size={14} /></button></div>)}
           <form className="email-add-recipient" onSubmit={addRecipient}><label htmlFor="email-additional-recipient">Invite recipients</label><textarea id="email-additional-recipient" placeholder="Paste addresses separated by commas or new lines" value={emailInput} onChange={event => setEmailInput(event.target.value)} rows={3} /><button type="submit" className="email-invite-batch" disabled={!emailInput.trim() || !deliveryConfigured}><Mail size={14} /> Send invitations</button>{addError && <small role="alert">{addError}</small>}</form>
           <p className="email-verification-note"><ShieldCheck size={13} /> New recipients accept once, then can receive future reports. They can unsubscribe at any time.</p>
@@ -248,6 +257,7 @@ export const EmailReportsPanel = ({ user }) => {
       </aside>
     </div>
     {(actionMessage || actionError) && <p className={`email-action-feedback${actionError ? ' is-error' : ''}`} role={actionError ? 'alert' : 'status'}>{actionError || actionMessage}</p>}
+    {user?.id && <details className="email-delivery-history"><summary>Recent delivery attempts</summary><p>“Sent” means the email provider accepted the message; inbox delivery is not guaranteed.</p>{historyError ? <p role="status">{historyError}</p> : !deliveryHistory.length ? <p>No delivery attempts yet. Your first report or reminder will appear here.</p> : <ul>{deliveryHistory.map((item,index)=><li key={`${item.schedule_id}-${item.period_key}-${index}`}><span>{schedules.find(schedule=>schedule.id===item.schedule_id)?.type || (item.schedule_id.startsWith('task-') ? 'Task reminder' : item.schedule_id.startsWith('manual') ? 'On-demand email' : 'Report')}</span><time>{new Date(item.delivered_at).toLocaleString()}</time><strong>{item.status==='sent'?'Sent to provider':item.status==='failed'?'Needs attention':'Processing'}</strong>{item.error_message && <small>{item.error_message}</small>}</li>)}</ul>}</details>}
     <footer className="email-prototype-footer"><ShieldCheck size={14} /><span>Settings are stored securely with your account. Reports include only enabled metrics and accepted recipients.</span></footer>
   </section>;
 };

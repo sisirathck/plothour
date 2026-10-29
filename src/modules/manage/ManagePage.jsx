@@ -1,3 +1,4 @@
+import { deriveStudyGoals, MAX_MONTHLY_GOAL_HOURS } from '../../../shared/studyMetrics.js';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -72,8 +73,6 @@ const studyWeekdays = [
   { label: 'Fri', value: 5 },
   { label: 'Sat', value: 6 },
 ];
-const WEEKS_PER_MONTH = 365.25 / 7 / 12;
-const MAX_MONTHLY_GOAL_HOURS = Math.floor(168 * WEEKS_PER_MONTH * 100) / 100;
 const roundGoalHours = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const localDateKey = (value = new Date()) => {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
@@ -83,21 +82,6 @@ const localDateKey = (value = new Date()) => {
 };
 const DEFAULT_START_DATE = localDateKey();
 
-const deriveStudyGoals = (basis, rawValue, studyDays) => {
-  const dayCount = studyDays?.length || studyWeekdays.length;
-  const max = basis === 'daily' ? 24 : basis === 'weekly' ? 168 : MAX_MONTHLY_GOAL_HOURS;
-  const source = rawValue === '' ? 0 : Math.max(0, Math.min(max, Number(rawValue) || 0));
-  const daily = basis === 'daily' ? source : basis === 'weekly' ? source / dayCount : source / WEEKS_PER_MONTH / dayCount;
-  const weekly = basis === 'daily' ? source * dayCount : basis === 'weekly' ? source : source / WEEKS_PER_MONTH;
-  const monthly = basis === 'monthly' ? source : weekly * WEEKS_PER_MONTH;
-
-  return {
-    daily: basis === 'daily' && rawValue === '' ? '' : roundGoalHours(daily),
-    weekly: basis === 'weekly' && rawValue === '' ? '' : roundGoalHours(weekly),
-    monthly: basis === 'monthly' && rawValue === '' ? '' : roundGoalHours(monthly),
-    basis,
-  };
-};
 
 const getRandomProjectColor = (exclude = []) => {
   const excluded = new Set(exclude.filter(Boolean).map((color) => color.toLowerCase()));
@@ -627,7 +611,7 @@ export const ManagePage = ({ user }) => {
       : project
   )));
 
-  const [workspaceTab, setWorkspaceTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'tasks' ? 'tasks' : 'projects');
+  const [workspaceTab, setWorkspaceTab] = useState(() => { const tab = new URLSearchParams(window.location.search).get('tab'); return ['projects','tasks','email'].includes(tab) ? tab : 'projects'; });
   useEffect(() => {
     const selectWorkspaceTab = (event) => {
       if (['tasks', 'projects', 'email'].includes(event.detail)) setWorkspaceTab(event.detail);

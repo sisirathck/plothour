@@ -25,9 +25,7 @@ export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
 
   const handleLoginSuccess = (userData) => {
     showToast(`Welcome, ${userData.display_name || userData.email}!`, 'success');
-    setTimeout(() => {
-      onLoginSuccess?.(userData);
-    }, 700);
+    onLoginSuccess?.(userData);
   };
 
   return (
@@ -55,6 +53,7 @@ export const LoginPage = ({ onTryDemo, onLoginSuccess }) => {
         <div className="login-left-pane">
           {/* Modular Login Card */}
           <div className="login-form-wrapper">
+            {new URLSearchParams(window.location.search).get('extension') === '1' && <p role="status">Sign in with Google below to connect your browser timer. Then reopen the extension.</p>}
             <LoginForm
               isSignUp={isSignUp}
               onLoginSuccess={handleLoginSuccess}

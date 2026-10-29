@@ -10,6 +10,8 @@
     "start": "node server/index.js",
     "build:start": "npm run build && node server/index.js",
     "lint": "oxlint",
+    "test": "node --test server/tests/*.test.js",
+    "test:runtime": "node scripts/check-local-runtime.js",
     "preview": "vite preview"
   },
   "dependencies": {

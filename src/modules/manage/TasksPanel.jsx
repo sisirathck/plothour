@@ -62,6 +62,9 @@ export const TasksPanel = ({ user, projects }) => {
   const [due, setDue] = useState('');
   const [reminder, setReminder] = useState('');
   const [tab, setTab] = useState('current');
+  const entriesKey = user?.id ? `studyduel_user_${user.id}_time_entries` : 'studyduel_demo_time_entries';
+  const [trackedEntries, setTrackedEntries] = useState(() => { try { return JSON.parse(localStorage.getItem(entriesKey) || '[]'); } catch { return []; } });
+  useEffect(() => { const refresh = () => { try { setTrackedEntries(JSON.parse(localStorage.getItem(entriesKey) || '[]')); } catch {} }; window.addEventListener('studyduel:timer-storage',refresh); window.addEventListener('storage',refresh); return () => { window.removeEventListener('studyduel:timer-storage',refresh); window.removeEventListener('storage',refresh); }; },[entriesKey]);
   const todayKey = dateKey(new Date());
   const taskTabs = [{ id: 'all', label: 'All' }, { id: 'current', label: 'Current' }, { id: 'overdue', label: 'Overdue' }, { id: 'completed', label: 'Completed' }];
   const visibleTasks = tasks.filter(task => tab === 'all' || taskStatus(task, todayKey) === tab)
@@ -89,7 +92,8 @@ export const TasksPanel = ({ user, projects }) => {
     {!visibleTasks.length && <p className="agenda-empty">{tab === 'completed' ? 'Completed tasks will appear here.' : tab === 'overdue' ? 'No overdue tasks.' : 'No tasks in this view.'}</p>}
     {visibleTasks.map(task => <div className={`task-line${task.completed ? ' is-completed' : ''}`} key={task.id}>
       <input type="checkbox" aria-label={`Complete ${task.title}`} checked={task.completed} onChange={() => mutate(`/${task.id}`, 'PATCH', { completed: !task.completed })} />
-      <div><strong style={{ textDecoration: task.completed ? 'line-through' : undefined }}>{task.title}</strong><small>{task.project_name || 'Personal'}{task.subproject_name ? ` · ${task.subproject_name}` : ''}{task.due_date ? ` · Due ${formatDisplayDate(task.due_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{task.reminder_date ? ` · Reminder ${formatDisplayDate(task.reminder_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small>{tab === 'current' && task.due_date && <span className="task-deadline-bar" aria-label="Due-date progress; full bar means seven days or more"><i style={{ width: `${Math.min(100, Math.max(0, ((new Date(`${task.due_date.slice(0, 10)}T23:59:59`).getTime() - Date.now()) / 86400000) / 7) * 100)}%` }} /></span>}</div>
+      <div><small>{Math.round(trackedEntries.filter(entry => entry.taskId === task.id).reduce((sum,entry) => sum + Number(entry.durationSeconds || 0),0) / 60)} min tracked</small><strong style={{ textDecoration: task.completed ? 'line-through' : undefined }}>{task.title}</strong><small>{task.project_name || 'Personal'}{task.subproject_name ? ` · ${task.subproject_name}` : ''}{task.due_date ? ` · Due ${formatDisplayDate(task.due_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{task.reminder_date ? ` · Reminder ${formatDisplayDate(task.reminder_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small>{tab === 'current' && task.due_date && <span className="task-deadline-bar" aria-label="Due-date progress; full bar means seven days or more"><i style={{ width: `${Math.min(100, Math.max(0, ((new Date(`${task.due_date.slice(0, 10)}T23:59:59`).getTime() - Date.now()) / 86400000) / 7) * 100)}%` }} /></span>}</div>
+      {!task.completed && <button type="button" disabled={!projects.some(p => p.name === task.project_name)} title={task.project_name ? 'Start a timer linked to this task' : 'Choose a project when creating a task to track time'} onClick={() => window.dispatchEvent(new CustomEvent('plothour:start-task', { detail: task }))}>Track time</button>}
       <button onClick={() => mutate(`/${task.id}`, 'DELETE')} aria-label={`Delete ${task.title}`}>Remove</button>
     </div>)}
   </section>;

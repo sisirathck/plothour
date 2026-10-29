@@ -1,3 +1,4 @@
+import { summarizeSessions, goalSecondsForRange } from '../../../shared/studyMetrics.js';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Sun,
@@ -177,14 +178,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     };
   }, [preferencesKey]);
 
-  const dailyGoalHours = useMemo(() => {
-    const projectTotal = projects.reduce(
-      (total, project) => total + (project.archived ? 0 : (project.subjects || []).reduce(
-        (subjectTotal, subject) => subjectTotal + (Number(subject.goals?.daily) || 0), 0
-      )), 0
-    );
-    return projectTotal > 0 ? projectTotal : 4;
-  }, [projects]);
+  const dailyGoalHours = useMemo(() => goalSecondsForRange(projects, 'today') / 3600, [projects]);
 
   const [entries, setEntries] = useState(() => {
     try {
@@ -223,7 +217,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   }), [entries, dateWindow]);
   const rangeDaysCount = Math.max(1, Math.floor((dateWindow.end.getTime() - dateWindow.start.getTime()) / 86400000) + 1);
   const rangeSecs = useMemo(
-    () => rangeEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0),
+    () => summarizeSessions(rangeEntries).seconds,
     [rangeEntries]
   );
   const previousWindow = useMemo(() => {
@@ -261,22 +255,12 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     [previousRangeEntries]
   );
   const rangeDeltaSecs = rangeSecs - previousRangeSecs;
-  const rangeActiveDays = new Set(rangeEntries.filter((entry) => entry.durationSeconds > 0).map((entry) => dateKey(entry.startedAt))).size;
+  const rangeActiveDays = summarizeSessions(rangeEntries).activeDays;
   const averageActiveDaySecs = rangeActiveDays ? Math.round(rangeSecs / rangeActiveDays) : 0;
   const rangeLabel = dateRange === 'custom'
     ? `${formatDisplayDate(dateWindow.start, { month: 'short', day: 'numeric', year: 'numeric' })} – ${formatDisplayDate(dateWindow.end, { month: 'short', day: 'numeric', year: 'numeric' })}`
     : dashboardRangeOptions.find((item) => item.id === dateRange)?.label || 'This week';
-  const rangeGoalHours = useMemo(() => projects.reduce((total, project) => {
-    if (project.archived) return total;
-    return total + (project.subjects || []).reduce((projectTotal, subject) => {
-      if (dateRange === 'today') return projectTotal + (Number(subject.goals?.daily) || 0);
-      if (dateRange === '7days') return projectTotal + (Number(subject.goals?.daily) || 0) * 7;
-      if (dateRange === 'week') return projectTotal + (Number(subject.goals?.weekly) || 0);
-      if (dateRange === 'month') return projectTotal + (Number(subject.goals?.monthly) || 0);
-      if (['30days', '90days', 'custom'].includes(dateRange)) return projectTotal + (Number(subject.goals?.daily) || 0) * (dateRange === '30days' ? 30 : dateRange === '90days' ? 90 : rangeDaysCount);
-      return projectTotal;
-    }, 0);
-  }, 0), [projects, dateRange, rangeDaysCount]);
+  const rangeGoalHours = useMemo(() => goalSecondsForRange(projects, dateRange, rangeDaysCount) / 3600, [projects, dateRange, rangeDaysCount]);
   const rangeGoalSecs = rangeGoalHours * 3600;
   const hasComparableGoal = dateRange !== 'all' && rangeGoalSecs > 0;
   const elapsedRangeDays = Math.min(rangeDaysCount, Math.max(1, Math.floor((Math.min(now.getTime(), dateWindow.end.getTime()) - dateWindow.start.getTime()) / 86400000) + 1));
@@ -726,7 +710,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
   const studyVelocityStats = useMemo(() => {
     const totalDaysCount = Math.max(1, rangeDaysCount);
     const dateMap = new Map();
-    const count = Math.min(60, totalDaysCount);
+    const count = totalDaysCount;
     const dayKeys = [];
 
     for (let i = 0; i < count; i++) {
@@ -748,15 +732,14 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
     });
 
     const daysList = dayKeys.map((k) => dateMap.get(k));
-    const activeDaysList = daysList.filter((d) => d.seconds > 0);
-    const activeDaysCount = activeDaysList.length;
+    const activeDaysCount = summarizeSessions(rangeEntries).activeDays;
 
     const consistencyPct = totalDaysCount > 0 ? Math.round((activeDaysCount / totalDaysCount) * 100) : 0;
-    const activeDayAvgSeconds = activeDaysCount > 0 ? Math.round(rangeSecs / activeDaysCount) : 0;
+    const activeDayAvgSeconds = Math.round(summarizeSessions(rangeEntries).averageActiveDaySeconds);
     const overallDailyAvgSeconds = totalDaysCount > 0 ? Math.round(rangeSecs / totalDaysCount) : 0;
 
-    const targetSeconds = (dailyGoalHours || 2) * 3600;
-    const goalHitDays = daysList.filter((d) => d.seconds >= targetSeconds).length;
+    const targetSeconds = dailyGoalHours * 3600;
+    const goalHitDays = targetSeconds > 0 ? daysList.filter((d) => d.seconds >= targetSeconds).length : 0;
     const goalHitPct = activeDaysCount > 0 ? Math.round((goalHitDays / activeDaysCount) * 100) : 0;
 
     const totalSessions = rangeEntries.length;
@@ -799,7 +782,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
       goalHitDays,
       goalHitPct,
       targetSeconds,
-      targetHours: dailyGoalHours || 2,
+      targetHours: dailyGoalHours,
       sessionsPerActiveDay,
       peakDayOutput,
       peakDayLabel,
@@ -1247,12 +1230,13 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
                     ? 'All recorded study time across your account.'
                     : hasComparableGoal
                     ? rangeGoalRemainingSecs === 0
-                      ? 'Weekly target reached. Great work.'
+                      ? 'Period target reached. Great work.'
                       : paceIsOnTrack
                         ? `${fmtDur(rangeGoalRemainingSecs)} left · on pace for this point in the period`
                         : `${fmtDur(paceDifferenceSecs)} behind the planned pace · ${fmtDur(rangeGoalRemainingSecs)} left`
                     : 'Add weekly goals to your projects to see whether you are on pace.'}
                 </p>
+                {hasComparableGoal && !paceIsOnTrack && <button type="button" className="db-weekly-set-goal" onClick={() => onNavigate?.('manage')}>Review targets and priorities <ArrowRight size={13} /></button>}
               </div>
             </div>
 
@@ -1266,7 +1250,7 @@ export function DashboardPage({ user, onNavigate, standalone = false }) {
         </DashboardSection>
 
         <DashboardSection section={dashboardSection('daily')} order={dashboardSectionOrder('daily')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>
-          <SnapshotPanel snapshotMetrics={snapshotMetrics} />
+          <SnapshotPanel snapshotMetrics={snapshotMetrics} onReviewTargets={() => onNavigate?.('manage')} />
         </DashboardSection>
 
         <DashboardSection section={dashboardSection('focus')} order={dashboardSectionOrder('focus')} onExpand={(id) => updateDashboardSection(id, { collapsed: false })}>

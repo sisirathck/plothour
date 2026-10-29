@@ -1,6 +1,7 @@
+import { summarizeProfile } from '../../shared/studyMetrics.js';
 import { Router } from 'express';
 import { randomBytes } from 'crypto';
-import { query } from '../db.js';
+import { pool, query } from '../db.js';
 import { authenticate } from '../middleware.js';
 
 export const connectionsRouter = Router();
@@ -76,18 +77,14 @@ connectionsRouter.post('/', async (req, res) => {
   }
 });
 
-connectionsRouter.delete('/:partnerId', async (req, res) => {
+connectionsRouter.delete('/:partnerId', async (req,res) => {
+  const client=await pool.connect();
   try {
-    await query(
-      `DELETE FROM friendships WHERE user_low_id = LEAST($1::uuid, $2::uuid)
-       AND user_high_id = GREATEST($1::uuid, $2::uuid)`,
-      [req.userId, req.params.partnerId]
-    );
-    return res.json({ success: true });
-  } catch (error) {
-    console.error('[Connections DELETE Error]:', error);
-    return res.status(500).json({ error: 'Could not remove this study partner.' });
-  }
+    await client.query('BEGIN');
+    await client.query('DELETE FROM comparison_sharing WHERE (user_id=$1 AND partner_id=$2) OR (user_id=$2 AND partner_id=$1)',[req.userId,req.params.partnerId]);
+    await client.query('DELETE FROM friendships WHERE user_low_id=LEAST($1::uuid,$2::uuid) AND user_high_id=GREATEST($1::uuid,$2::uuid)',[req.userId,req.params.partnerId]);
+    await client.query('COMMIT');return res.json({success:true});
+  }catch{await client.query('ROLLBACK');return res.status(500).json({error:'Could not remove this connection.'});}finally{client.release();}
 });
 
 connectionsRouter.get('/comparison', async (req, res) => {
@@ -129,128 +126,47 @@ connectionsRouter.get('/comparison', async (req, res) => {
        WHERE u.id = ANY($1::uuid[])`,
       [ids]
     );
+    const permissions = await query('SELECT * FROM comparison_sharing WHERE partner_id=$1 AND user_id=ANY($2::uuid[])',[req.userId,ids]);
+    const sharingByUser = new Map(permissions.rows.map(row=>[row.user_id,row]));
     const serializedProfiles = profiles.rows.map((profile) => {
       let storedEntries = [];
-      let preferences = {};
       let projects = [];
       try { storedEntries = JSON.parse(profile.entries_json || '[]'); } catch {}
-      try { preferences = JSON.parse(profile.preferences_json || '{}'); } catch {}
       try { projects = JSON.parse(profile.projects_json || '[]'); } catch {}
-      const entries = (Array.isArray(storedEntries) ? storedEntries : [])
-        .map((entry) => ({
-          ...entry,
-          startedAt: Number.isFinite(Number(entry.startedAt)) ? Number(entry.startedAt) : new Date(entry.startedAt).getTime(),
-          durationSeconds: Math.max(0, Number(entry.durationSeconds) || 0),
-        }))
-        .filter((entry) => Number.isFinite(entry.startedAt) && entry.durationSeconds > 0);
-      const dailyGoalHours = Math.max(0, Number(preferences.dailyGoalHours) || 0);
-      const periodEntries = entries.filter((entry) => entry.startedAt >= from && entry.startedAt <= to);
-      const previousEntries = entries.filter((entry) => entry.startedAt >= previousFrom && entry.startedAt <= previousTo);
-      const dateKey = (timestamp) => {
-        const date = new Date(timestamp);
-        const parts = new Intl.DateTimeFormat('en-CA', {
-          timeZone: profile.timezone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
-        }).formatToParts(date);
-        return `${parts.find((part) => part.type === 'year').value}-${parts.find((part) => part.type === 'month').value}-${parts.find((part) => part.type === 'day').value}`;
-      };
-      const dailyTotals = new Map();
-      const dailySessions = new Map();
-      periodEntries.forEach((entry) => {
-        const key = dateKey(entry.startedAt);
-        dailyTotals.set(key, (dailyTotals.get(key) || 0) + entry.durationSeconds);
-        dailySessions.set(key, (dailySessions.get(key) || 0) + 1);
-      });
-      const dailyRows = [...dailyTotals].map(([date, seconds]) => ({ date, seconds, sessions: dailySessions.get(date) || 0 }));
-      const activeDays = dailyRows.length;
-      const seconds = periodEntries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
-      const sortedSessions = periodEntries.map((entry) => entry.durationSeconds).sort((a, b) => a - b);
-      const activeDayDurations = dailyRows.map((day) => day.seconds).sort((a, b) => a - b);
-      const median = (values) => values.length ? (values.length % 2
-        ? values[Math.floor(values.length / 2)]
-        : Math.round((values[values.length / 2 - 1] + values[values.length / 2]) / 2)) : 0;
-      const longSessions = periodEntries.filter((entry) => entry.durationSeconds >= 45 * 60).length;
-      const shortSessions = periodEntries.filter((entry) => entry.durationSeconds < 15 * 60).length;
-      const goalDays = dailyGoalHours > 0 ? dailyRows.filter((day) => day.seconds >= dailyGoalHours * 3600).length : 0;
-      const weekdaySeconds = periodEntries.filter((entry) => {
-        const day = new Date(`${dateKey(entry.startedAt)}T00:00:00Z`).getUTCDay();
-        return day !== 0 && day !== 6;
-      }).reduce((sum, entry) => sum + entry.durationSeconds, 0);
-      const weekendSeconds = seconds - weekdaySeconds;
-      const previousSeconds = previousEntries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
-      const recentDailyTotals = new Map();
-      entries.filter((entry) => entry.startedAt >= recentFrom && entry.startedAt <= recentTo).forEach((entry) => {
-        const key = dateKey(entry.startedAt);
-        recentDailyTotals.set(key, (recentDailyTotals.get(key) || 0) + entry.durationSeconds);
-      });
-      const orderedDays = [...dailyRows].sort((a, b) => a.date.localeCompare(b.date));
-      const daySerial = (date) => Math.floor(new Date(`${date}T00:00:00Z`).getTime() / 86400000);
-      let longestStreak = 0;
-      let streak = 0;
-      let lastSerial = null;
-      orderedDays.forEach((day) => {
-        const serial = daySerial(day.date);
-        streak = lastSerial === serial - 1 ? streak + 1 : 1;
-        longestStreak = Math.max(longestStreak, streak);
-        lastSerial = serial;
-      });
-      const periodEndDate = dateKey(to);
-      const streakAtEnd = orderedDays.at(-1)?.date === periodEndDate ? streak : 0;
-      const bestDay = [...orderedDays].sort((a, b) => b.seconds - a.seconds)[0] || null;
-      const longestSession = [...periodEntries].sort((a, b) => b.durationSeconds - a.durationSeconds)[0] || null;
-      const peakHours = new Map();
-      periodEntries.forEach((entry) => {
-        const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: profile.timezone || 'UTC', hour: 'numeric', hourCycle: 'h23' }).format(new Date(entry.startedAt)));
-        peakHours.set(hour, (peakHours.get(hour) || 0) + entry.durationSeconds);
-      });
-      const peakHour = [...peakHours].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-      const projectTotals = new Map();
-      periodEntries.forEach((entry) => {
-        const label = entry.subjectName || entry.projectName || 'General Study';
-        projectTotals.set(label, (projectTotals.get(label) || 0) + entry.durationSeconds);
-      });
-      const activeProjects = Array.isArray(projects) ? projects.filter((project) => !project.archived) : [];
-      const goalSeconds = rangeType === 'all' ? 0 : activeProjects.reduce((total, project) => total + (project.subjects || []).reduce((part, subject) => {
-        const goals = subject.goals || {};
-        if (rangeType === 'week') return part + (Number(goals.weekly) || 0) * 3600;
-        if (rangeType === 'month') return part + (Number(goals.monthly) || 0) * 3600;
-        if (rangeType === 'today') return part + (Number(goals.daily) || 0) * 3600;
-        return part + (Number(goals.daily) || 0) * calendarDays * 3600;
-      }, 0), 0);
-      return {
-        id: profile.id,
-        name: profile.display_name,
-        weekStartsOn: Number.isInteger(Number(profile.week_starts_on)) ? Number(profile.week_starts_on) : weekStartsOn,
-        current: {
-          seconds,
-          activeDays,
-          sessions: periodEntries.length,
-          averageActiveDaySeconds: activeDays ? Math.round(seconds / activeDays) : 0,
-          averageSessionSeconds: periodEntries.length ? Math.round(seconds / periodEntries.length) : 0,
-        sessionsPerCalendarDay: periodEntries.length / calendarDays,
-          medianActiveDaySeconds: median(activeDayDurations),
-          longSessionShare: periodEntries.length ? longSessions / periodEntries.length : 0,
-          shortSessions,
-          thirtyMinuteDays: activeDayDurations.filter((value) => value >= 1800).length,
-          goalDays,
-          goalSeconds,
-          goalProgressPct: goalSeconds ? Math.round(seconds / goalSeconds * 100) : null,
-          weekdaySeconds,
-          weekendSeconds,
-          streakAtEnd,
-          longestStreak,
-          bestDay,
-          longestSession: longestSession ? { seconds: longestSession.durationSeconds, date: dateKey(longestSession.startedAt) } : null,
-          peakHour,
-          projectBreakdown: [...projectTotals].map(([name, projectSeconds]) => ({ name, seconds: projectSeconds })).sort((a, b) => b.seconds - a.seconds),
-        },
-        previous: { seconds: previousSeconds },
-        daily: dailyRows,
-        recentDaily: [...recentDailyTotals].map(([date, seconds]) => ({ date, seconds })).sort((a, b) => a.date.localeCompare(b.date)),
-      };
+      const sharing = sharingByUser.get(profile.id);
+      const own = profile.id === req.userId;
+      const selected = new Set(sharing?.project_ids || []);
+      const visibleEntries = (Array.isArray(storedEntries) ? storedEntries : []).filter(entry => own || selected.has(entry.projectId)).map(entry => own || sharing?.share_project_names ? entry : {...entry,projectName:'Shared project',subjectName:''});
+      const visibleProjects = (Array.isArray(projects) ? projects : []).filter(project => own || selected.has(project.id));
+      return { ...summarizeProfile({id:profile.id,name:profile.display_name,entries:visibleEntries,projects:visibleProjects,timeZone:profile.timezone || 'UTC',start:from,end:to,previousStart:previousFrom,previousEnd:previousTo,range:rangeType,calendarDays,recentStart:recentFrom,recentEnd:recentTo}), weekStartsOn:profile.week_starts_on, sharingLimited:!own };
+
     });
     return res.json({ profiles: serializedProfiles });
   } catch (error) {
     console.error('[Comparison Data Error]:', error);
     return res.status(500).json({ error: 'Could not load comparison data.' });
   }
+});
+
+connectionsRouter.get('/sharing',async(req,res) => {
+  try {
+    const [partners,projects,permissions]=await Promise.all([
+      query(`SELECT u.id,u.display_name AS name FROM friendships f JOIN users u ON u.id=CASE WHEN f.user_low_id=$1 THEN f.user_high_id ELSE f.user_low_id END WHERE f.user_low_id=$1 OR f.user_high_id=$1`,[req.userId]),
+      query('SELECT id,name FROM projects WHERE user_id=$1 AND archived_at IS NULL ORDER BY sort_order,name',[req.userId]),
+      query('SELECT partner_id,project_ids,share_project_names FROM comparison_sharing WHERE user_id=$1',[req.userId])
+    ]);
+    res.json({partners:partners.rows,projects:projects.rows,permissions:permissions.rows});
+  } catch {res.status(500).json({error:'Could not load sharing preferences.'});}
+});
+connectionsRouter.put('/sharing/:partnerId',async(req,res) => {
+  const {projectIds,shareProjectNames}=req.body || {};
+  if(!Array.isArray(projectIds) || projectIds.length>500 || typeof shareProjectNames!=='boolean' || projectIds.some(id=>typeof id!=='string' || !/^[\da-f-]{36}$/i.test(id))) return res.status(400).json({error:'Choose valid sharing preferences.'});
+  try {
+    const partner=(await query('SELECT 1 FROM friendships WHERE user_low_id=LEAST($1::uuid,$2::uuid) AND user_high_id=GREATEST($1::uuid,$2::uuid)',[req.userId,req.params.partnerId])).rows.length;
+    if(!partner) return res.status(403).json({error:'Connect this person before sharing.'});
+    const owned=(await query('SELECT id FROM projects WHERE user_id=$1 AND id=ANY($2::uuid[])',[req.userId,projectIds])).rows;
+    if(owned.length!==new Set(projectIds).size) return res.status(400).json({error:'Only your own projects can be shared.'});
+    await query(`INSERT INTO comparison_sharing(user_id,partner_id,project_ids,share_project_names) VALUES($1,$2,$3,$4) ON CONFLICT(user_id,partner_id) DO UPDATE SET project_ids=EXCLUDED.project_ids,share_project_names=EXCLUDED.share_project_names,updated_at=now()`,[req.userId,req.params.partnerId,projectIds,shareProjectNames]);
+    res.json({saved:true});
+  } catch {res.status(500).json({error:'Could not save sharing preferences.'});}
 });

@@ -1,68 +1,23 @@
-# PlotHour Browser Extension ⏱️
+# PlotHour browser timer — 1.1.1
 
-A beautiful, high-performance browser extension for **Chrome**, **Brave**, **Safari**, **Edge**, and **Arc** to track study and work sessions right from your browser toolbar.
+The extension does one job: sign in, select a project and optional subproject, start a timer, and stop/save it. The server confirms every change. Closing the popup does not stop the timer.
 
-Inspired by TimeCamp’s quick-logging workflow, tailored specifically for **PlotHour**.
+## Use the updated extension
 
----
+In Chrome, Brave or Edge, open the browser's extensions page. If PlotHour is already loaded from this repository's `extension` directory, press **Reload** on its card. Otherwise use **Load unpacked** and select this directory. Packaged downloads must be extracted first. Safari requires conversion and building with Apple's Web Extension tools; that platform has not been verified here.
 
-## ✨ Features
+1. Open the popup.
+2. Choose **Continue with Google** to sign in in the main app, or use email and password. For local testing only, expand **Connection settings** and set the app address to your Vite origin such as `http://127.0.0.1:5175`. Local and deployed accounts are separate environments.
+3. For Google, complete sign-in in the new PlotHour tab and reopen the popup. Keep that app tab open: authenticated requests use its HTTP-only cookie without copying the Google credential or session token. **Connect signed-in browser tab** also connects an existing signed-in tab. Reload existing app tabs once after updating the extension.
+4. Choose a project and optional subproject; press **Start timer**.
+5. Press **Stop & save session**. Success appears only after the server confirms the save.
 
-- **Login Once**: Log in once with your PlotHour account or 1-click connect to an open PlotHour browser tab. It securely remembers your session.
-- **Project & Task Hierarchy**: Browse your full account project list with color badges and nested subjects/tasks.
-- **Searchable Task Picker**: Instant real-time search across all projects, subtasks, and suggested shortcuts.
-- **Rich Running Timer View**:
-  - Live ticking digital clock with monospace typography.
-  - Project color dot & breadcrumb indicator.
-  - Active session notes preview.
-  - Start time timestamp and duration counter.
-- **Real-Time Toolbar Badge**:
-  - Displays live running duration (e.g. `14m`, `1.5h`) directly on the extension icon in your browser toolbar with an emerald badge indicator.
-- **Two-Way Web App Sync**:
-  - Timers started in the extension immediately update open PlotHour tabs.
-  - Timers stopped on the web app immediately update the extension badge and status.
-- **Audio Chimes**: Subtle, high-fidelity Web Audio tones on timer start and stop.
-- **Quick Links**: 1-click "Go to Timesheet" navigation to your PlotHour dashboard.
+Use **Refresh projects & timer** after changing projects elsewhere. The toolbar badge refreshes in the background. The web app polls the same timer state. There is no fake login, offline recording, or fallback sample project list. If the server is unavailable, the popup reports the failure and preserves the last confirmed timer display.
 
----
+A separately deployed backend needs these source changes deployed before it can provide the updated transactional timer, session connection, and pause/resume behavior. The app address is editable; `plothour.com` is the default from this repository's existing configuration.
 
-## 🚀 How to Install & Load the Extension
+## Checks
 
-### 1. Chrome / Brave / Edge / Arc (Chromium Browsers)
+`npm run test:runtime` from the repository root exercises the actual extension service-worker source against the local API using disposable synthetic accounts. It covers login, account projects, subproject selection, start and stop. It does not replace testing an installed popup in each supported browser.
 
-1. Open your browser extension manager:
-   - **Brave**: `brave://extensions`
-   - **Chrome**: `chrome://extensions`
-   - **Edge**: `edge://extensions`
-2. Enable **Developer mode** (toggle switch in the top right corner).
-3. Click the **Load unpacked** button.
-4. Select the `PlotHour/extension` folder:
-   ```
-   /Users/sisirath/PlotHour/extension
-   ```
-5. Click **Select Folder**. The **PlotHour — Time Tracking** extension will now appear in your browser toolbar!
-6. *(Tip)* Pin the PlotHour icon to your browser toolbar for instant 1-click access anytime.
-
----
-
-### 2. Apple Safari (macOS)
-
-Safari supports standard WebExtensions Manifest V3:
-1. Open **Safari Settings** (`⌘ ,`) → **Advanced** tab → Check **Show features for web developers** (or **Show Develop menu in menu bar**).
-2. Go to the **Develop** menu in the top bar → Check **Allow Unsigned Extensions**.
-3. In Terminal, build the Safari app wrapper using Apple's standard Web Extension converter:
-   ```bash
-   xcrun safari-web-extension-converter /Users/sisirath/PlotHour/extension --macos-only
-   ```
-4. Build and run in Xcode once, then enable the PlotHour extension in Safari Extensions settings.
-
----
-
-## 🛠️ Development & Local Testing
-
-1. Start your local PlotHour server & frontend:
-   ```bash
-   npm run dev
-   ```
-2. Open the extension popup from your browser toolbar.
-3. You can sign in using your account email and password, click **Connect Tab** to link an open tab, or click **Demo Mode** for instant offline testing!
+Extension storage contains the signed session token, never the password. Sign out clears extension credentials without signing the web app out. Session revocation on the server also applies to the extension.

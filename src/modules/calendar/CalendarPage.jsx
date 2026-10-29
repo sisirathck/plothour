@@ -1,3 +1,4 @@
+import { summarizeSessions, subjectGoalHours } from '../../../shared/studyMetrics.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarDays, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Check, Clock3, X, FileText } from 'lucide-react';
@@ -35,7 +36,6 @@ const formatDuration = (seconds) => {
   return minutes ? `${minutes}m` : '—';
 };
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const WEEKS_PER_MONTH = 365.25 / 7 / 12;
 
 export const CalendarPage = ({ user, entries: providedEntries, setEntries: setProvidedEntries, projects: providedProjects, onClose }) => {
   const { config } = useSiteCustomization();
@@ -124,11 +124,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
     const subject = projects.flatMap((project) => project.subjects || []).find((item) => item.id === id);
     return entry.subjectId === id || (!entry.subjectId && entry.subjectName === subject?.name);
   }), [entries, projectFilter, projects]);
-  const totalsByDay = useMemo(() => filteredEntries.reduce((totals, entry) => {
-    const key = entryDateKey(entry.startedAt);
-    totals[key] = (totals[key] || 0) + (Number(entry.durationSeconds) || 0);
-    return totals;
-  }, {}), [filteredEntries]);
+  const totalsByDay = useMemo(() => Object.fromEntries(summarizeSessions(filteredEntries).daily.map(day => [day.date,day.seconds])), [filteredEntries]);
 
   const plannedByDay = useMemo(() => {
     const scheduled = {};
@@ -143,11 +139,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
           ? subject.studyDays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
           : [];
         const studyDays = days.length ? days : (daily || weekly || monthly) ? [0, 1, 2, 3, 4, 5, 6] : [];
-        const dayCount = studyDays.length || 7;
-        const basis = ['daily', 'weekly', 'monthly'].includes(goals.basis)
-          ? goals.basis
-          : daily > 0 ? 'daily' : weekly > 0 ? 'weekly' : 'monthly';
-        const targetHours = basis === 'daily' ? daily : basis === 'weekly' ? weekly / dayCount : monthly / WEEKS_PER_MONTH / dayCount;
+        const targetHours = subjectGoalHours(subject,'daily');
         if (!targetHours || !studyDays.length) return;
         if (projectFilter !== 'all') {
           const [kind, id] = projectFilter.split(':');

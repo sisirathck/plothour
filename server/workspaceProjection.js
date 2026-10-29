@@ -155,7 +155,7 @@ async function syncActiveTimer(client, userId, raw) {
 async function upsertJson(client, table, column, userId, value) {
   await client.query(
     `INSERT INTO ${table} (user_id,${column}) VALUES ($1,$2::jsonb)
-     ON CONFLICT (user_id) DO UPDATE SET ${column}=EXCLUDED.${column}, updated_at=now()`,
+     ON CONFLICT (user_id) DO UPDATE SET ${column}=${table === 'user_preferences' && column === 'preferences' ? `${table}.${column} || EXCLUDED.${column}` : `EXCLUDED.${column}`}, updated_at=now()`,
     [userId, JSON.stringify(value)]
   );
 }
@@ -166,7 +166,10 @@ export async function syncWorkspaceProjection(client, userId, items, onlyKey = n
 
   if (matches('projects') && get('projects') != null) await syncProjects(client, userId, get('projects'));
   if (matches('time_entries') && get('time_entries') != null) await syncTimeEntries(client, userId, get('time_entries'));
-  if (matches('active_timer') && get('active_timer') != null) await syncActiveTimer(client, userId, get('active_timer'));
+  if (matches('active_timer') && get('active_timer') != null) {
+    const authoritative=await client.query('SELECT 1 FROM active_timers WHERE user_id=$1',[userId]);
+    if(!authoritative.rows.length) await syncActiveTimer(client,userId,get('active_timer'));
+  }
   if (matches('preferences') && get('preferences') != null) await upsertJson(client, 'user_preferences', 'preferences', userId, parse(get('preferences'), {}));
   if (matches('theme') && get('theme') != null) await client.query(`INSERT INTO user_preferences (user_id,theme) VALUES ($1,$2) ON CONFLICT(user_id) DO UPDATE SET theme=EXCLUDED.theme,updated_at=now()`, [userId, get('theme')]);
   if (matches('theme_mode') && get('theme_mode') != null) await client.query(`INSERT INTO user_preferences (user_id,theme_mode) VALUES ($1,$2) ON CONFLICT(user_id) DO UPDATE SET theme_mode=EXCLUDED.theme_mode,updated_at=now()`, [userId, get('theme_mode')]);

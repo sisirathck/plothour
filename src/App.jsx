@@ -17,11 +17,12 @@ function App() {
   const [user, setUser] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(() => {
     return (
-      validAppRoutes.some((route) => window.location.pathname.startsWith(route)) ||
-      localStorage.getItem('studyduel_demo_mode') === 'true'
+      new URLSearchParams(window.location.search).get('extension') !== '1' && localStorage.getItem('studyduel_demo_mode') === 'true'
     );
   });
+  const [authError, setAuthError] = useState('');
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState('');
   const [workspaceReadyForUser, setWorkspaceReadyForUser] = useState(null);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ function App() {
       })
       .catch((error) => {
         console.error('[Workspace sync] Could not load saved account data:', error.message);
-        if (!cancelled) setWorkspaceReadyForUser(user.id);
+        if (!cancelled) setWorkspaceLoadError('We couldn’t load your saved workspace. Your data has not been changed.');
       });
 
     return () => {
@@ -65,15 +66,15 @@ function App() {
   // Check existing session on load & preload AppShell in background during idle time
   useEffect(() => {
     let authenticated = false;
-    fetch('/api/auth/me')
-      .then((res) => (res.ok ? res.json() : null))
+    fetch('/api/auth/me', { signal: AbortSignal.timeout(15000) })
+      .then((res) => { if(res.status >= 500) throw new Error('The account service is temporarily unavailable.'); return res.ok ? res.json() : null; })
       .then((data) => {
         if (data?.user) {
           authenticated = true;
           setUser(data.user);
         }
       })
-      .catch(() => {})
+      .catch(() => { if(!isDemoMode) setAuthError('We couldn’t check your sign-in session. Please retry.'); })
       .finally(() => {
         if (!authenticated && isDemoMode) {
           const openingCalendarPopup = window.location.pathname.startsWith('/calendar');
@@ -99,7 +100,7 @@ function App() {
     const handlePopState = () => {
       const isAppRoute = validAppRoutes.some((route) => window.location.pathname.startsWith(route));
       if (isAppRoute) {
-        setIsDemoMode(true);
+        setIsDemoMode(localStorage.getItem('studyduel_demo_mode') === 'true');
       } else if (window.location.pathname === '/' || window.location.pathname === '/login') {
         if (!user) {
           setIsDemoMode(false);
@@ -122,16 +123,15 @@ function App() {
   };
 
   // If user is directly loading an app route (/timer, /dashboard) while checking auth, show a refined themed spinner
-  const isDirectAppRoute = validAppRoutes.some((route) => window.location.pathname.startsWith(route));
   const themeScopeKey = user?.id
     ? `${user.id}:${workspaceReadyForUser === user.id ? 'ready' : 'loading'}`
     : isDemoMode ? 'demo' : 'guest';
-  if ((isCheckingAuth && (isDirectAppRoute || isDemoMode)) || (user && workspaceReadyForUser !== user.id)) {
+  if (isCheckingAuth || authError || (user && workspaceReadyForUser !== user.id)) {
     return (
       <ThemeProvider key={themeScopeKey} userId={user?.id} demoMode={isDemoMode}>
         <SiteCustomizationProvider>
         <div className="app-loading-screen" aria-label="Loading PlotHour...">
-          <div className="app-loading-spinner" />
+          {workspaceLoadError || authError ? <div role="alert"><p>{workspaceLoadError || authError}</p><button type="button" onClick={() => window.location.reload()}>Retry loading workspace</button></div> : <div className="app-loading-spinner" />}
         </div>
         </SiteCustomizationProvider>
       </ThemeProvider>

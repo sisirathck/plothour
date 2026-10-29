@@ -369,7 +369,7 @@ export const AdminPage = ({ user }) => {
 
       <section className="admin-customization-card admin-email-preview-library">
         <div className="admin-users-heading"><div><h2><Mail size={17} /> Email preview library</h2><p>Review the report designs and task reminder emails available to PlotHour users.</p></div></div>
-        <EmailPreviewsGallery />
+        <p><a href="/previews/email-design.html" target="_blank" rel="noreferrer">Preview all production email designs ↗</a></p><EmailPreviewsGallery />
       </section>
 
       <section className="admin-users-card">

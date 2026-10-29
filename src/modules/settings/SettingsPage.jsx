@@ -1,3 +1,5 @@
+import { WorkspaceBackup } from './WorkspaceBackup';
+import { ComparisonSharing } from './ComparisonSharing';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
@@ -582,6 +584,7 @@ export const SettingsPage = ({ user }) => {
           ========================================================================= */}
       {activeSettingsTab === 'preferences' && (
         <div id="panel-preferences" role="tabpanel" aria-labelledby="tab-preferences">
+          <WorkspaceBackup user={user} />
           {/* CARD 1: Workspace, Profile & Theme Appearance Card */}
           <section className="settings-bento-card" aria-labelledby="card-workspace-title">
             <div className="settings-card-header">
@@ -950,6 +953,7 @@ export const SettingsPage = ({ user }) => {
           ========================================================================= */}
       {activeSettingsTab === 'connections' && (
         <div id="panel-connections" role="tabpanel" aria-labelledby="tab-connections">
+          <ComparisonSharing user={user} />
           {/* CARD 1: Your PlotHour Invite Code Card */}
           <section className="settings-bento-card" aria-labelledby="card-invite-title">
             <div className="settings-card-header">

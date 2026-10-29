@@ -52,6 +52,7 @@ workspaceRouter.put('/import', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [req.userId]);
     const inserted = await client.query(
       `INSERT INTO user_workspace_state (user_id, data)
        VALUES ($1, $2::jsonb)
@@ -63,15 +64,8 @@ workspaceRouter.put('/import', async (req, res) => {
       `SELECT data FROM user_workspace_state WHERE user_id = $1`,
       [req.userId]
     )).rows[0]?.data ?? {};
+    await syncWorkspaceProjection(client, req.userId, data);
     await client.query('COMMIT');
-    try {
-      await client.query('BEGIN');
-      await syncWorkspaceProjection(client, req.userId, data);
-      await client.query('COMMIT');
-    } catch (projectionError) {
-      await client.query('ROLLBACK');
-      console.error('[Workspace projection import warning]:', projectionError);
-    }
     return res.json({ initialized: true, imported: inserted.rows.length > 0, items: data });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -82,6 +76,7 @@ workspaceRouter.put('/import', async (req, res) => {
 
 workspaceRouter.put('/item', async (req, res) => {
   const { key, value } = req.body || {};
+  if(key===`studyduel_user_${req.userId}_active_timer`)return res.status(409).json({error:'Timers now sync through the timer service. Refresh the app before changing a timer.'});
   const items = { [key]: value };
   if (!validWorkspaceItems(items, req.userId)) {
     return res.status(400).json({ error: 'Invalid workspace item' });
@@ -90,6 +85,15 @@ workspaceRouter.put('/item', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [req.userId]);
+    const before=(await client.query('SELECT data FROM user_workspace_state WHERE user_id=$1 FOR UPDATE',[req.userId])).rows[0]?.data || {};
+    if (Object.hasOwn(req.body, 'expectedValue')) {
+      const saved = await client.query('SELECT data ->> $2::text AS value FROM user_workspace_state WHERE user_id=$1', [req.userId,key]);
+      if ((saved.rows[0]?.value ?? null) !== req.body.expectedValue && saved.rows[0]?.value !== value) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'This data changed on another device. Your changes are kept locally. Choose which version to keep.', currentValue: saved.rows[0]?.value ?? null });
+      }
+    }
     await client.query(
       `INSERT INTO user_workspace_state (user_id, data)
        VALUES ($1, jsonb_build_object($2::text, $3::text))
@@ -98,15 +102,16 @@ workspaceRouter.put('/item', async (req, res) => {
            updated_at = now()`,
       [req.userId, key, value]
     );
-    await client.query('COMMIT');
-    try {
-      await client.query('BEGIN');
-      await syncWorkspaceProjection(client, req.userId, { [key]: value }, key);
-      await client.query('COMMIT');
-    } catch (projectionError) {
-      await client.query('ROLLBACK');
-      console.error('[Workspace projection item warning]:', projectionError);
+    await syncWorkspaceProjection(client, req.userId, { [key]: value }, key);
+    if(key===`studyduel_user_${req.userId}_time_entries`) {
+      const previous=JSON.parse(before[key] || '[]'),next=JSON.parse(value);
+      if(!Array.isArray(previous)||!Array.isArray(next))throw new Error('Invalid session list');
+      const kept=new Set(next.map(entry=>entry.id));
+      const removed=previous.map(entry=>entry.id).filter(id=>!kept.has(id)&&/^[\da-f-]{36}$/i.test(id));
+      if(removed.length)await client.query('DELETE FROM time_entries WHERE user_id=$1 AND id=ANY($2::uuid[])',[req.userId,removed]);
     }
+
+    await client.query('COMMIT');
     return res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');

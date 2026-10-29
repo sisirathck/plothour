@@ -1416,3 +1416,4 @@
   .settings-confirm-backdrop, .settings-export-preview-backdrop { align-items: end; padding: 10px; }
   .settings-confirm-dialog, .settings-export-preview { width: 100%; max-height: calc(100dvh - 20px); overflow-y: auto; border-radius: 20px 20px 14px 14px; }
 }
+.sharing-project-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0}.sharing-project-list label{display:flex;gap:8px;align-items:center;font-size:13px}.settings-bento-card:has(.sharing-project-list) p{font-size:12px;line-height:1.8;color:var(--sd-text-muted)}.settings-bento-card:has(.sharing-project-list) select{display:block;margin-top:10px;padding:10px;background:var(--sd-bg-subtle);color:var(--sd-text-primary);border:1px solid var(--sd-border-soft);border-radius:6px}

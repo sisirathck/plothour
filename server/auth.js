@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+if (process.env.NODE_ENV === 'production' && (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32)) throw new Error('Production requires a unique AUTH_SECRET of at least 32 characters.');
+
 const AUTH_SECRET = process.env.AUTH_SECRET || 'studyduel-development-fallback-secret-key-32b';
 const COOKIE_NAME = 'studyduel_session';
 

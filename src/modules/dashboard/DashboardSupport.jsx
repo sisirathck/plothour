@@ -69,7 +69,7 @@ const useSvgChartTooltip = () => {
   return { show, hide, node };
 };
 
-export const SnapshotPanel = ({ snapshotMetrics }) => {
+export const SnapshotPanel = ({ snapshotMetrics, onReviewTargets }) => {
   const weekMetric = snapshotMetrics.find((m) => m.id === 'time-week');
   const weekSeconds = weekMetric ? (weekMetric.weekDays || []).reduce((s, d) => s + d.seconds, 0) : 0;
   const weeklyPlanned = weekMetric?.weeklyPlannedSeconds || 0;
@@ -96,12 +96,11 @@ export const SnapshotPanel = ({ snapshotMetrics }) => {
       insightText = 'Weekly goal reached — keep the momentum.';
     } else if (weekSeconds >= expectedByNow * 0.92) {
       insightKind = 'good';
-      const hoursPerDay = Math.ceil((pace / 3600) * 10) / 10;
       insightText = `On pace · ${fmtDur(pace)}/day · projecting ${fmtDur(projectedEnd)} by week end`;
     } else if (weekDaysRemaining > 0) {
       const neededPerDay = deficit / weekDaysRemaining;
       insightKind = 'warn';
-      insightText = `${fmtDur(deficit)} remaining · needs ${fmtDur(neededPerDay)}/day over ${weekDaysRemaining} day${weekDaysRemaining !== 1 ? 's' : ''}`;
+      insightText = neededPerDay > 8 * 3600 ? 'Your remaining target needs a demanding pace. Review your priorities or lower the target.' : `${fmtDur(deficit)} remaining · ${fmtDur(neededPerDay)}/day across ${weekDaysRemaining} remaining days. Adjust the target if your plans changed.`;
     } else {
       insightKind = 'warn';
       insightText = `${fmtDur(deficit)} short of weekly goal`;
@@ -119,8 +118,8 @@ export const SnapshotPanel = ({ snapshotMetrics }) => {
           <div className={`db-snapshot-insight-chip db-snapshot-insight-chip--${insightKind}`}>
             <span className={`db-snapshot-insight-dot db-snapshot-insight-dot--${insightKind}`} />
             <span className="db-snapshot-insight-copy">
-              <strong>{insightKind === 'warn' ? 'Pace alert' : insightKind === 'good' ? 'On track' : 'Weekly pace'}</strong>
-              <span>{insightText}</span>
+              <strong>{insightKind === 'warn' ? 'Review your plan' : insightKind === 'good' ? 'On track' : 'Weekly pace'}</strong>
+              <span>{insightText}</span>{insightKind === 'warn' && onReviewTargets && <button type="button" className="db-weekly-set-goal" onClick={onReviewTargets}>Review targets</button>}
             </span>
           </div>
         )}

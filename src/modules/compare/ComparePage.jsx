@@ -1,3 +1,4 @@
+import { summarizeProfile } from '../../../shared/studyMetrics.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarDays, Check, ChevronDown, LoaderCircle, Settings2, Users, Share2, ChevronUp, Info, Image as ImageIcon } from 'lucide-react';
@@ -107,46 +108,9 @@ function weeklySeries(profiles, dates, weekStart) {
   return weeks.slice(-12);
 }
 
-function summarizeLocalProfile(source, start, end, previous, range, calendarDays, projects = []) {
-  const entries = (Array.isArray(source.entries) ? source.entries : []).filter((entry) => Number(entry.startedAt) >= start.getTime() && Number(entry.startedAt) <= end.getTime());
-  const previousEntries = (Array.isArray(source.entries) ? source.entries : []).filter((entry) => Number(entry.startedAt) >= previous.start.getTime() && Number(entry.startedAt) <= previous.end.getTime());
-  const dailyMap = new Map(); const sessions = entries.map((entry) => Number(entry.durationSeconds) || 0); const projectTotals = new Map();
-  entries.forEach((entry) => {
-    const date = dateKey(new Date(Number(entry.startedAt))); dailyMap.set(date, (dailyMap.get(date) || 0) + (Number(entry.durationSeconds) || 0));
-    const label = entry.subjectName || entry.projectName || 'General Study'; projectTotals.set(label, (projectTotals.get(label) || 0) + (Number(entry.durationSeconds) || 0));
-  });
-  const daily = [...dailyMap].map(([date, seconds]) => ({ date, seconds, sessions: entries.filter((entry) => dateKey(new Date(Number(entry.startedAt))) === date).length })).sort((a, b) => a.date.localeCompare(b.date));
-  const seconds = sessions.reduce((sum, value) => sum + value, 0); const activeDays = daily.length; const dayValues = daily.map((day) => day.seconds).sort((a, b) => a - b);
-  const median = dayValues.length ? dayValues.length % 2 ? dayValues[Math.floor(dayValues.length / 2)] : Math.round((dayValues[dayValues.length / 2 - 1] + dayValues[dayValues.length / 2]) / 2) : 0;
-  const goalSeconds = range === 'all' ? 0 : projects.filter((project) => !project.archived).reduce((sum, project) => sum + (project.subjects || []).reduce((subtotal, subject) => {
-    const goal = subject.goals || {};
-    if (range === 'today') return subtotal + (Number(goal.daily) || 0) * 3600;
-    if (range === 'week') return subtotal + (Number(goal.weekly) || 0) * 3600;
-    if (range === 'month') return subtotal + (Number(goal.monthly) || 0) * 3600;
-    return subtotal + (Number(goal.daily) || 0) * calendarDays * 3600;
-  }, 0), 0);
-  const goalDays = projects.length ? daily.filter((day) => {
-    const target = projects.filter((project) => !project.archived).reduce((sum, project) => sum + (project.subjects || []).reduce((n, subject) => n + (Number(subject.goals?.daily) || 0), 0), 0) * 3600;
-    return target > 0 && day.seconds >= target;
-  }).length : 0;
-  const orderedDays = [...daily].sort((a, b) => a.date.localeCompare(b.date)); let longestStreak = 0; let run = 0; let previousDate = '';
-  orderedDays.forEach((day) => { const serial = Math.floor(new Date(`${day.date}T00:00:00Z`).getTime() / 86400000); run = previousDate && serial - previousDate === 1 ? run + 1 : 1; previousDate = serial; longestStreak = Math.max(longestStreak, run); });
-  const streakAtEnd = orderedDays.at(-1)?.date === dateKey(end) ? run : 0;
-  const bestDay = [...daily].sort((a, b) => b.seconds - a.seconds)[0] || null; const longestSession = [...entries].sort((a, b) => b.durationSeconds - a.durationSeconds)[0] || null;
-  const peakHours = new Map(); let weekdaySeconds = 0;
-  entries.forEach((entry) => { const date = new Date(Number(entry.startedAt)); const hour = date.getHours(); peakHours.set(hour, (peakHours.get(hour) || 0) + (Number(entry.durationSeconds) || 0)); if (![0, 6].includes(date.getDay())) weekdaySeconds += Number(entry.durationSeconds) || 0; });
-  const peakHour = [...peakHours].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  const recentToday = new Date(); const recentFrom = new Date(recentToday.getFullYear(), recentToday.getMonth(), recentToday.getDate() - 6).getTime();
-  const recentTo = recentToday.getTime(); const recentTotals = new Map();
-  (Array.isArray(source.entries) ? source.entries : []).filter((entry) => Number(entry.startedAt) >= recentFrom && Number(entry.startedAt) <= recentTo).forEach((entry) => {
-    const date = dateKey(new Date(Number(entry.startedAt))); recentTotals.set(date, (recentTotals.get(date) || 0) + (Number(entry.durationSeconds) || 0));
-  });
-  return {
-    id: source.id, name: source.name,
-    current: { seconds, activeDays, sessions: entries.length, averageActiveDaySeconds: activeDays ? Math.round(seconds / activeDays) : 0, averageSessionSeconds: entries.length ? Math.round(seconds / entries.length) : 0, sessionsPerCalendarDay: entries.length / Math.max(1, calendarDays), medianActiveDaySeconds: median, longSessionShare: entries.length ? entries.filter((entry) => entry.durationSeconds >= 2700).length / entries.length : 0, shortSessions: entries.filter((entry) => entry.durationSeconds < 900).length, thirtyMinuteDays: dayValues.filter((value) => value >= 1800).length, goalDays, goalSeconds, goalProgressPct: goalSeconds ? Math.round(seconds / goalSeconds * 100) : null, weekdaySeconds, weekendSeconds: seconds - weekdaySeconds, streakAtEnd, longestStreak, bestDay, longestSession: longestSession ? { seconds: longestSession.durationSeconds, date: dateKey(new Date(Number(longestSession.startedAt))) } : null, peakHour, projectBreakdown: [...projectTotals].map(([name, value]) => ({ name, seconds: value })).sort((a, b) => b.seconds - a.seconds) },
-    previous: { seconds: previousEntries.reduce((sum, entry) => sum + (Number(entry.durationSeconds) || 0), 0) }, daily,
-    recentDaily: [...recentTotals].map(([date, value]) => ({ date, seconds: value })).sort((a, b) => a.date.localeCompare(b.date)),
-  };
+function summarizeLocalProfile(source,start,end,previous,range,calendarDays,projects=[]) {
+  const now=new Date();
+  return summarizeProfile({id:source.id,name:source.name,entries:source.entries,projects,start:start.getTime(),end:end.getTime(),previousStart:previous.start.getTime(),previousEnd:previous.end.getTime(),range,calendarDays,recentStart:new Date(now.getFullYear(),now.getMonth(),now.getDate()-6).getTime(),recentEnd:now.getTime()});
 }
 
 function PatternMetrics({ profile }) {

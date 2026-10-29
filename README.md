@@ -201,7 +201,7 @@ flowchart LR
 - **Dedicated APIs:** the backend also provides project and timer endpoints backed by relational tables, alongside connections, authentication, administration, and activity reporting.
 - **Comparisons:** connected-account data is fetched through the connections API; demo comparisons use generated profiles.
 
-The current web timer is driven by client timestamps and workspace sync. It does not yet guarantee conflict-free simultaneous editing or server-authoritative timing across devices. The dedicated timer endpoints and browser workspace are separate paths in the current implementation. Failed workspace saves are logged, so local browser state should not replace a verified backup.
+The authenticated web timer and browser extension now use the same server timer service. Start, switch, pause, resume and stop changes are serialized per account and committed with session history. Workspace edits use a durable local outbox, retry failures, and detect stale writes rather than silently overwriting another device. Core session metrics and goal conversion helpers live in `shared/studyMetrics.js`. General workspace editing remains optimistic; conflicts require the user to choose a version.
 
 ### Code map
 
@@ -275,7 +275,7 @@ For Chromium-based browsers, open the extension manager, enable **Developer mode
 
 Start with a focused [issue](https://github.com/sisirathck/studyduel-2.0/issues) or pull request explaining the behavior you want to improve. For UI work, include before/after captures in both themes and check a narrow viewport. For changes to sessions or goals, check that the timer, dashboard, calendar, and comparisons agree.
 
-Run `npm run build` and `npm run lint` before submitting. The repository currently has no automated test script; lint output includes existing warnings. Keep screenshots and examples synthetic, and exclude credentials and personal study histories from contributions.
+Run `npm run build` and `npm run lint` before submitting. Run `npm test` for unit checks and `npm run test:runtime` against a running local API and PostgreSQL database for integration checks. The runtime check creates and removes only synthetic accounts. Lint output includes existing warnings. Keep screenshots and examples synthetic, and exclude credentials and personal study histories from contributions.
 
 ### Troubleshooting
 

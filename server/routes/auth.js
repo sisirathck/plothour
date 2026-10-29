@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { authenticate } from '../middleware.js';
+import { loginRateLimit } from '../requestSecurity.js';
 import { createHmac, randomInt, timingSafeEqual } from 'crypto';
 import nodemailer from 'nodemailer';
 import { query } from '../db.js';
@@ -417,7 +419,7 @@ authRouter.post('/resend-verification', async (req, res) => {
 /**
  * Log in with email and password
  */
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', loginRateLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -709,7 +711,7 @@ authRouter.post('/change-password', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const token = req.cookies?.studyduel_session || bearerToken;
+    const token = bearerToken || req.cookies?.studyduel_session;
     if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
     const payload = verifySessionToken(token);
@@ -838,11 +840,11 @@ authRouter.post('/google', async (req, res) => {
 /**
  * Get currently authenticated user session
  */
-authRouter.get('/me', async (req, res) => {
+authRouter.get('/me', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const token = req.cookies?.studyduel_session || bearerToken;
+    const token = bearerToken || req.cookies?.studyduel_session;
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -884,7 +886,7 @@ authRouter.patch('/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const token = req.cookies?.studyduel_session || bearerToken;
+    const token = bearerToken || req.cookies?.studyduel_session;
     const payload = token ? verifySessionToken(token) : null;
     if (!payload?.userId) return res.status(401).json({ error: 'Not authenticated' });
 
@@ -922,7 +924,7 @@ authRouter.patch('/profile', async (req, res) => {
  * Log out and clear session cookie
  */
 authRouter.post('/logout', async (req, res) => {
-  const token = req.cookies?.studyduel_session;
+  const token = req.cookies?.studyduel_session || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
   const payload = token ? verifySessionToken(token) : null;
   if (payload?.jti) {
     try {

@@ -1,3 +1,4 @@
+import { commandTimer, refreshServerTimer } from '../../data/serverTimer';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play,
@@ -30,7 +31,7 @@ import {
   rj,
 } from './TimerSupport';
 import './Timer.css';
-export const TimerPage = ({ user, onNavigate }) => {
+export const TimerPage = ({ user, onNavigate, requestedTask }) => {
   const { config, text } = useSiteCustomization();
   const projectsKey = user?.id ? `studyduel_user_${user.id}_projects` : K_PROJECTS;
   const activeKey = user?.id ? `studyduel_user_${user.id}_active_timer` : K_ACTIVE;
@@ -59,14 +60,23 @@ export const TimerPage = ({ user, onNavigate }) => {
   const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
   const searchRef = useRef(null);
   const [pendingSelection, setPendingSelection] = useState(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(() => Boolean(activeTimer?.pausedAt));
   // Keep the pause snapshot in milliseconds. Storing whole seconds here made
   // every pause/resume cycle silently discard the fractional second.
-  const [pausedElapsedMs, setPausedElapsedMs] = useState(0);
+  const [pausedElapsedMs, setPausedElapsedMs] = useState(() => activeTimer?.pausedAt ? Math.max(0, activeTimer.pausedAt - activeTimer.startedAt - (activeTimer.pausedSeconds || 0) * 1000) : 0);
   const [notice, setNotice] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const closeCalendar = useCallback(() => setCalendarOpen(false), []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const refresh = () => refreshServerTimer(user.id).catch(error => setNotice(error.message));
+    refresh();
+    const timer = window.setInterval(refresh, 5000);
+    window.addEventListener('focus', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, [user?.id]);
 
   // Live clock tick
   useEffect(() => {
@@ -81,11 +91,11 @@ export const TimerPage = ({ user, onNavigate }) => {
 
   // Sync state
   useEffect(() => {
-    localStorage.setItem(activeKey, JSON.stringify(activeTimer));
+    if (!user?.id) localStorage.setItem(activeKey, JSON.stringify(activeTimer));
   }, [activeKey, activeTimer]);
 
   useEffect(() => {
-    localStorage.setItem(entriesKey, JSON.stringify(entries));
+    if (localStorage.getItem(entriesKey) !== JSON.stringify(entries)) localStorage.setItem(entriesKey, JSON.stringify(entries));
   }, [entriesKey, entries]);
 
   useEffect(() => {
@@ -107,8 +117,9 @@ export const TimerPage = ({ user, onNavigate }) => {
     const syncStoppedSession = () => {
       setActiveTimer(rj(activeKey, null));
       setEntries(rj(entriesKey, []));
-      setIsPaused(false);
-      setPausedElapsedMs(0);
+      const timer = rj(activeKey, null);
+      setIsPaused(Boolean(timer?.pausedAt));
+      setPausedElapsedMs(timer?.pausedAt ? Math.max(0, timer.pausedAt - timer.startedAt - (timer.pausedSeconds || 0) * 1000) : 0);
     };
     window.addEventListener('studyduel:timer-storage', syncStoppedSession);
     return () => window.removeEventListener('studyduel:timer-storage', syncStoppedSession);
@@ -141,7 +152,7 @@ export const TimerPage = ({ user, onNavigate }) => {
     if (!activeTimer) return 0;
     return isPaused
       ? pausedElapsedMs
-      : Math.max(0, now.getTime() - activeTimer.startedAt);
+      : Math.max(0, now.getTime() - activeTimer.startedAt - (activeTimer.pausedSeconds || 0) * 1000);
   }, [activeTimer, now, isPaused, pausedElapsedMs]);
   const elapsed = Math.floor(elapsedMs / 1000);
   const elapsedHundredths = useMemo(() => {
@@ -402,7 +413,12 @@ export const TimerPage = ({ user, onNavigate }) => {
   }, [pendingSelection, activeTimer]);
 
   // Start Session
-  const startTimer = (pId = selProj, sId = selSub) => {
+  const startTimer = async (pId = selProj, sId = selSub, taskId = null) => {
+    if (user?.id) {
+      try { await commandTimer(user.id, 'start', { projectId: pId, subjectId: sId || null, taskId, expectedStartedAt: activeTimer?.startedAt || null, mode: sessionGoalMode || 'stopwatch' }); setSelProj(pId); setSelSub(sId || ''); setNotice('Timer started · saved to your account'); }
+      catch(error) { setNotice(error.message); }
+      return;
+    }
     setPendingSelection(null);
     setKeyboardComboIndex(-1);
     const proj = projects.find((p) => p.id === pId);
@@ -433,6 +449,7 @@ export const TimerPage = ({ user, onNavigate }) => {
       subjectId: sub?.id || '',
       subjectName: sub?.name || '',
       color: sub?.color || proj.color || '#f3957f',
+      taskId,
       mode: sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch',
       startedAt: t,
     });
@@ -444,6 +461,16 @@ export const TimerPage = ({ user, onNavigate }) => {
   };
   const startTimerRef = useRef(startTimer);
   startTimerRef.current = startTimer;
+  const handledTask = useRef(null);
+  useEffect(() => {
+    if (!requestedTask || handledTask.current === requestedTask.requestId) return;
+    handledTask.current = requestedTask.requestId;
+    const project = projects.find(item => item.name === requestedTask.project_name);
+    if (!project) { setNotice('Choose an existing project for this task before tracking time.'); return; }
+    const sub = project.subjects?.find(item => item.name === requestedTask.subproject_name);
+    startTimerRef.current(project.id, sub?.id || '', requestedTask.id);
+  }, [requestedTask, projects, user?.id]);
+
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -486,7 +513,8 @@ export const TimerPage = ({ user, onNavigate }) => {
   }, [activeStudyPanelTab, keyboardComboIndex]);
 
   // Stop Session
-  const stopTimer = () => {
+  const stopTimer = async () => {
+    if (user?.id) { try { await commandTimer(user.id, 'stop', { expectedStartedAt: activeTimer?.startedAt }); setNotice('Session saved'); } catch(error) { setNotice(error.message); } return; }
     if (!activeTimer) return;
     const t = Date.now();
     const dur = Math.max(1, Math.floor((isPaused ? pausedElapsedMs : t - activeTimer.startedAt) / 1000));
@@ -548,7 +576,8 @@ export const TimerPage = ({ user, onNavigate }) => {
     }
   };
 
-  const discardTimer = () => {
+  const discardTimer = async () => {
+    if (user?.id) { try { await commandTimer(user.id, 'discard', { expectedStartedAt: activeTimer?.startedAt }); setNotice('Session discarded'); } catch(error) { setNotice(error.message); } return; }
     if (!activeTimer) return;
     setActiveTimer(null);
     setIsPaused(false);
@@ -558,7 +587,8 @@ export const TimerPage = ({ user, onNavigate }) => {
   };
 
   // Pause / Resume
-  const togglePause = () => {
+  const togglePause = async () => {
+    if (user?.id) { try { await commandTimer(user.id, isPaused ? 'resume' : 'pause', { expectedStartedAt: activeTimer?.startedAt }); } catch(error) { setNotice(error.message); } return; }
     if (!activeTimer) return;
     if (isPaused) {
       const adjustedStart = Date.now() - pausedElapsedMs;

@@ -1,0 +1,17 @@
+import React, { useState } from 'react';
+import { flushWorkspace } from '../../data/workspaceSync';
+export function WorkspaceBackup({user}) {
+  const [preview,setPreview]=useState(null),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
+  const download=async()=>{setBusy(true);try{
+    // Preserve pending local edits in the export even when the server is offline.
+    let server={format:'plothour-workspace',version:1,accountId:user.id,items:{},tasks:[]};
+    try{const response=await fetch('/api/backup');if(!response.ok)throw new Error();server=await response.json();}catch{setMessage('Offline backup: includes local workspace data; server-only tasks may be absent.');}
+    const prefix=`studyduel_user_${user.id}_`;
+    for(const key of Object.keys(localStorage))if(key.startsWith(prefix)&&!key.endsWith('_active_timer'))server.items[key]=localStorage.getItem(key);
+    server.conflictArchive=JSON.parse(localStorage.getItem(`plothour_conflicts_${user.id}`)||'[]');
+    const url=URL.createObjectURL(new Blob([JSON.stringify({...server,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`plothour-workspace-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch{setMessage('Could not create backup. Please retry.');}finally{setBusy(false);}};
+  const inspect=async event=>{try{const file=event.target.files?.[0];if(!file)return;if(file.size>8000000)throw new Error('Choose a backup smaller than 8 MB.');const data=JSON.parse(await file.text());if(data.format!=='plothour-workspace'||data.version!==1||data.accountId!==user.id)throw new Error('Choose a workspace backup from this account.');setPreview(data);setMessage('');}catch(e){setMessage(e.message);}finally{event.target.value='';}};
+  const restore=async()=>{setBusy(true);try{await flushWorkspace();const response=await fetch('/api/backup/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(preview)});const data=await response.json();if(!response.ok)throw new Error(data.error);window.location.reload();}catch(e){setMessage(e.message);}finally{setBusy(false);}};
+  return <section className="settings-bento-card" style={{padding:24,marginTop:24}}><h2>Workspace backup & recovery</h2><p>Back up your projects, subprojects, goals, sessions, tasks and workspace preferences. Restore merges missing records into this account and keeps existing edits. It does not start timers or expand email or comparison sharing.</p>{!user?.id?<p>Sign in to back up your account workspace. Demo session export remains available above.</p>:<><button type="button" className="settings-secondary-btn" disabled={busy} onClick={download}>Download full backup</button><label style={{display:'block',marginTop:16}}>Review a backup to restore<input type="file" accept=".json,application/json" onChange={inspect} disabled={busy}/></label>{preview&&<div><p>Backup created {preview.exportedAt || 'on an unknown date'} · {preview.tasks?.length || 0} task records. Current records are preserved; missing projects and sessions are merged.</p><button type="button" className="settings-secondary-btn" onClick={()=>setPreview(null)}>Cancel</button><button type="button" className="settings-primary-btn" disabled={busy} onClick={restore}>Merge backup into my workspace</button></div>}</>}{message&&<p role="status">{message}</p>}</section>;
+}

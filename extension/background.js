@@ -1,177 +1,102 @@
-/**
- * PlotHour Browser Extension - Background Service Worker
- * Compatible with Chrome, Brave, Safari, Edge (Manifest V3)
- */
-
 const ext = typeof chrome !== 'undefined' ? chrome : browser;
-
-// Storage keys
-const STORAGE_KEYS = {
-  ACTIVE_TIMER: 'studyduel_active_timer',
-  USER: 'studyduel_user',
-  TOKEN: 'studyduel_token',
-  PROJECTS: 'studyduel_projects',
-  ENTRIES: 'studyduel_time_entries',
-  SETTINGS: 'studyduel_settings',
-};
-
-// Format elapsed time for browser action badge (e.g., '14m', '1.5h')
-function formatBadgeText(seconds) {
-  if (seconds < 60) return '●';
-  const mins = Math.floor(seconds / 60);
-  if (mins < 60) return `${mins}m`;
-  const hours = (mins / 60).toFixed(1);
-  return `${hours.replace(/\.0$/, '')}h`;
+let mutation = Promise.resolve();
+function validOrigin(value) {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) throw new Error('Use HTTPS, or a localhost address for development.');
+  return url.origin;
 }
-
-// Update the extension toolbar icon badge
-async function updateBadge() {
-  try {
-    const data = await ext.storage.local.get([STORAGE_KEYS.ACTIVE_TIMER]);
-    const active = data[STORAGE_KEYS.ACTIVE_TIMER];
-
-    if (active && active.startedAt) {
-      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - active.startedAt) / 1000));
-      const badgeText = formatBadgeText(elapsedSeconds);
-
-      await ext.action.setBadgeText({ text: badgeText });
-      await ext.action.setBadgeBackgroundColor({ color: '#f3957f' }); // PlotHour Warm Coral
-      if (ext.action.setBadgeTextColor) {
-        await ext.action.setBadgeTextColor({ color: '#ffffff' });
-      }
-      await ext.action.setTitle({
-        title: `PlotHour: Running on "${active.projectName}${active.subjectName ? ` - ${active.subjectName}` : ''}" (${badgeText})`,
-      });
-    } else {
-      await ext.action.setBadgeText({ text: '' });
-      await ext.action.setTitle({ title: 'PlotHour Time Tracker - Click to start' });
-    }
-  } catch (err) {
-    console.error('[PlotHour BG] Badge update error:', err);
+async function connection() { const data = await ext.storage.local.get(['studyduel_server_url','studyduel_token','studyduel_tab_id','studyduel_connect_paused']); return { origin: data.studyduel_server_url || 'https://plothour.com', token: data.studyduel_token, tabId: data.studyduel_tab_id, paused: data.studyduel_connect_paused }; }
+async function api(path, options = {}, config) {
+  const { origin, token, tabId } = config || await connection();
+  if(!token && tabId) {
+    let result;
+    try { result=await ext.tabs.sendMessage(tabId,{type:'AUTHENTICATED_REQUEST',path,method:options.method || 'GET',body:options.body}); }
+    catch {throw new Error('Open your PlotHour tab and reconnect your browser session.');}
+    if(!result || result.status>=400)throw new Error(result?.data?.error || 'Your app session ended. Sign in to PlotHour again.');
+    if(result.data.syncWarning) result.data.warning=result.data.syncWarning;
+    return result.data;
   }
+  let response;
+  for (let attempt=0; attempt<2; attempt++) {
+    try { response = await fetch(`${validOrigin(origin)}/api${path}`, { credentials: 'omit', ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, signal: AbortSignal.timeout(15000) }); break; }
+    catch(error) { if(attempt===1 || !path.startsWith('/timer/')) throw error; }
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+  return data;
 }
-
-// Alarms for background ticker (updates toolbar badge every 30s)
-ext.alarms.create('badge_tick', { periodInMinutes: 0.5 });
-ext.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'badge_tick') {
-    updateBadge();
-  }
-});
-
-// Broadcast state change to all open PlotHour web tabs
-async function notifyTabs(message) {
-  try {
-    const tabs = await ext.tabs.query({
-      url: ['http://localhost:*/*', 'http://127.0.0.1:*/*'],
-    });
-    for (const tab of tabs) {
-      ext.tabs.sendMessage(tab.id, message).catch(() => {});
-    }
-  } catch (err) {
-    console.warn('[PlotHour BG] Tab notification warning:', err);
-  }
+async function badge(activeTimer) {
+  const seconds = activeTimer ? Math.max(0, Math.floor(((activeTimer.pausedAt || Date.now()) - activeTimer.startedAt) / 1000 - (activeTimer.pausedSeconds || 0))) : 0;
+  await ext.action.setBadgeText({ text: activeTimer ? activeTimer.pausedAt ? 'Ⅱ' : seconds < 60 ? '●' : seconds < 3600 ? `${Math.floor(seconds / 60)}m` : `${(seconds / 3600).toFixed(1)}h` : '' });
+  await ext.action.setBadgeBackgroundColor({ color: '#746eac' });
 }
-
-// Handle runtime messages from popup and content scripts
-ext.runtime.onMessage.addListener((req, sender, sendResponse) => {
-  if (req.type === 'START_TIMER') {
-    (async () => {
-      const activeTimer = {
-        projectId: req.projectId,
-        projectName: req.projectName,
-        subjectId: req.subjectId || '',
-        subjectName: req.subjectName || '',
-        color: req.color || '#10b981',
-        note: req.note || '',
-        startedAt: req.startedAt || Date.now(),
-      };
-
-      await ext.storage.local.set({ [STORAGE_KEYS.ACTIVE_TIMER]: activeTimer });
-      await updateBadge();
-      await notifyTabs({ type: 'TIMER_STARTED', activeTimer });
-      sendResponse({ success: true, activeTimer });
-    })();
-    return true; // Keep channel open for async response
+async function saveTimer(activeTimer) { await ext.storage.local.set({ studyduel_active_timer: activeTimer }); await badge(activeTimer); }
+async function getState() {
+  const config = await connection();
+  if(config.paused) return {origin:config.origin,user:null,projects:[],activeTimer:null};
+  if (!config.token && !config.tabId) {
+    try { await connectTab(); return getState(); }
+    catch { return { origin: config.origin, user: null, projects: [], activeTimer: null }; }
   }
-
-  if (req.type === 'STOP_TIMER') {
-    (async () => {
-      const data = await ext.storage.local.get([STORAGE_KEYS.ACTIVE_TIMER, STORAGE_KEYS.ENTRIES]);
-      const active = data[STORAGE_KEYS.ACTIVE_TIMER];
-      const now = Date.now();
-
-      if (active) {
-        const dur = Math.max(1, Math.floor((now - active.startedAt) / 1000));
-        const newEntry = {
-          id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(now),
-          ...active,
-          endedAt: now,
-          durationSeconds: dur,
-        };
-
-        const prevEntries = Array.isArray(data[STORAGE_KEYS.ENTRIES]) ? data[STORAGE_KEYS.ENTRIES] : [];
-        await ext.storage.local.set({
-          [STORAGE_KEYS.ACTIVE_TIMER]: null,
-          [STORAGE_KEYS.ENTRIES]: [newEntry, ...prevEntries].slice(0, 100),
-        });
-
-        await updateBadge();
-        await notifyTabs({ type: 'TIMER_STOPPED', entry: newEntry });
-        sendResponse({ success: true, entry: newEntry });
-      } else {
-        await ext.storage.local.set({ [STORAGE_KEYS.ACTIVE_TIMER]: null });
-        await updateBadge();
-        sendResponse({ success: true, entry: null });
-      }
-    })();
-    return true;
+  const [account, projects, timer] = await Promise.all([api('/auth/me'), api('/projects'), api('/timer/active')]);
+  await saveTimer(timer.activeTimer);
+  return { origin: config.origin, user: account.user, projects: projects.projects, activeTimer: timer.activeTimer, warning: timer.warning || timer.syncWarning };
+}
+async function connectTab() {
+  const config=await connection();
+  const tabs=await ext.tabs.query({url:['http://localhost/*','http://127.0.0.1/*','https://plothour.com/*','https://www.plothour.com/*',`${validOrigin(config.origin)}/*`]});
+  for(const tab of tabs.sort((a,b)=>Number(b.active)-Number(a.active))) {
+    try {
+      const result=await ext.tabs.sendMessage(tab.id,{type:'AUTHENTICATED_REQUEST',path:'/auth/me',method:'GET'});
+      if(result?.status!==200 || !result.data?.user)continue;
+      const origin=validOrigin(tab.url);
+      await ext.storage.local.remove(['studyduel_token']);
+      await ext.storage.local.set({studyduel_server_url:origin,studyduel_tab_id:tab.id,studyduel_connect_paused:false});
+      return {origin,user:result.data.user};
+    }catch{}
   }
-
-  if (req.type === 'SYNC_FROM_WEBAPP') {
-    (async () => {
-      if (req.activeTimer) {
-        await ext.storage.local.set({ [STORAGE_KEYS.ACTIVE_TIMER]: req.activeTimer });
-      } else if (req.activeTimer === null) {
-        await ext.storage.local.set({ [STORAGE_KEYS.ACTIVE_TIMER]: null });
-      }
-      if (req.projects && Array.isArray(req.projects)) {
-        await ext.storage.local.set({ [STORAGE_KEYS.PROJECTS]: req.projects });
-      }
-      if (req.user) {
-        await ext.storage.local.set({ [STORAGE_KEYS.USER]: req.user });
-      }
-      await updateBadge();
-      sendResponse({ success: true });
-    })();
-    return true;
+  throw new Error('Open PlotHour in this browser and sign in first, then reconnect. If the app was already open when you installed the extension, reload that app tab once.');
+}
+async function handle(req) {
+  if (req.type === 'LOGIN') {
+    const origin = validOrigin(req.origin);
+    const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: req.email, password: req.password }) }, { origin });
+    if (!data.token || !data.user) throw new Error('This server did not return an authenticated session.');
+    await ext.storage.local.remove(['studyduel_tab_id']);
+    await ext.storage.local.set({ studyduel_server_url: origin, studyduel_token: data.token,studyduel_connect_paused:false });
+    return { origin, user: data.user };
   }
-
-  if (req.type === 'OPEN_WEBAPP') {
-    (async () => {
-      const targetPath = req.path || '/dashboard';
-      const origin = req.origin || 'http://localhost:5173';
-      const fullUrl = `${origin}${targetPath}`;
-
-      const tabs = await ext.tabs.query({ url: `${origin}/*` });
-      if (tabs.length > 0) {
-        await ext.tabs.update(tabs[0].id, { active: true, url: fullUrl });
-        if (tabs[0].windowId) {
-          await ext.windows.update(tabs[0].windowId, { focused: true });
-        }
-      } else {
-        await ext.tabs.create({ url: fullUrl });
-      }
-      sendResponse({ success: true });
-    })();
-    return true;
+  if (req.type === 'GET_STATE') return getState();
+  if (req.type === 'CONNECT_TAB') return connectTab();
+  if (req.type === 'SET_SERVER') {
+    const origin=validOrigin(req.origin);
+    await ext.storage.local.remove(['studyduel_token','studyduel_tab_id','studyduel_connect_paused']);
+    await ext.storage.local.set({studyduel_server_url:origin,studyduel_connect_paused:true});
+    return {origin,user:null,projects:[],activeTimer:null};
   }
+  if (req.type === 'GOOGLE_LOGIN') {
+    const {origin}=await connection();
+    const tab=await ext.tabs.create({url:`${validOrigin(origin)}/login?extension=1`});
+    await ext.storage.local.remove(['studyduel_token']);
+    if(tab?.id) await ext.storage.local.set({studyduel_tab_id:tab.id,studyduel_connect_paused:false});
+    return {origin};
+  }
+  if (req.type === 'START_TIMER' || req.type === 'STOP_TIMER') {
+    const result = await api(`/timer/${req.type === 'START_TIMER' ? 'start' : 'stop'}`, { method: 'POST', body: JSON.stringify({ projectId: req.projectId, subjectId: req.subjectId, expectedStartedAt: req.expectedStartedAt, commandId: crypto.randomUUID() }) });
+    await saveTimer(result.activeTimer);
+    return result;
+  }
+  if (req.type === 'LOGOUT') { await ext.storage.local.set({studyduel_connect_paused:true}); await ext.storage.local.remove(['studyduel_tab_id','studyduel_token','studyduel_user','studyduel_projects','studyduel_time_entries']); await saveTimer(null); return {}; }
+  if (req.type === 'OPEN_WEBAPP') { const { origin } = await connection(); await ext.tabs.create({ url: `${validOrigin(origin)}${['/timer','/manage'].includes(req.path) ? req.path : '/timer'}` }); return {}; }
+  throw new Error('Unknown extension action.');
+}
+ext.runtime.onMessage.addListener((req, sender, reply) => {
+  // Only extension pages may trigger account and timer actions.
+  if (sender.tab || !sender.url?.startsWith(ext.runtime.getURL(''))) return false;
+  const execute = () => handle(req).then(data => reply({ ...data, success: true })).catch(error => reply({ success: false, error: error.message }));
+  mutation = mutation.then(execute, execute);
+  return true;
 });
-
-// Initialize badge state on install or startup
-ext.runtime.onInstalled.addListener(() => {
-  updateBadge();
-});
-ext.runtime.onStartup.addListener(() => {
-  updateBadge();
-});
+ext.alarms.create('timer-refresh', { periodInMinutes: .5 });
+ext.alarms.onAlarm.addListener(() => getState().catch(() => {}));
+ext.runtime.onStartup.addListener(() => getState().catch(() => {}));

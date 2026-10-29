@@ -1,3 +1,4 @@
+import { subjectGoalHours } from '../../../shared/studyMetrics.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
@@ -33,7 +34,6 @@ export const fmtDur = (s) => {
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
-const WEEKS_PER_MONTH = 365.25 / 7 / 12;
 const STUDY_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const getSubjectStudySchedule = (subject) => {
   const goals = subject?.goals || {};
@@ -49,12 +49,7 @@ export const getSubjectStudySchedule = (subject) => {
   const basis = ['daily', 'weekly', 'monthly'].includes(goals.basis)
     ? goals.basis
     : dailyGoalHours > 0 ? 'daily' : weeklyGoalHours > 0 ? 'weekly' : 'monthly';
-  const dayCount = studyDays.length || ALL_STUDY_DAYS.length;
-  const targetHours = basis === 'daily'
-    ? dailyGoalHours
-    : basis === 'weekly'
-      ? weeklyGoalHours / dayCount
-      : monthlyGoalHours / WEEKS_PER_MONTH / dayCount;
+  const targetHours = subjectGoalHours(subject,'daily');
   const goalDaysLabel = studyDays.map((day) => STUDY_DAY_LABELS[day]).join(', ');
   return { studyDays, targetHours, goalBasis: basis, goalDaysLabel };
 };

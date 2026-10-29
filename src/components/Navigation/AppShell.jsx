@@ -1,3 +1,7 @@
+import { summarizeSessions } from '../../../shared/studyMetrics.js';
+import { Onboarding } from './Onboarding';
+import { WorkspaceStatus } from './WorkspaceStatus';
+import { commandTimer, refreshServerTimer } from '../../data/serverTimer';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { Bell, Flame, LogOut, Settings, Square, X } from 'lucide-react';
 import { StudyDuelLogo } from '../Logo/StudyDuelLogo';
@@ -15,7 +19,7 @@ const navItems = [
   { route: 'timer', path: '/timer', label: 'Timer' },
   { route: 'dashboard', path: '/dashboard', label: 'Dashboard' },
   { route: 'compare', path: '/compare', label: 'Compare' },
-  { route: 'manage', path: '/manage', label: 'Tasks' },
+  { route: 'manage', path: '/manage', label: 'Workspace' },
 ];
 
 const getRouteFromPath = () => {
@@ -48,35 +52,18 @@ const localStudyDateKey = (value) => {
 };
 
 const calculateStudyStreak = (entries) => {
-  const studiedDates = [...new Set((Array.isArray(entries) ? entries : [])
-    .filter((entry) => Number(entry?.durationSeconds) > 0)
-    .map((entry) => localStudyDateKey(entry.startedAt))
-    .filter(Boolean))].sort();
-  const serialFor = (key) => {
-    const [year, month, day] = key.split('-').map(Number);
-    return Date.UTC(year, month - 1, day) / 86400000;
-  };
-  const serials = studiedDates.map(serialFor);
-  let longestStreak = 0;
-  let run = 0;
-  let previous = null;
-  serials.forEach((serial) => {
-    run = previous !== null && serial === previous + 1 ? run + 1 : 1;
-    longestStreak = Math.max(longestStreak, run);
-    previous = serial;
-  });
-  const todaySerial = serialFor(localStudyDateKey(new Date()));
-  const activeSerials = new Set(serials);
-  let cursor = activeSerials.has(todaySerial) ? todaySerial : activeSerials.has(todaySerial - 1) ? todaySerial - 1 : null;
-  let currentStreak = 0;
-  while (cursor !== null && activeSerials.has(cursor)) {
-    currentStreak += 1;
-    cursor -= 1;
-  }
-  return { currentStreak, longestStreak, lastStudyDate: studiedDates.at(-1) || null };
+  const summary=summarizeSessions(entries);
+  const studiedDates=summary.daily.map(day=>day.date);
+  const serialFor=key=>Date.parse(`${key}T00:00:00Z`)/86400000;
+  const serials=new Set(studiedDates.map(serialFor));
+  const today=serialFor(localStudyDateKey(new Date()));
+  let cursor=serials.has(today)?today:today-1,currentStreak=0;
+  while(serials.has(cursor)){currentStreak++;cursor--;}
+  return {currentStreak,longestStreak:summary.longestStreak,lastStudyDate:studiedDates.at(-1)||null};
 };
 
 export const AppShell = ({ user, onLogout }) => {
+  const [requestedTask, setRequestedTask] = useState(null);
   const [currentRoute, setCurrentRoute] = useState(getRouteFromPath);
   const [visitedRoutes, setVisitedRoutes] = useState(() => new Set([getRouteFromPath()]));
   const visibleNavItems = user?.is_admin
@@ -147,7 +134,14 @@ export const AppShell = ({ user, onLogout }) => {
     };
   }, [activeTimerKey]);
 
-  const stopRunningTimer = () => {
+  useEffect(() => {
+    if (!user?.id) return;
+    const timer = setInterval(() => refreshServerTimer(user.id).catch(() => {}), 10000);
+    return () => clearInterval(timer);
+  }, [user?.id]);
+
+  const stopRunningTimer = async () => {
+    if (user?.id) { try { await commandTimer(user.id, 'stop', { expectedStartedAt: activeTimer?.startedAt }); } catch(error) { setReminderNotice({ id: 'timer-save-error', message: error.message }); } return; }
     if (!activeTimer) return;
     const endedAt = Date.now();
     const durationSeconds = Math.max(1, Math.floor((endedAt - Number(activeTimer.startedAt)) / 1000));
@@ -300,6 +294,12 @@ export const AppShell = ({ user, onLogout }) => {
     return { label: `${time}, ${date}`, iso: now.toISOString() };
   })();
 
+  useEffect(() => {
+    const start = event => { setRequestedTask({ ...event.detail, requestId: crypto.randomUUID() }); navigateTo('timer'); };
+    window.addEventListener('plothour:start-task', start);
+    return () => window.removeEventListener('plothour:start-task', start);
+  }, []);
+
   return (
     <div className="app-shell-wrapper">
       {/* Persistent Top Navigation Bar */}
@@ -403,12 +403,14 @@ export const AppShell = ({ user, onLogout }) => {
           </button>
         </div>
       </nav>
+      <WorkspaceStatus user={user} />
+      <Onboarding user={user} onNavigate={navigateTo} />
 
       {reminderNotice && <aside className="app-reminder-toast" role="status"><span className="app-reminder-icon"><Bell size={16} /></span><span>{reminderNotice.message}</span><button type="button" aria-label="Dismiss reminder" onClick={() => setReminderNotice(null)}><X size={15} /></button></aside>}
 
       {/* Modular Section Content */}
       <main className="app-shell-content" id={`panel-${currentRoute}`} role="region">
-        {visitedRoutes.has('timer') && <div className={`app-route-transition${currentRoute === 'timer' ? ' is-active' : ''}`} hidden={currentRoute !== 'timer'}><TimerPage user={user} onNavigate={navigateTo} /></div>}
+        {visitedRoutes.has('timer') && <div className={`app-route-transition${currentRoute === 'timer' ? ' is-active' : ''}`} hidden={currentRoute !== 'timer'}><TimerPage user={user} onNavigate={navigateTo} requestedTask={requestedTask} /></div>}
         {visitedRoutes.has('dashboard') && <div className={`app-route-transition${currentRoute === 'dashboard' ? ' is-active' : ''}`} hidden={currentRoute !== 'dashboard'}><DashboardPage user={user} onNavigate={navigateTo} /></div>}
         {visitedRoutes.has('compare') && <div className={`app-route-transition${currentRoute === 'compare' ? ' is-active' : ''}`} hidden={currentRoute !== 'compare'}><ComparePage user={user} onNavigate={navigateTo} /></div>}
         {visitedRoutes.has('manage') && <div className={`app-route-transition${currentRoute === 'manage' ? ' is-active' : ''}`} hidden={currentRoute !== 'manage'}><ManagePage user={user} /></div>}

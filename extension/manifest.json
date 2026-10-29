@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PlotHour — Time Tracking",
-  "version": "1.0.0",
-  "description": "Log time directly from your browser for projects and tasks with PlotHour. One-click timer, instant sync, and rich stats.",
+  "name": "PlotHour \u2014 Time Tracking",
+  "version": "1.1.2",
+  "description": "Select your project and optional subproject, then start and stop your PlotHour timer.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -36,9 +36,13 @@
     {
       "matches": [
         "http://localhost/*",
-        "http://127.0.0.1/*"
+        "http://127.0.0.1/*",
+        "https://plothour.com/*",
+        "https://www.plothour.com/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

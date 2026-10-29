@@ -1,0 +1,8 @@
+import React, { useEffect, useState } from 'react';
+import { flushWorkspace, getWorkspaceSyncStatus, resolveWorkspaceConflict } from '../../data/workspaceSync';
+export function WorkspaceStatus({user}) {
+  const [status,setStatus]=useState(getWorkspaceSyncStatus);
+  useEffect(()=>{const update=e=>setStatus(e.detail);window.addEventListener('plothour:sync-status',update);return()=>window.removeEventListener('plothour:sync-status',update);},[]);
+  if(!user?.id) return null;
+  return <div className={`workspace-sync-status is-${status.state}`} role="status"><span>{status.state==='saved'?'All changes saved':status.state==='saving'?'Saving changes…':status.state==='offline'?'Offline · changes kept on this device':status.state==='conflict'?'Changes found on another device · your local edits are preserved':'Could not save · changes kept on this device'}</span>{['error','offline'].includes(status.state)&&<button type="button" onClick={()=>flushWorkspace().catch(()=>{})}>Retry</button>}{status.state==='conflict'&&<details><summary>Review versions</summary><p>Choose the saved account version or this device’s edits. Both copies are retained locally before resolving.</p>{status.conflicts?.map(item=><div key={item.key}><p>{item.key.endsWith('_time_entries')?'Session history':item.key.endsWith('_projects')?'Projects':'Workspace setting'}</p><button type="button" onClick={()=>resolveWorkspaceConflict(item.key,'server').catch(()=>{})}>Use saved account version</button><button type="button" onClick={()=>resolveWorkspaceConflict(item.key,'local').catch(()=>{})}>Keep this device’s edits</button></div>)}</details>}</div>;
+}
