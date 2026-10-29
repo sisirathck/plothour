@@ -476,3 +476,40 @@ export const CompactStopwatchFace = ({ elapsed, targetSeconds = 0 }) => {
     </svg>
   );
 };
+
+/* ── Nested study-target progress rings ── */
+export const SessionTargetRings = ({ rings = [] }) => {
+  const visibleRings = rings.slice(0, 3);
+  const radii = visibleRings.length === 1 ? [48] : visibleRings.length === 2 ? [50, 37] : [51, 39, 27];
+
+  return (
+    <div className={`session-target-rings ring-count-${visibleRings.length}`}>
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle className="session-target-rings-plate" cx="60" cy="60" r="56" />
+        {visibleRings.map((ring, index) => {
+          const radius = radii[index];
+          const circumference = 2 * Math.PI * radius;
+          const progress = Math.max(0, Math.min(100, ring.progress));
+          return (
+            <g key={ring.id} className={`session-target-ring session-target-ring-${ring.id}`}>
+              <circle className="session-target-ring-track" cx="60" cy="60" r={radius} />
+              <circle
+                className="session-target-ring-value"
+                cx="60"
+                cy="60"
+                r={radius}
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference * (1 - progress / 100)}
+              />
+            </g>
+          );
+        })}
+      </svg>
+      <div className="session-target-ring-key" aria-hidden="true">
+        {visibleRings.map((ring) => (
+          <span key={ring.id}><i className={`is-${ring.id}`} />{ring.shortLabel}<b>{Math.round(ring.progress)}%</b></span>
+        ))}
+      </div>
+    </div>
+  );
+};

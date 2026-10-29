@@ -8,7 +8,7 @@ import {
   Target,
   Search,
 } from 'lucide-react';
-import { AnalogueClockFace, CompactStopwatchFace, HorologyArt } from './TimerClock';
+import { AnalogueClockFace, HorologyArt, SessionTargetRings } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
 import { TimerPlaceholderPanel } from './TimerPlaceholderPanel';
 import { CalendarPage } from '../calendar/CalendarPage';
@@ -141,7 +141,61 @@ export const TimerPage = ({ user }) => {
 
   const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch';
   const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[2];
-  const sessionProgress = sessionGoal.seconds ? Math.min(100, Math.round((elapsed / sessionGoal.seconds) * 100)) : 0;
+  const sessionTargetRings = useMemo(() => {
+    if (!sessionProject) return [];
+    const goals = sessionSubject?.goals || {};
+    const recurringGoals = [
+      { id: 'daily', shortLabel: 'D', hours: Number(goals.daily) || 0 },
+      { id: 'weekly', shortLabel: 'W', hours: Number(goals.weekly) || 0 },
+      { id: 'monthly', shortLabel: 'M', hours: Number(goals.monthly) || 0 },
+    ].filter((goal) => goal.hours > 0);
+
+    const matchesSession = (entry) => {
+      const projectMatches = entry.projectId ? entry.projectId === sessionProjectId : entry.projectName === sessionProject.name;
+      if (!projectMatches) return false;
+      if (!sessionSubject) return true;
+      return entry.subjectId ? entry.subjectId === sessionSubjectId : entry.subjectName === sessionSubject.name;
+    };
+    const matchedEntries = entries.filter(matchesSession);
+    const activeSeconds = activeTimer?.projectId === sessionProjectId
+      && (!sessionSubjectId || activeTimer?.subjectId === sessionSubjectId) ? elapsed : 0;
+    const periodStart = {
+      daily: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+      monthly: new Date(now.getFullYear(), now.getMonth(), 1),
+    };
+    const weekDayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const preferredWeekStart = weekDayKeys.indexOf(timerPreferences.weekStart || 'monday');
+    const weekStartDay = preferredWeekStart >= 0 ? preferredWeekStart : 1;
+    periodStart.weekly = new Date(periodStart.daily);
+    periodStart.weekly.setDate(periodStart.weekly.getDate() - ((periodStart.weekly.getDay() - weekStartDay + 7) % 7));
+
+    const secondsSince = (start) => matchedEntries.reduce((total, entry) => (
+      Number(entry.startedAt) >= start.getTime() && Number(entry.startedAt) <= now.getTime()
+        ? total + (Number(entry.durationSeconds) || 0)
+        : total
+    ), 0) + activeSeconds;
+
+    if (recurringGoals.length) {
+      return recurringGoals.map((goal) => ({
+        ...goal,
+        completedSeconds: secondsSince(periodStart[goal.id]),
+        targetSeconds: goal.hours * 3600,
+        progress: Math.min(100, (secondsSince(periodStart[goal.id]) / (goal.hours * 3600)) * 100),
+      }));
+    }
+
+    const estimatedHours = Number(sessionSubject?.estimateHours)
+      || (!sessionSubject ? (sessionProject.subjects || []).reduce((total, subject) => total + (Number(subject.estimateHours) || 0), 0) : 0);
+    if (estimatedHours <= 0) return [];
+    const completedSeconds = matchedEntries.reduce((total, entry) => total + (Number(entry.durationSeconds) || 0), 0) + activeSeconds;
+    return [{
+      id: 'total',
+      shortLabel: 'T',
+      completedSeconds,
+      targetSeconds: estimatedHours * 3600,
+      progress: Math.min(100, (completedSeconds / (estimatedHours * 3600)) * 100),
+    }];
+  }, [activeTimer?.projectId, activeTimer?.subjectId, elapsed, entries, now, sessionProject, sessionProjectId, sessionSubject, sessionSubjectId, timerPreferences.weekStart]);
   const focusSchedule = getSubjectStudySchedule(sessionSubject);
   const focusGoalSecs = focusSchedule.targetHours * 3600;
   const focusIsPlannedToday = focusSchedule.studyDays.includes(now.getDay());
@@ -832,8 +886,18 @@ export const TimerPage = ({ user }) => {
                     {activeTimer.subjectName && <b style={{ color: sessionSubject?.color || sessionProject?.color || activeTimer.color || 'var(--sd-coral)' }}>{activeTimer.subjectName}</b>}
                   </div>
                   <span className="timer-running-divider" aria-hidden="true" />
-                  <div className="timer-running-progress" role="timer" aria-label={`Elapsed stopwatch ${fmtClock(elapsed)}`}>
-                    <CompactStopwatchFace elapsed={elapsed} targetSeconds={sessionGoal.seconds} />
+                  <div
+                    className="timer-running-progress"
+                    role="img"
+                    aria-label={sessionTargetRings.length
+                      ? sessionTargetRings.map((ring) => `${ring.id} target ${Math.round(ring.progress)} percent complete`).join(', ')
+                      : 'No study target configured'}
+                  >
+                    {sessionTargetRings.length ? (
+                      <SessionTargetRings rings={sessionTargetRings} />
+                    ) : (
+                      <div className="session-target-rings-empty"><Target size={22} /><span>No target</span></div>
+                    )}
                   </div>
                   <div className="timer-running-elapsed" aria-live="polite">
                     <div><span>{fmtClock(elapsed)}</span><small>.{String(Math.floor(now.getMilliseconds() / 10)).padStart(2, '0')}</small></div>
