@@ -112,6 +112,12 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
   }, [entries, entriesKey, providedEntries, user?.id]);
 
   const filteredEntries = useMemo(() => entries.filter((entry) => {
+    const project = projects.find((item) => item.id === entry.projectId || item.name === entry.projectName);
+    const entrySubject = project?.subjects?.find((item) => item.id === entry.subjectId || item.name === entry.subjectName);
+    const projectStart = valueDateKey(project?.startDate || project?.start_date || project?.createdAt || project?.created_at);
+    const subjectStart = valueDateKey(entrySubject?.startDate || entrySubject?.start_date || entrySubject?.createdAt || entrySubject?.created_at);
+    const entryKey = entryDateKey(entry.startedAt);
+    if ((projectStart && entryKey < projectStart) || (subjectStart && entryKey < subjectStart)) return false;
     if (projectFilter === 'all') return true;
     const [kind, id] = projectFilter.split(':');
     if (kind === 'project') return entry.projectId === id || (!entry.projectId && entry.projectName === projects.find((project) => project.id === id)?.name);
@@ -308,7 +314,14 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
             const today = key === todayKey;
             const unstudied = inViewMonth && seconds === 0 && key <= todayKey;
             const filteredTaskProject = projects.find(project => projectFilter === `project:${project.id}` || (project.subjects || []).some(subject => projectFilter === `subject:${subject.id}`));
-            const dayTasks = tasks.filter(task => (projectFilter === 'all' || task.project_name === filteredTaskProject?.name) && (valueDateKey(task.due_date) === key || valueDateKey(task.reminder_date) === key));
+            // The calendar marker represents a task deadline, not a planned
+            // study occurrence or a reminder. Planned study is already shown
+            // inside the day cell, so only tasks with an explicit due date
+            // should add the task-details affordance.
+            const dayTasks = tasks.filter(task => (
+              (projectFilter === 'all' || task.project_name === filteredTaskProject?.name)
+              && valueDateKey(task.due_date) === key
+            ));
             return (
               <div className="calendar-day-wrap" key={key}>
               <button
@@ -330,7 +343,7 @@ export const CalendarPage = ({ user, entries: providedEntries, setEntries: setPr
                 </span>}
                 {inViewMonth && seconds > 0 && <span className="calendar-day-total"><span>Studied</span>{formatDuration(seconds)}</span>}
               </button>
-              {(dayTasks.length > 0 || planned.length > 0) && <button
+              {dayTasks.length > 0 && <button
                 type="button"
                 className="calendar-day-task-trigger"
                 aria-label={`View tasks and study plan for ${formatDisplayDate(day, { month: 'long', day: 'numeric' })}`}
