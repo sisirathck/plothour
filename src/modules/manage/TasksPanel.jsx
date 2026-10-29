@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import './TasksPanel.css';
 import { CalendarDays, ArrowUpRight, Check, Clock3 } from 'lucide-react';
 import { EditSelect, SessionDatePicker } from '../timer/TimerEntriesList';
+import { formatDisplayDate } from '../../utils/dateFormat';
 
 const dateKey = (date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const taskStatus = (task, today) => task.completed ? 'completed' : task.due_date?.slice(0, 10) < today ? 'overdue' : 'current';
@@ -57,7 +58,7 @@ export const TasksPanel = ({ user, projects }) => {
   const [project, setProject] = useState('');
   const [due, setDue] = useState('');
   const [reminder, setReminder] = useState('');
-  const [tab, setTab] = useState('all');
+  const [tab, setTab] = useState('current');
   const todayKey = dateKey(new Date());
   const taskTabs = [{ id: 'all', label: 'All' }, { id: 'current', label: 'Current' }, { id: 'overdue', label: 'Overdue' }, { id: 'completed', label: 'Completed' }];
   const visibleTasks = tasks.filter(task => tab === 'all' || taskStatus(task, todayKey) === tab)
@@ -84,7 +85,7 @@ export const TasksPanel = ({ user, projects }) => {
     {!visibleTasks.length && <p className="agenda-empty">{tab === 'completed' ? 'Completed tasks will appear here.' : tab === 'overdue' ? 'No overdue tasks.' : 'No tasks in this view.'}</p>}
     {visibleTasks.map(task => <div className={`task-line${task.completed ? ' is-completed' : ''}`} key={task.id}>
       <input type="checkbox" aria-label={`Complete ${task.title}`} checked={task.completed} onChange={() => mutate(`/${task.id}`, 'PATCH', { completed: !task.completed })} />
-      <div><strong style={{ textDecoration: task.completed ? 'line-through' : undefined }}>{task.title}</strong><small>{task.project_name || 'Personal'}{task.due_date ? ` · Due ${task.due_date.slice(0,10)}` : ''}{task.reminder_date ? ` · Reminder ${task.reminder_date.slice(0,10)}` : ''}</small></div>
+      <div><strong style={{ textDecoration: task.completed ? 'line-through' : undefined }}>{task.title}</strong><small>{task.project_name || 'Personal'}{task.due_date ? ` · Due ${formatDisplayDate(task.due_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{task.reminder_date ? ` · Reminder ${formatDisplayDate(task.reminder_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small>{tab === 'current' && task.due_date && <span className="task-deadline-bar" aria-label="Due-date progress; full bar means seven days or more"><i style={{ width: `${Math.min(100, Math.max(0, ((new Date(`${task.due_date.slice(0, 10)}T23:59:59`).getTime() - Date.now()) / 86400000) / 7) * 100)}%` }} /></span>}</div>
       <button onClick={() => mutate(`/${task.id}`, 'DELETE')} aria-label={`Delete ${task.title}`}>Remove</button>
     </div>)}
   </section>;
