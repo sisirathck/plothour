@@ -55,7 +55,7 @@ const durationLabel = (seconds) => {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
-const EditSelect = ({ value, options, onChange, label }) => {
+export const EditSelect = ({ value, options, onChange, label }) => {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState(null);
   const rootRef = useRef(null);
@@ -107,12 +107,12 @@ const EditSelect = ({ value, options, onChange, label }) => {
     </button>
     {open && menuPosition && createPortal(<div ref={menuRef} className="entry-edit-select-menu is-portal-menu" style={menuPosition} role="listbox" aria-label={label}>
       {options.map((option) => <button key={option.value || 'none'} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : ''} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}
-    </div>, document.body)}
+    </div>, rootRef.current?.closest('dialog') || document.body)}
   </div>;
 };
 
-const SessionDatePicker = ({ value, onChange }) => {
-  const selected = new Date(`${value}T12:00:00`);
+export const SessionDatePicker = ({ value, onChange }) => {
+  const selected = value ? new Date(`${value}T12:00:00`) : new Date();
   const [open, setOpen] = useState(false);
   const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
   const rootRef = useRef(null);
@@ -128,7 +128,7 @@ const SessionDatePicker = ({ value, onChange }) => {
   const days = Array.from({ length: 42 }, (_, index) => { const day = new Date(gridStart); day.setDate(gridStart.getDate() + index); return day; });
   return <div className="entry-date-picker" ref={rootRef}>
     <button type="button" className="entry-date-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => { setMonth(new Date(selected.getFullYear(), selected.getMonth(), 1)); setOpen((current) => !current); }}>
-      <span>{formatDisplayDate(selected, { day: '2-digit', month: 'short', year: 'numeric' })}</span><Calendar size={14} aria-hidden="true" />
+      <span>{value ? formatDisplayDate(selected, { day: '2-digit', month: 'short', year: 'numeric' }) : 'Choose a date'}</span><Calendar size={14} aria-hidden="true" />
     </button>
     {open && <div className="entry-date-popover" role="dialog" aria-label="Choose session date">
       <div className="entry-date-head"><button type="button" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button><strong>{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong><button type="button" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button></div>

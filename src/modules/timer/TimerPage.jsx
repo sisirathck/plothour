@@ -11,6 +11,7 @@ import {
 import { AnalogueClockFace, HorologyArt, SessionTargetRings } from './TimerClock';
 import { TimerEntriesList } from './TimerEntriesList';
 import { TaskAgenda } from '../manage/TasksPanel';
+import { ManualEntry } from './ManualEntry';
 import { CalendarPage } from '../calendar/CalendarPage';
 import { formatDisplayDate } from '../../utils/dateFormat';
 import { getSiteFontStyle, useSiteCustomization } from '../../context/SiteCustomizationContext';
@@ -588,6 +589,7 @@ export const TimerPage = ({ user }) => {
           {/* Search projects and subprojects before choosing a session. */}
           <div className="timer-combo-search" ref={searchRef}>
             <Search size={17} aria-hidden="true" />
+            <ManualEntry projects={activeProjects} onSave={entry => setEntries(current => [entry, ...current])} />
             <input
               type="search"
               value={comboSearch}
@@ -983,7 +985,7 @@ export const TimerPage = ({ user }) => {
 
           </div>
 
-          <TaskAgenda user={user} projects={activeProjects} />
+          <TaskAgenda user={user} projects={activeProjects} studyPlan={todayStudyPlan} onStart={startTimer} />
         </div>
       </section>
 

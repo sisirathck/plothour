@@ -480,6 +480,7 @@
 
 /* Search-first project and subject selection. */
 .timer-combo-search {
+  padding-right: 114px;
   position: relative;
   z-index: 5;
   display: flex;
@@ -494,6 +495,12 @@
   box-shadow: var(--sd-shadow-sm);
   transition: border-color var(--sd-transition), box-shadow var(--sd-transition), background var(--sd-transition);
 }
+
+.manual-entry-trigger{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:5px;padding:7px 10px;background:var(--sd-bg-surface);border:1px solid var(--sd-border-glass);border-radius:8px;color:var(--sd-text-secondary);font-family:inherit;font-size:11px;cursor:pointer;z-index:1}
+.manual-entry-dialog{position:fixed;inset:0;width:min(580px,calc(100vw - 40px));max-height:85vh;overflow:auto;box-sizing:border-box;padding:24px;border:1px solid var(--sd-border-glass);border-radius:20px;background:var(--sd-bg-surface);color:var(--sd-text-primary);font-family:var(--font-sans);box-shadow:0 24px 80px #0003}
+.manual-entry-dialog::backdrop{background:#10122066;backdrop-filter:blur(4px)}
+.manual-entry-dialog header{display:flex;justify-content:space-between;gap:16px;margin-bottom:20px}.manual-entry-dialog h2{margin:0;font-size:24px}.manual-entry-dialog p{font-size:12px;color:var(--sd-text-muted)}.manual-entry-dialog button{font-family:inherit;cursor:pointer}.manual-entry-dialog header>button{align-self:start;border:0;background:none;color:inherit}
+.manual-entry-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.manual-entry-fields label{display:grid;gap:7px;font-size:11px;min-width:0}.manual-entry-fields input{padding:10px;background:var(--sd-bg-subtle);color:inherit;border:1px solid var(--sd-border-glass);border-radius:9px;font:inherit}.manual-entry-note{grid-column:1/-1}.manual-entry-dialog footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}.manual-entry-dialog footer button{padding:9px 15px;border-radius:9px;border:1px solid var(--sd-border-glass);background:var(--sd-bg-subtle);color:inherit}.manual-entry-dialog footer .entry-save-btn{background:var(--sd-coral);color:white}
 
 .timer-combo-search:focus-within {
   border-color: var(--sd-coral);
