@@ -60,7 +60,9 @@ export const TimerPage = ({ user, onNavigate }) => {
   const searchRef = useRef(null);
   const [pendingSelection, setPendingSelection] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
-  const [pausedElapsed, setPausedElapsed] = useState(0);
+  // Keep the pause snapshot in milliseconds. Storing whole seconds here made
+  // every pause/resume cycle silently discard the fractional second.
+  const [pausedElapsedMs, setPausedElapsedMs] = useState(0);
   const [notice, setNotice] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -106,7 +108,7 @@ export const TimerPage = ({ user, onNavigate }) => {
       setActiveTimer(rj(activeKey, null));
       setEntries(rj(entriesKey, []));
       setIsPaused(false);
-      setPausedElapsed(0);
+      setPausedElapsedMs(0);
     };
     window.addEventListener('studyduel:timer-storage', syncStoppedSession);
     return () => window.removeEventListener('studyduel:timer-storage', syncStoppedSession);
@@ -135,15 +137,17 @@ export const TimerPage = ({ user, onNavigate }) => {
   const sessionSubject = sessionProject?.subjects?.find((subject) => subject.id === sessionSubjectId);
 
   // Elapsed computation
-  const elapsed = useMemo(() => {
+  const elapsedMs = useMemo(() => {
     if (!activeTimer) return 0;
-    if (isPaused) return pausedElapsed;
-    return Math.max(0, Math.floor((now.getTime() - activeTimer.startedAt) / 1000));
-  }, [activeTimer, now, isPaused, pausedElapsed]);
+    return isPaused
+      ? pausedElapsedMs
+      : Math.max(0, now.getTime() - activeTimer.startedAt);
+  }, [activeTimer, now, isPaused, pausedElapsedMs]);
+  const elapsed = Math.floor(elapsedMs / 1000);
   const elapsedHundredths = useMemo(() => {
-    if (!activeTimer || isPaused) return 0;
-    return Math.floor((Math.max(0, now.getTime() - activeTimer.startedAt) % 1000) / 10);
-  }, [activeTimer, isPaused, now]);
+    if (!activeTimer) return 0;
+    return Math.floor((elapsedMs % 1000) / 10);
+  }, [activeTimer, elapsedMs]);
 
   const sessionMode = activeTimer?.mode || sessionGoalMode || timerPreferences.defaultTimerMode || 'stopwatch';
   const sessionGoal = TIMER_GOALS.find((goal) => goal.id === sessionMode) || TIMER_GOALS[2];
@@ -435,7 +439,7 @@ export const TimerPage = ({ user, onNavigate }) => {
     setSelProj(proj.id);
     setSelSub(sub?.id || '');
     setIsPaused(false);
-    setPausedElapsed(0);
+    setPausedElapsedMs(0);
     setNotice('');
   };
   const startTimerRef = useRef(startTimer);
@@ -485,7 +489,7 @@ export const TimerPage = ({ user, onNavigate }) => {
   const stopTimer = () => {
     if (!activeTimer) return;
     const t = Date.now();
-    const dur = Math.max(1, isPaused ? pausedElapsed : Math.floor((t - activeTimer.startedAt) / 1000));
+    const dur = Math.max(1, Math.floor((isPaused ? pausedElapsedMs : t - activeTimer.startedAt) / 1000));
 
     setEntries((cur) => [
       {
@@ -499,7 +503,7 @@ export const TimerPage = ({ user, onNavigate }) => {
 
     setActiveTimer(null);
     setIsPaused(false);
-    setPausedElapsed(0);
+    setPausedElapsedMs(0);
     setNotice(`Session Logged · ${fmtDur(dur)}`);
     setTimeout(() => setNotice(''), 5000);
     if (timerPreferences.soundEnabled) {
@@ -548,7 +552,7 @@ export const TimerPage = ({ user, onNavigate }) => {
     if (!activeTimer) return;
     setActiveTimer(null);
     setIsPaused(false);
-    setPausedElapsed(0);
+    setPausedElapsedMs(0);
     setNotice('Session discarded');
     setTimeout(() => setNotice(''), 4000);
   };
@@ -557,11 +561,11 @@ export const TimerPage = ({ user, onNavigate }) => {
   const togglePause = () => {
     if (!activeTimer) return;
     if (isPaused) {
-      const adjustedStart = Date.now() - pausedElapsed * 1000;
+      const adjustedStart = Date.now() - pausedElapsedMs;
       setActiveTimer((prev) => ({ ...prev, startedAt: adjustedStart }));
       setIsPaused(false);
     } else {
-      setPausedElapsed(elapsed);
+      setPausedElapsedMs(Math.max(0, Date.now() - activeTimer.startedAt));
       setIsPaused(true);
     }
   };
