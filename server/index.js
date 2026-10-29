@@ -223,6 +223,7 @@ app.listen(PORT, async () => {
       await backfillWorkspaceProjections(migrationClient);
     }
     await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/012_tasks.sql'), 'utf8'));
+    await migrationClient.query(fs.readFileSync(path.resolve(__dirname, '../database/013_task_subprojects.sql'), 'utf8'));
     databaseReady = true;
   } catch (err) {
     console.error(` [Database] Connection or migration failed:`, err.message);

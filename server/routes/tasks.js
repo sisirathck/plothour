@@ -9,9 +9,9 @@ tasksRouter.get('/', async (req, res) => {
   catch { res.status(500).json({ error: 'Could not load tasks' }); }
 });
 tasksRouter.post('/', async (req, res) => {
-  const { title, due_date, reminder_date, project_name = '' } = req.body;
-  if (typeof title !== 'string' || !title.trim() || title.length > 240 || typeof project_name !== 'string' || project_name.length > 240 || !validDate(due_date) || !validDate(reminder_date)) return res.status(400).json({ error: 'Check the task title and dates' });
-  try { res.status(201).json((await query('INSERT INTO user_tasks(user_id,title,due_date,reminder_date,project_name) VALUES($1,$2,$3,$4,$5) RETURNING *', [req.userId,title.trim(),due_date || null,reminder_date || null,project_name])).rows[0]); }
+  const { title, due_date, reminder_date, project_name = '', subproject_name = '' } = req.body;
+  if (typeof title !== 'string' || !title.trim() || title.length > 240 || typeof project_name !== 'string' || project_name.length > 240 || typeof subproject_name !== 'string' || subproject_name.length > 240 || !validDate(due_date) || !validDate(reminder_date)) return res.status(400).json({ error: 'Check the task title and dates' });
+  try { res.status(201).json((await query('INSERT INTO user_tasks(user_id,title,due_date,reminder_date,project_name,subproject_name) VALUES($1,$2,$3,$4,$5,$6) RETURNING *', [req.userId,title.trim(),due_date || null,reminder_date || null,project_name,subproject_name])).rows[0]); }
   catch { res.status(500).json({ error: 'Could not save task' }); }
 });
 tasksRouter.patch('/:id', async (req, res) => {

@@ -56,6 +56,8 @@ export const TasksPanel = ({ user, projects }) => {
   const { tasks, error, mutate } = useTasks(user);
   const [busy, setBusy] = useState(false);
   const [project, setProject] = useState('');
+  const [subproject, setSubproject] = useState('');
+  const selectedProject = projects.find(item => item.name === project);
   const [due, setDue] = useState('');
   const [reminder, setReminder] = useState('');
   const [tab, setTab] = useState('current');
@@ -66,15 +68,16 @@ export const TasksPanel = ({ user, projects }) => {
   const add = async (event) => {
     event.preventDefault(); const form = event.currentTarget;
     if (due && due < todayKey) { setDue(todayKey); return; }
-    const body = { ...Object.fromEntries(new FormData(form)), project_name: project, due_date: due, reminder_date: reminder };
-    setBusy(true); if (await mutate('', 'POST', body)) { form.reset(); setDue(''); setReminder(''); setProject(''); } setBusy(false);
+    const body = { ...Object.fromEntries(new FormData(form)), project_name: project, subproject_name: subproject, due_date: due, reminder_date: reminder };
+    setBusy(true); if (await mutate('', 'POST', body)) { form.reset(); setDue(''); setReminder(''); setProject(''); setSubproject(''); } setBusy(false);
   };
   return <section className="tasks-panel">
     <div className="tasks-page-heading"><span className="agenda-icon"><CalendarDays size={19} /></span><div><h2>Tasks & reminders</h2><p>Keep your next steps and deadlines in one place.</p></div><span className="tasks-open-count">{tasks.filter(t => !t.completed).length} open</span></div>
     <form className="tasks-create" onSubmit={add}>
       <label>Task<input required maxLength={240} name="title" placeholder="What needs to get done?" /></label>
-      <label>Project<EditSelect label="Task project" value={project} options={[{value:'',label:'Personal / unassigned'},...projects.map(p => ({value:p.name,label:p.name}))]} onChange={setProject} /></label>
-      <label>Due date<SessionDatePicker value={due} onChange={value => { setDue(value); if (reminder && (reminder < todayKey || reminder > value)) setReminder(''); }} minDate={todayKey} />{due && <button type="button" className="task-clear-date" onClick={() => { setDue(''); if (reminder && reminder < todayKey) setReminder(''); }}>Clear date</button>}{!due && <small>Optional</small>}</label>
+      <label><span className="tasks-field-label">Project <em>Optional</em></span><EditSelect label="Task project" value={project} options={[{value:'',label:'Personal / unassigned'},...projects.map(p => ({value:p.name,label:p.name}))]} onChange={value => { setProject(value); setSubproject(''); }} /></label>
+      <label><span className="tasks-field-label">Subproject <em>Optional</em></span><EditSelect label="Task subproject" value={subproject} options={[{value:'',label:project ? 'No subproject' : 'Choose a project first'},...(selectedProject?.subjects || []).map(item => ({value:item.name,label:item.name}))]} onChange={setSubproject} /></label>
+      <label><span className="tasks-field-label">Due date <em>Optional</em></span><SessionDatePicker value={due} onChange={value => { setDue(value); if (reminder && (reminder < todayKey || reminder > value)) setReminder(''); }} minDate={todayKey} />{due && <button type="button" className="task-clear-date" onClick={() => { setDue(''); if (reminder && reminder < todayKey) setReminder(''); }}>Clear date</button>}</label>
       <label><span className="tasks-field-label">Remind me on <em>Optional</em></span><SessionDatePicker value={reminder} onChange={setReminder} minDate={todayKey} maxDate={due} />{reminder && <button type="button" className="task-clear-date" onClick={() => setReminder('')}>Clear reminder</button>}</label>
       <button disabled={busy}>{busy ? 'Saving…' : 'Add task'}</button>
     </form>
@@ -85,7 +88,7 @@ export const TasksPanel = ({ user, projects }) => {
     {!visibleTasks.length && <p className="agenda-empty">{tab === 'completed' ? 'Completed tasks will appear here.' : tab === 'overdue' ? 'No overdue tasks.' : 'No tasks in this view.'}</p>}
     {visibleTasks.map(task => <div className={`task-line${task.completed ? ' is-completed' : ''}`} key={task.id}>
       <input type="checkbox" aria-label={`Complete ${task.title}`} checked={task.completed} onChange={() => mutate(`/${task.id}`, 'PATCH', { completed: !task.completed })} />
-      <div><strong style={{ textDecoration: task.completed ? 'line-through' : undefined }}>{task.title}</strong><small>{task.project_name || 'Personal'}{task.due_date ? ` · Due ${formatDisplayDate(task.due_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{task.reminder_date ? ` · Reminder ${formatDisplayDate(task.reminder_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small>{tab === 'current' && task.due_date && <span className="task-deadline-bar" aria-label="Due-date progress; full bar means seven days or more"><i style={{ width: `${Math.min(100, Math.max(0, ((new Date(`${task.due_date.slice(0, 10)}T23:59:59`).getTime() - Date.now()) / 86400000) / 7) * 100)}%` }} /></span>}</div>
+      <div><strong style={{ textDecoration: task.completed ? 'line-through' : undefined }}>{task.title}</strong><small>{task.project_name || 'Personal'}{task.subproject_name ? ` · ${task.subproject_name}` : ''}{task.due_date ? ` · Due ${formatDisplayDate(task.due_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{task.reminder_date ? ` · Reminder ${formatDisplayDate(task.reminder_date, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</small>{tab === 'current' && task.due_date && <span className="task-deadline-bar" aria-label="Due-date progress; full bar means seven days or more"><i style={{ width: `${Math.min(100, Math.max(0, ((new Date(`${task.due_date.slice(0, 10)}T23:59:59`).getTime() - Date.now()) / 86400000) / 7) * 100)}%` }} /></span>}</div>
       <button onClick={() => mutate(`/${task.id}`, 'DELETE')} aria-label={`Delete ${task.title}`}>Remove</button>
     </div>)}
   </section>;
@@ -149,7 +152,7 @@ export const TaskAgenda = ({ user, projects, studyPlan = [], onStart, onManageTa
       <div className="agenda-column-items" tabIndex={0} role="region" aria-label="Tasks and deadlines">
       {!items.length && <p className="agenda-empty">No upcoming deadlines. You’re all caught up.</p>}{items.map(item => <div className={`task-line${item.completed ? ' is-completed' : item.date && item.date < key ? ' is-overdue' : ''}`} key={item.id}>
       {!item.deadline && <input type="checkbox" checked={false} aria-label={`Complete ${item.title}`} onChange={() => completeTask(item)} />}
-      <div><strong>{item.title}</strong><small>{item.project_name || 'Personal'}</small></div>
+      <div><strong>{item.title}</strong><small>{item.project_name || 'Personal'}{item.subproject_name ? ` · ${item.subproject_name}` : ''}</small></div>
       <span className={`agenda-due${item.date === key ? ' is-today' : ''}`} title={item.date || item.reminder || undefined}>{item.completed ? 'Done' : item.date ? dueLabel(item.date) : item.reminder ? `Remind ${dueLabel(item.reminder)}` : 'Anytime'}</span>
       {item.date && !item.completed && <div className="agenda-deadline-bar" role="meter" aria-label={`Time remaining for ${item.title}; full bar means seven days or more`} aria-valuemin={0} aria-valuemax={7} aria-valuenow={Math.min(7, Math.max(0, (new Date(`${item.date}T23:59:59`).getTime() - today.getTime()) / 86400000))} aria-valuetext={dueLabel(item.date)} title="Full bar = 7+ days remaining">
         <i style={{ width: `${Math.min(100, Math.max(0, (new Date(`${item.date}T23:59:59`).getTime() - today.getTime()) / (7 * 86400000) * 100))}%` }} />
